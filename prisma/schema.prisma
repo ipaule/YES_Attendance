@@ -12,8 +12,8 @@ model User {
   username  String   @unique
   password  String
   role      String   @default("LEADER") // PASTOR, EXECUTIVE, LEADER
-  groupId   String
-  group     Group    @relation(fields: [groupId], references: [id])
+  groupId   String?
+  group     Group?   @relation(fields: [groupId], references: [id])
   teamId    String?  @unique
   team      Team?    @relation("LeaderOfTeam")
   createdAt DateTime @default(now())
@@ -37,13 +37,16 @@ model Team {
   members   Member[]
   dates     AttendanceDate[]
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([name, groupId])
 }
 
 model Member {
   id          String       @id @default(cuid())
   name        String
   gender      String       // MALE, FEMALE
-  birthYear   Int
+  birthYear   String       @default("")
   teamId      String
   team        Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
   attendances Attendance[]
@@ -64,13 +67,20 @@ model AttendanceDate {
   @@unique([date, teamId])
 }
 
+model GlobalDate {
+  id    String   @id @default(cuid())
+  date  DateTime @unique
+  label String
+  order Int      @default(0)
+}
+
 model Attendance {
   id               String         @id @default(cuid())
   memberId         String
   member           Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
   attendanceDateId String
   attendanceDate   AttendanceDate @relation(fields: [attendanceDateId], references: [id], onDelete: Cascade)
-  status           String         @default("ABSENT") // HERE, ABSENT, AWR
+  status           String         @default("HERE") // HERE, ABSENT, AWR
   awrReason        String?
 
   @@unique([memberId, attendanceDateId])

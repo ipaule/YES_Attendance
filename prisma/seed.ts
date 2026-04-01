@@ -19,20 +19,16 @@ async function main() {
     });
   }
 
-  const firstGroup = await prisma.group.findFirst({ orderBy: { order: "asc" } });
-
-  if (firstGroup) {
-    await prisma.user.upsert({
-      where: { username: "AJ" },
-      update: {},
-      create: {
-        username: "AJ",
-        password: hashSync("3927", 10),
-        role: "PASTOR",
-        groupId: firstGroup.id,
-      },
-    });
-  }
+  await prisma.user.upsert({
+    where: { username: "AJ" },
+    update: { groupId: null },
+    create: {
+      username: "AJ",
+      password: hashSync("3927", 10),
+      role: "PASTOR",
+      groupId: null,
+    },
+  });
 
   console.log("Seed completed: 4 groups + admin user AJ created");
 }

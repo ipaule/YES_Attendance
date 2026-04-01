@@ -1,14 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { AttendanceTable } from "@/components/attendance/AttendanceTable";
-import { Download } from "lucide-react";
 import type { TeamWithData } from "@/types";
 
 export default function TeamPage() {
   const params = useParams();
   const teamId = params.teamId as string;
+  const router = useRouter();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["team", teamId],
@@ -38,26 +39,16 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-4 pb-20 lg:pb-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">
-            {data.group?.name} - {data.name}
-          </h1>
-          {data.leader && (
-            <p className="text-sm text-gray-500">
-              순장: {data.leader.username}
-            </p>
-          )}
-        </div>
+      <div className="flex items-center gap-3">
         <button
-          onClick={() => {
-            window.open(`/api/attendance/export?teamId=${teamId}`, "_blank");
-          }}
-          className="flex items-center gap-1.5 text-sm bg-emerald-600 text-white rounded-lg px-4 py-2 hover:bg-emerald-700 transition-colors"
+          onClick={() => router.back()}
+          className="text-gray-400 hover:text-gray-600 transition-colors"
         >
-          <Download className="h-4 w-4" />
-          엑셀 다운로드
+          <ArrowLeft className="h-5 w-5" />
         </button>
+        <h1 className="text-xl font-bold text-gray-900">
+          {data.group?.name} - {data.name}
+        </h1>
       </div>
 
       <AttendanceTable team={data} />

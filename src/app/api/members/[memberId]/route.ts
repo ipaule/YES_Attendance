@@ -36,7 +36,7 @@ export async function PATCH(
       ...(data.name !== undefined && { name: data.name }),
       ...(data.gender !== undefined && { gender: data.gender }),
       ...(data.birthYear !== undefined && {
-        birthYear: parseInt(data.birthYear),
+        birthYear: data.birthYear,
       }),
     },
     include: { attendances: true },

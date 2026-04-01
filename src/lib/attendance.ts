@@ -1,9 +1,10 @@
 export function calculateAttendanceRate(
   statuses: string[]
 ): number {
-  const awrCount = statuses.filter((s) => s === "AWR").length;
+  // Exclude AWR and blank (unrecorded) from denominator
+  const excludedCount = statuses.filter((s) => s === "AWR" || s === "" || !s).length;
   const hereCount = statuses.filter((s) => s === "HERE").length;
-  const totalDates = statuses.length - awrCount;
+  const totalDates = statuses.length - excludedCount;
 
   if (totalDates === 0) return 0;
   return (hereCount / totalDates) * 100;

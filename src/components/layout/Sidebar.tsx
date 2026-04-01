@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   ClipboardList,
   BarChart3,
@@ -13,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { User } from "@/types";
+import type { User, Group } from "@/types";
 
 interface SidebarProps {
   user: User;
@@ -24,6 +25,17 @@ interface SidebarProps {
 export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
   const pathname = usePathname();
 
+  const { data: groups } = useQuery({
+    queryKey: ["groups"],
+    queryFn: async (): Promise<Group[]> => {
+      const res = await fetch("/api/groups");
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      return data.groups;
+    },
+    enabled: user.role === "PASTOR",
+  });
+
   const roleLabel =
     user.role === "PASTOR"
       ? "목사님"
@@ -31,7 +43,7 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
         ? "임원"
         : "순장";
 
-  const navItems = getNavItems(user);
+  const navItems = getNavItems(user, groups || []);
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-gray-200">
@@ -52,7 +64,7 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
         <p className="text-sm font-medium text-gray-900">{user.username}</p>
         <p className="text-xs text-gray-500">
-          {roleLabel} · {user.group?.name || ""}
+          {roleLabel}{user.group ? ` · ${user.group.name}` : ""}
         </p>
       </div>
 
@@ -97,7 +109,7 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
   );
 }
 
-function getNavItems(user: User) {
+function getNavItems(user: User, groups: Group[]) {
   const sections: {
     title: string;
     items: { label: string; href: string; icon: typeof ClipboardList }[];
@@ -123,17 +135,17 @@ function getNavItems(user: User) {
   }
 
   // Executive: group teams
-  if (user.role === "EXECUTIVE" || user.role === "PASTOR") {
+  if (user.role === "EXECUTIVE" && user.groupId) {
     sections.push({
-      title: "그룹 관리",
+      title: "공동체 관리",
       items: [
         {
-          label: "그룹 현황",
+          label: "공동체 현황",
           href: `/dashboard/group/${user.groupId}`,
           icon: FolderOpen,
         },
         {
-          label: "그룹 그래프",
+          label: "공동체 그래프",
           href: `/dashboard/graphs/group/${user.groupId}`,
           icon: TrendingUp,
         },
@@ -141,8 +153,39 @@ function getNavItems(user: User) {
     });
   }
 
-  // Pastor: all groups + combined + admin
-  if (user.role === "PASTOR") {
+  // Pastor: 공동체 관리 link + 8 group items (4 현황 + 4 그래프) + admin
+  if (user.role === "PASTOR" && groups.length > 0) {
+    const groupItems: { label: string; href: string; icon: typeof ClipboardList }[] = [];
+
+    // 공동체 관리 tab on top
+    groupItems.push({
+      label: "공동체 관리",
+      href: "/dashboard/groups",
+      icon: Users,
+    });
+
+    // 샬롬 현황, 사랑 현황, 소망 현황, 믿음 현황
+    for (const g of groups) {
+      groupItems.push({
+        label: `${g.name} 현황`,
+        href: `/dashboard/group/${g.id}`,
+        icon: FolderOpen,
+      });
+    }
+    // 샬롬 그래프, 사랑 그래프, 소망 그래프, 믿음 그래프
+    for (const g of groups) {
+      groupItems.push({
+        label: `${g.name} 그래프`,
+        href: `/dashboard/graphs/group/${g.id}`,
+        icon: TrendingUp,
+      });
+    }
+
+    sections.push({
+      title: "공동체",
+      items: groupItems,
+    });
+
     sections.push({
       title: "전체 관리",
       items: [
@@ -155,11 +198,6 @@ function getNavItems(user: User) {
           label: "사용자 관리",
           href: "/dashboard/admin",
           icon: Settings,
-        },
-        {
-          label: "전체 그룹",
-          href: "/dashboard/groups",
-          icon: Users,
         },
       ],
     });

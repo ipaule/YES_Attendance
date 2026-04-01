@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
         );
         return {
           date: date.label,
-          status: att?.status || "ABSENT",
+          status: att?.status || "",
         };
       }),
     }));
@@ -67,8 +67,8 @@ export async function GET(request: NextRequest) {
           const att = member.attendances.find(
             (a) => a.attendanceDateId === team.dates[i].id
           );
-          const status = att?.status || "ABSENT";
-          if (status !== "AWR") {
+          const status = att?.status || "";
+          if (status !== "AWR" && status !== "") {
             eligibleCount++;
             if (status === "HERE") hereCount++;
           }
@@ -89,9 +89,26 @@ export async function GET(request: NextRequest) {
       return point;
     });
 
+    // Calculate overall percentage for each member (latest cumulative)
+    const lastPoint = chartData.length > 0 ? chartData[chartData.length - 1] : null;
+    const seriesWithPct = team.members.map((member) => {
+      const pct = lastPoint ? (lastPoint[member.name] as number) : 0;
+      return `${member.name} (${pct}%)`;
+    });
+
+    // Rename keys in chartData to match seriesWithPct
+    const renamedChartData = chartData.map((point) => {
+      const renamed: Record<string, string | number> = { date: point.date };
+      team.members.forEach((member, i) => {
+        renamed[seriesWithPct[i]] = point[member.name] as number;
+      });
+      renamed["전체"] = point["전체"];
+      return renamed;
+    });
+
     return NextResponse.json({
-      chartData,
-      series: series.map((s) => s.name),
+      chartData: renamedChartData,
+      series: [...seriesWithPct, "전체"],
       teamName: team.name,
     });
   }
@@ -206,8 +223,8 @@ async function getGroupGraphData(groupId: string, groupName?: string) {
         const att = member.attendances.find(
           (a) => a.attendanceDateId === date.id
         );
-        const status = att?.status || "ABSENT";
-        if (status !== "AWR") {
+        const status = att?.status || "";
+        if (status !== "AWR" && status !== "") {
           teamEligible++;
           if (status === "HERE") teamHere++;
         }

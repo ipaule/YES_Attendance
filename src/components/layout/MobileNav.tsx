@@ -54,15 +54,20 @@ function getMobileNavItems(user: User) {
     });
   }
 
-  if (user.role === "EXECUTIVE" || user.role === "PASTOR") {
+  if (user.role === "EXECUTIVE" && user.groupId) {
     items.push({
-      label: "그룹",
+      label: "공동체",
       href: `/dashboard/group/${user.groupId}`,
       icon: FolderOpen,
     });
   }
 
   if (user.role === "PASTOR") {
+    items.push({
+      label: "공동체",
+      href: "/dashboard/groups",
+      icon: FolderOpen,
+    });
     items.push({
       label: "관리",
       href: "/dashboard/admin",

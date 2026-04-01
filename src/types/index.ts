@@ -6,9 +6,9 @@ export interface User {
   id: string;
   username: string;
   role: Role;
-  groupId: string;
+  groupId: string | null;
   teamId: string | null;
-  group?: Group;
+  group?: Group | null;
   team?: Team;
 }
 
@@ -34,7 +34,7 @@ export interface Member {
   id: string;
   name: string;
   gender: Gender;
-  birthYear: number;
+  birthYear: string;
   teamId: string;
   order: number;
   attendances?: AttendanceRecord[];

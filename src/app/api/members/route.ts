@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
   const { name, gender, birthYear, teamId } = await request.json();
 
-  if (!name || !gender || !birthYear || !teamId) {
+  if (!name || !gender || !teamId) {
     return NextResponse.json(
       { error: "모든 필드를 입력해주세요." },
       { status: 400 }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     data: {
       name,
       gender,
-      birthYear: parseInt(birthYear),
+      birthYear: birthYear || "",
       teamId,
       order: (maxOrder?.order ?? -1) + 1,
     },

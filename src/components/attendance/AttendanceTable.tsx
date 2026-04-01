@@ -83,9 +83,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
 
   const deleteMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      const res = await fetch(`/api/members/${memberId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/members/${memberId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete member");
       return res.json();
     },
@@ -138,9 +136,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
 
   const deleteDateMutation = useMutation({
     mutationFn: async (dateId: string) => {
-      const res = await fetch(`/api/dates/${dateId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/dates/${dateId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete date");
       return res.json();
     },
@@ -162,7 +158,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
   ) => {
     return dates.map((d) => {
       const att = getAttendance(member, d.id);
-      return att?.status || "ABSENT";
+      return att?.status || "";
     });
   };
 
@@ -197,7 +193,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
             className="flex items-center gap-1 text-xs bg-emerald-600 text-white rounded-lg px-3 py-1.5 hover:bg-emerald-700 transition-colors"
           >
             <Plus className="h-3 w-3" />
-            멤버 추가
+            순원 추가
           </button>
         </div>
       </div>
@@ -237,38 +233,33 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
             onChange={(e) =>
               setNewMember((prev) => ({ ...prev, name: e.target.value }))
             }
-            className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 w-24 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 w-20 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
           <select
             value={newMember.gender}
             onChange={(e) =>
               setNewMember((prev) => ({ ...prev, gender: e.target.value }))
             }
-            className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           >
             <option value="MALE">남</option>
             <option value="FEMALE">여</option>
           </select>
           <input
-            type="number"
-            placeholder="출생년도"
+            type="text"
+            placeholder="또래"
             value={newMember.birthYear}
             onChange={(e) =>
               setNewMember((prev) => ({ ...prev, birthYear: e.target.value }))
             }
-            className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 w-24 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 w-20 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
           <button
             onClick={() =>
               newMember.name &&
-              newMember.birthYear &&
               addMemberMutation.mutate({ ...newMember, teamId: team.id })
             }
-            disabled={
-              !newMember.name ||
-              !newMember.birthYear ||
-              addMemberMutation.isPending
-            }
+            disabled={!newMember.name || addMemberMutation.isPending}
             className="text-xs bg-emerald-600 text-white rounded-lg px-3 py-1.5 hover:bg-emerald-700 disabled:opacity-50"
           >
             추가
@@ -287,21 +278,21 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2 text-left font-medium text-gray-600 min-w-[80px]">
+              <th className="sticky left-0 z-10 bg-gray-50 px-2 py-2 text-left font-medium text-gray-600 w-16 min-w-[64px]">
                 이름
               </th>
-              <th className="sticky left-[80px] z-10 bg-gray-50 px-3 py-2 text-center font-medium text-gray-600 min-w-[40px]">
+              <th className="sticky left-16 z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-10 min-w-[40px] whitespace-nowrap">
                 성별
               </th>
-              <th className="sticky left-[120px] z-10 bg-gray-50 px-3 py-2 text-center font-medium text-gray-600 min-w-[60px]">
+              <th className="sticky left-[104px] z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-14 min-w-[56px]">
                 또래
               </th>
               {team.dates.map((date) => (
                 <th
                   key={date.id}
-                  className="px-1 py-2 text-center font-medium text-gray-600 min-w-[48px] group"
+                  className="px-1 py-2 text-center font-medium text-gray-600 min-w-[56px]"
                 >
-                  <div className="flex flex-col items-center">
+                  <div className="flex items-center justify-center gap-1">
                     <span className="text-xs">{date.label}</span>
                     <button
                       onClick={() => {
@@ -309,20 +300,20 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                           deleteDateMutation.mutate(date.id);
                         }
                       }}
-                      className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
                 </th>
               ))}
-              <th className="px-3 py-2 text-center font-medium text-gray-600 min-w-[64px]">
+              <th className="px-2 py-2 text-center font-medium text-gray-600 min-w-[50px]">
                 출석률
               </th>
-              <th className="px-3 py-2 text-center font-medium text-gray-600 min-w-[48px]">
+              <th className="px-2 py-2 text-center font-medium text-gray-600 min-w-[36px]">
                 등급
               </th>
-              <th className="px-2 py-2 min-w-[32px]" />
+              <th className="px-1 py-2 w-8" />
             </tr>
           </thead>
           <tbody>
@@ -338,16 +329,13 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                   className="border-b border-gray-100 hover:bg-gray-50"
                 >
                   {/* Name */}
-                  <td className="sticky left-0 z-10 bg-white px-3 py-1">
+                  <td className="sticky left-0 z-10 bg-white px-2 py-1 w-16">
                     {isEditing ? (
                       <input
                         type="text"
                         value={editData.name}
                         onChange={(e) =>
-                          setEditData((prev) => ({
-                            ...prev,
-                            name: e.target.value,
-                          }))
+                          setEditData((prev) => ({ ...prev, name: e.target.value }))
                         }
                         onKeyDown={(e) => {
                           if (e.key === "Enter") handleEditSave(member.id);
@@ -358,24 +346,21 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     ) : (
                       <button
                         onClick={() => handleEditStart(member)}
-                        className="text-left hover:text-indigo-600 transition-colors"
+                        className="text-left text-sm hover:text-indigo-600 transition-colors truncate block w-full"
                       >
                         {member.name}
                       </button>
                     )}
                   </td>
                   {/* Gender */}
-                  <td className="sticky left-[80px] z-10 bg-white px-3 py-1 text-center">
+                  <td className="sticky left-16 z-10 bg-white px-1 py-1 text-center w-10">
                     {isEditing ? (
                       <select
                         value={editData.gender}
                         onChange={(e) =>
-                          setEditData((prev) => ({
-                            ...prev,
-                            gender: e.target.value,
-                          }))
+                          setEditData((prev) => ({ ...prev, gender: e.target.value }))
                         }
-                        className="text-xs border border-indigo-300 rounded px-1 py-0.5"
+                        className="text-xs border border-indigo-300 rounded px-0.5 py-0.5 w-full"
                       >
                         <option value="MALE">남</option>
                         <option value="FEMALE">여</option>
@@ -387,22 +372,19 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     )}
                   </td>
                   {/* Birth Year */}
-                  <td className="sticky left-[120px] z-10 bg-white px-3 py-1 text-center">
+                  <td className="sticky left-[104px] z-10 bg-white px-1 py-1 text-center w-14">
                     {isEditing ? (
                       <input
-                        type="number"
+                        type="text"
                         value={editData.birthYear}
                         onChange={(e) =>
-                          setEditData((prev) => ({
-                            ...prev,
-                            birthYear: e.target.value,
-                          }))
+                          setEditData((prev) => ({ ...prev, birthYear: e.target.value }))
                         }
                         onKeyDown={(e) => {
                           if (e.key === "Enter") handleEditSave(member.id);
                           if (e.key === "Escape") setEditingMember(null);
                         }}
-                        className="w-16 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center"
+                        className="w-full text-xs border border-indigo-300 rounded px-1 py-0.5 text-center"
                       />
                     ) : (
                       <span className="text-xs text-gray-500">
@@ -414,51 +396,53 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                   {team.dates.map((date) => {
                     const att = getAttendance(member, date.id);
                     return (
-                      <td key={date.id} className="px-1 py-1 text-center">
-                        <AttendanceCell
-                          status={
-                            (att?.status as AttendanceStatus) || "ABSENT"
-                          }
-                          awrReason={att?.awrReason || null}
-                          onChange={(status, awrReason) => {
-                            attendanceMutation.mutate({
-                              memberId: member.id,
-                              attendanceDateId: date.id,
-                              status,
-                              awrReason,
-                            });
-                          }}
-                        />
+                      <td key={date.id} className="px-0 py-1 text-center">
+                        <div className="flex justify-center">
+                          <AttendanceCell
+                            status={
+                              (att?.status as AttendanceStatus | "") || ""
+                            }
+                            awrReason={att?.awrReason || null}
+                            onChange={(status, awrReason) => {
+                              attendanceMutation.mutate({
+                                memberId: member.id,
+                                attendanceDateId: date.id,
+                                status,
+                                awrReason,
+                              });
+                            }}
+                          />
+                        </div>
                       </td>
                     );
                   })}
                   {/* Rate */}
-                  <td className="px-3 py-1 text-center">
+                  <td className="px-2 py-1 text-center">
                     <span className="text-xs font-medium text-gray-700">
                       {rate.toFixed(0)}%
                     </span>
                   </td>
                   {/* Grade */}
-                  <td className="px-3 py-1 text-center">
+                  <td className="px-2 py-1 text-center">
                     <span
-                      className={`inline-block text-xs font-bold px-2 py-0.5 rounded ${getGradeColor(grade)}`}
+                      className={`inline-block text-xs font-bold px-1.5 py-0.5 rounded ${getGradeColor(grade)}`}
                     >
                       {grade}
                     </span>
                   </td>
                   {/* Actions */}
-                  <td className="px-2 py-1">
+                  <td className="px-1 py-1">
                     {isEditing ? (
-                      <div className="flex gap-1">
+                      <div className="flex flex-col gap-0.5">
                         <button
                           onClick={() => handleEditSave(member.id)}
-                          className="text-xs text-indigo-600 hover:text-indigo-800"
+                          className="text-[10px] text-indigo-600 hover:text-indigo-800"
                         >
                           저장
                         </button>
                         <button
                           onClick={() => setEditingMember(null)}
-                          className="text-xs text-gray-400 hover:text-gray-600"
+                          className="text-[10px] text-gray-400 hover:text-gray-600"
                         >
                           취소
                         </button>
@@ -472,7 +456,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                         }}
                         className="text-gray-300 hover:text-red-500 transition-colors"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3 w-3" />
                       </button>
                     )}
                   </td>
@@ -484,8 +468,8 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
 
         {team.members.length === 0 && (
           <div className="text-center py-12 text-gray-400">
-            <p>아직 멤버가 없습니다.</p>
-            <p className="text-sm mt-1">위의 &quot;멤버 추가&quot; 버튼을 클릭하여 멤버를 추가하세요.</p>
+            <p>아직 순원이 없습니다.</p>
+            <p className="text-sm mt-1">위의 &quot;순원 추가&quot; 버튼을 클릭하여 순원을 추가하세요.</p>
           </div>
         )}
       </div>

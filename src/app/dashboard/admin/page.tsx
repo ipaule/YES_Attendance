@@ -1,6 +1,8 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import type { Role } from "@/types";
 
@@ -8,15 +10,16 @@ interface UserRecord {
   id: string;
   username: string;
   role: string;
-  groupId: string;
+  groupId: string | null;
   teamId: string | null;
-  group: { id: string; name: string };
+  group: { id: string; name: string } | null;
   team: { id: string; name: string } | null;
   createdAt: string;
 }
 
 export default function AdminPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   const { data: users, isLoading } = useQuery({
@@ -40,20 +43,20 @@ export default function AdminPage() {
     },
   });
 
-  const updateRoleMutation = useMutation({
+  const updateUserMutation = useMutation({
     mutationFn: async ({
       userId,
-      role,
+      data,
     }: {
       userId: string;
-      role: Role;
+      data: { role?: Role; groupId?: string };
     }) => {
       const res = await fetch(`/api/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
+        body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Failed to update role");
+      if (!res.ok) throw new Error("Failed to update user");
       return res.json();
     },
     onSuccess: () => {
@@ -61,20 +64,13 @@ export default function AdminPage() {
     },
   });
 
-  const updateGroupMutation = useMutation({
-    mutationFn: async ({
-      userId,
-      groupId,
-    }: {
-      userId: string;
-      groupId: string;
-    }) => {
-      const res = await fetch(`/api/users/${userId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ groupId }),
-      });
-      if (!res.ok) throw new Error("Failed to update group");
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await fetch(`/api/users/${userId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete user");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -100,88 +96,64 @@ export default function AdminPage() {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case "PASTOR":
-        return "목사님";
-      case "EXECUTIVE":
-        return "임원";
-      case "LEADER":
-        return "순장";
-      default:
-        return role;
+      case "PASTOR": return "목사님";
+      case "EXECUTIVE": return "임원";
+      case "LEADER": return "순장";
+      default: return role;
     }
   };
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case "PASTOR":
-        return "bg-purple-100 text-purple-700";
-      case "EXECUTIVE":
-        return "bg-blue-100 text-blue-700";
-      case "LEADER":
-        return "bg-gray-100 text-gray-700";
-      default:
-        return "bg-gray-100 text-gray-700";
+      case "PASTOR": return "bg-purple-100 text-purple-700";
+      case "EXECUTIVE": return "bg-blue-100 text-blue-700";
+      case "LEADER": return "bg-gray-100 text-gray-700";
+      default: return "bg-gray-100 text-gray-700";
     }
   };
 
   return (
     <div className="space-y-4 pb-20 lg:pb-4">
-      <h1 className="text-xl font-bold text-gray-900">사용자 관리</h1>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.back()}
+          className="text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h1 className="text-xl font-bold text-gray-900">사용자 관리</h1>
+      </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3 text-left font-medium text-gray-600">
-                  아이디
-                </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">
-                  역할
-                </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">
-                  그룹
-                </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">
-                  담당 조
-                </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">
-                  역할 변경
-                </th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">
-                  그룹 변경
-                </th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">아이디</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600">역할</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600">공동체</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600">담당 순</th>
+                <th className="px-2 py-3 w-10" />
               </tr>
             </thead>
             <tbody>
               {users?.map((u) => (
-                <tr
-                  key={u.id}
-                  className="border-b border-gray-100 hover:bg-gray-50"
-                >
-                  <td className="px-4 py-3 font-medium text-gray-800">
-                    {u.username}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${getRoleBadgeColor(u.role)}`}
-                    >
-                      {getRoleLabel(u.role)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center text-gray-600">
-                    {u.group?.name}
-                  </td>
-                  <td className="px-4 py-3 text-center text-gray-600">
-                    {u.team?.name || "-"}
+                <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-800">{u.username}</span>
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${getRoleBadgeColor(u.role)}`}>
+                        {getRoleLabel(u.role)}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <select
                       value={u.role}
                       onChange={(e) =>
-                        updateRoleMutation.mutate({
+                        updateUserMutation.mutate({
                           userId: u.id,
-                          role: e.target.value as Role,
+                          data: { role: e.target.value as Role },
                         })
                       }
                       disabled={u.id === user?.id}
@@ -192,25 +164,25 @@ export default function AdminPage() {
                       <option value="PASTOR">목사님</option>
                     </select>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <select
-                      value={u.groupId}
-                      onChange={(e) =>
-                        updateGroupMutation.mutate({
-                          userId: u.id,
-                          groupId: e.target.value,
-                        })
-                      }
-                      className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    >
-                      {groups?.map(
-                        (g: { id: string; name: string }) => (
-                          <option key={g.id} value={g.id}>
-                            {g.name}
-                          </option>
-                        )
-                      )}
-                    </select>
+                  <td className="px-4 py-3 text-center text-xs text-gray-500">
+                    {u.group?.name || "-"}
+                  </td>
+                  <td className="px-4 py-3 text-center text-gray-500 text-xs">
+                    {u.team?.name || "-"}
+                  </td>
+                  <td className="px-2 py-3 text-center">
+                    {u.id !== user?.id && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`"${u.username}" 사용자를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+                            deleteUserMutation.mutate(u.id);
+                          }
+                        }}
+                        className="text-gray-300 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

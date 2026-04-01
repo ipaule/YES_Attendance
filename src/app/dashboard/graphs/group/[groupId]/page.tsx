@@ -1,12 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { AttendanceChart } from "@/components/graphs/AttendanceChart";
 
 export default function GroupGraphPage() {
   const params = useParams();
   const groupId = params.groupId as string;
+  const router = useRouter();
 
   const { data, isLoading } = useQuery({
     queryKey: ["graph", "group", groupId],
@@ -35,13 +37,21 @@ export default function GroupGraphPage() {
 
   return (
     <div className="space-y-4 pb-20 lg:pb-4">
-      <h1 className="text-xl font-bold text-gray-900">그룹 그래프</h1>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.back()}
+          className="text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h1 className="text-xl font-bold text-gray-900">공동체 그래프</h1>
+      </div>
 
       <AttendanceChart
         chartData={data.chartData}
         series={data.series}
-        title={`${data.groupName} 그룹 출석률`}
-        subtitle="조별 출석률 추이 (점선: 그룹 전체 평균)"
+        title={`${data.groupName} 공동체 출석률`}
+        subtitle="순별 출석률 추이 (점선: 공동체 전체 평균)"
       />
     </div>
   );

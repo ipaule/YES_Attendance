@@ -3,13 +3,13 @@
 import { useState, useRef, useEffect } from "react";
 import type { AttendanceStatus } from "@/types";
 
+type CellStatus = AttendanceStatus | "";
+
 interface AttendanceCellProps {
-  status: AttendanceStatus;
+  status: CellStatus;
   awrReason: string | null;
   onChange: (status: AttendanceStatus, awrReason?: string) => void;
 }
-
-const statusCycle: AttendanceStatus[] = ["HERE", "ABSENT", "AWR"];
 
 export function AttendanceCell({
   status,
@@ -28,13 +28,16 @@ export function AttendanceCell({
   }, [showAwrInput]);
 
   const handleClick = () => {
-    const currentIndex = statusCycle.indexOf(status);
-    const nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length];
-
-    if (nextStatus === "AWR") {
+    // Cycle: blank → O → X → AWR → O
+    if (status === "HERE") {
+      onChange("ABSENT");
+    } else if (status === "ABSENT") {
       setShowAwrInput(true);
+    } else if (status === "AWR") {
+      onChange("HERE");
     } else {
-      onChange(nextStatus);
+      // blank/default → O
+      onChange("HERE");
     }
   };
 
@@ -46,22 +49,20 @@ export function AttendanceCell({
   const handleAwrCancel = () => {
     setShowAwrInput(false);
     setReason(awrReason || "");
+    // Skip AWR, go back to O
+    onChange("HERE");
   };
 
   const getStatusIcon = () => {
     switch (status) {
       case "HERE":
-        return (
-          <span className="text-green-600 font-bold text-lg">○</span>
-        );
+        return <span className="text-green-600 font-bold text-lg">O</span>;
       case "ABSENT":
-        return (
-          <span className="text-red-500 font-bold text-lg">✕</span>
-        );
+        return <span className="text-red-500 font-bold text-lg">X</span>;
       case "AWR":
-        return (
-          <span className="text-yellow-500 font-bold text-lg">△</span>
-        );
+        return <span className="text-yellow-500 font-bold text-lg">△</span>;
+      default:
+        return <span className="text-gray-300 text-lg">-</span>;
     }
   };
 

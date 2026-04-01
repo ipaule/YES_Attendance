@@ -9,7 +9,7 @@ export interface JWTPayload {
   userId: string;
   username: string;
   role: string;
-  groupId: string;
+  groupId: string | null;
   teamId: string | null;
 }
 

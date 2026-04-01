@@ -97,7 +97,7 @@ export default function SignupPage() {
 
           <div>
             <label htmlFor="group" className="block text-sm font-medium text-gray-700 mb-1">
-              소속 그룹
+              소속 공동체
             </label>
             <select
               id="group"

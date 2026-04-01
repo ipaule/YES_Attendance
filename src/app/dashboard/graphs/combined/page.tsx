@@ -1,9 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { AttendanceChart } from "@/components/graphs/AttendanceChart";
 
 export default function CombinedGraphPage() {
+  const router = useRouter();
+
   const { data, isLoading } = useQuery({
     queryKey: ["graph", "combined"],
     queryFn: async () => {
@@ -31,13 +35,21 @@ export default function CombinedGraphPage() {
 
   return (
     <div className="space-y-4 pb-20 lg:pb-4">
-      <h1 className="text-xl font-bold text-gray-900">합산 그래프</h1>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.back()}
+          className="text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h1 className="text-xl font-bold text-gray-900">합산 그래프</h1>
+      </div>
 
       <AttendanceChart
         chartData={data.chartData}
         series={data.series}
         title="사랑 · 소망 · 믿음 합산 출석률"
-        subtitle="그룹별 출석률 추이 (점선: 합산 평균)"
+        subtitle="공동체별 출석률 추이 (점선: 합산 평균)"
       />
     </div>
   );

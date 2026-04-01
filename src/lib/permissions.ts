@@ -44,3 +44,15 @@ export function canViewGroupGraph(
 export function canViewCombinedGraph(user: JWTPayload): boolean {
   return user.role === "PASTOR";
 }
+
+export async function canAccessShalom(user: JWTPayload): Promise<boolean> {
+  if (user.role === "PASTOR") return true;
+  if (user.role === "EXECUTIVE" && user.groupId) {
+    const group = await prisma.group.findUnique({
+      where: { id: user.groupId },
+      select: { name: true },
+    });
+    return group?.name === "샬롬";
+  }
+  return false;
+}

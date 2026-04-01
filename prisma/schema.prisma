@@ -81,6 +81,27 @@ model TermHistory {
   createdAt DateTime @default(now())
 }
 
+model ShalomMember {
+  id        String   @id @default(cuid())
+  name      String
+  gender    String   @default("")
+  birthYear String   @default("")
+  phone     String   @default("")
+  visitDate String   @default("")
+  inviter   String   @default("")
+  leader    String   @default("")
+  note      String   @default("")
+  status    String   @default("방문") // 방문, 등록, 졸업
+  createdAt DateTime @default(now())
+}
+
+model ShalomHistory {
+  id        String   @id @default(cuid())
+  name      String
+  data      String   // JSON array of ShalomMember records
+  createdAt DateTime @default(now())
+}
+
 model Attendance {
   id               String         @id @default(cuid())
   memberId         String

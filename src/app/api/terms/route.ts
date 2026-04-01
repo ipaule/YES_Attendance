@@ -133,9 +133,16 @@ export async function POST(request: NextRequest) {
     // 4. Clear global dates
     await prisma.globalDate.deleteMany();
 
-    // 5. Delete all users except AJ
+    // 5. Delete all users except AJ and 샬롬 users
+    const shalomGroup = await prisma.group.findFirst({
+      where: { name: "샬롬" },
+      select: { id: true },
+    });
     await prisma.user.deleteMany({
-      where: { username: { not: "AJ" } },
+      where: {
+        username: { not: "AJ" },
+        ...(shalomGroup ? { groupId: { not: shalomGroup.id } } : {}),
+      },
     });
 
     return NextResponse.json({

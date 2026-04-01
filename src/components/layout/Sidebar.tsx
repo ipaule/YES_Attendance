@@ -137,19 +137,41 @@ function getNavItems(user: User, groups: Group[]) {
 
   // Executive: group teams
   if (user.role === "EXECUTIVE" && user.groupId) {
+    const isShalomExec = user.group?.name === "샬롬";
+
     sections.push({
-      title: "공동체 관리",
+      title: isShalomExec ? "샬롬" : "공동체 관리",
       items: [
         {
-          label: "공동체 현황",
+          label: isShalomExec ? "샬롬 현황" : "공동체 현황",
           href: `/dashboard/group/${user.groupId}`,
           icon: FolderOpen,
         },
-        {
-          label: "공동체 그래프",
-          href: `/dashboard/graphs/group/${user.groupId}`,
-          icon: TrendingUp,
-        },
+        ...(isShalomExec
+          ? [
+              {
+                label: "샬롬 리스트",
+                href: "/dashboard/shalom",
+                icon: ClipboardList,
+              },
+              {
+                label: "샬롬 그래프",
+                href: "/dashboard/graphs/shalom",
+                icon: TrendingUp,
+              },
+              {
+                label: "샬롬 기록",
+                href: "/dashboard/shalom/history",
+                icon: History,
+              },
+            ]
+          : [
+              {
+                label: "공동체 그래프",
+                href: `/dashboard/graphs/group/${user.groupId}`,
+                icon: TrendingUp,
+              },
+            ]),
       ],
     });
   }
@@ -199,8 +221,13 @@ function getNavItems(user: User, groups: Group[]) {
             icon: FolderOpen,
           },
           {
+            label: "샬롬 리스트",
+            href: "/dashboard/shalom",
+            icon: ClipboardList,
+          },
+          {
             label: "샬롬 그래프",
-            href: `/dashboard/graphs/group/${shalom.id}`,
+            href: "/dashboard/graphs/shalom",
             icon: TrendingUp,
           },
         ],
@@ -223,6 +250,11 @@ function getNavItems(user: User, groups: Group[]) {
         {
           label: "지난 텀 기록",
           href: "/dashboard/history",
+          icon: History,
+        },
+        {
+          label: "샬롬 기록",
+          href: "/dashboard/shalom/history",
           icon: History,
         },
       ],

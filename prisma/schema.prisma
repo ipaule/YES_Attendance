@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  role      String   @default("LEADER") // PASTOR, EXECUTIVE, LEADER
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id])
+  teamId    String?  @unique
+  team      Team?    @relation("LeaderOfTeam")
+  createdAt DateTime @default(now())
+}
+
+model Group {
+  id    String @id @default(cuid())
+  name  String @unique
+  order Int    @default(0)
+  users User[]
+  teams Team[]
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id])
+  leaderId  String?  @unique
+  leader    User?    @relation("LeaderOfTeam", fields: [leaderId], references: [id])
+  members   Member[]
+  dates     AttendanceDate[]
+  createdAt DateTime @default(now())
+}
+
+model Member {
+  id          String       @id @default(cuid())
+  name        String
+  gender      String       // MALE, FEMALE
+  birthYear   Int
+  teamId      String
+  team        Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  attendances Attendance[]
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
+}
+
+model AttendanceDate {
+  id          String       @id @default(cuid())
+  date        DateTime
+  label       String
+  teamId      String
+  team        Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  order       Int          @default(0)
+  attendances Attendance[]
+  createdAt   DateTime     @default(now())
+
+  @@unique([date, teamId])
+}
+
+model Attendance {
+  id               String         @id @default(cuid())
+  memberId         String
+  member           Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  attendanceDateId String
+  attendanceDate   AttendanceDate @relation(fields: [attendanceDateId], references: [id], onDelete: Cascade)
+  status           String         @default("ABSENT") // HERE, ABSENT, AWR
+  awrReason        String?
+
+  @@unique([memberId, attendanceDateId])
+}

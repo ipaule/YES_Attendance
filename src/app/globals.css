@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-noto-sans-kr), "Apple SD Gothic Neo", "Malgun Gothic",
+    sans-serif;
+  --color-primary: #4f46e5;
+  --color-primary-dark: #4338ca;
+}
+
+body {
+  font-family: var(--font-sans);
+}

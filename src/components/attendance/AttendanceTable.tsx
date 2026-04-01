@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ArrowUpDown } from "lucide-react";
 import { AttendanceCell } from "./AttendanceCell";
 import {
   calculateAttendanceRate,
@@ -33,6 +33,11 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
   const [newDate, setNewDate] = useState("");
   const [editingMember, setEditingMember] = useState<string | null>(null);
   const [editData, setEditData] = useState({ name: "", gender: "", birthYear: "" });
+
+  type SortKey = "name" | "gender" | "rate" | "grade";
+  type SortDir = "none" | "asc" | "desc";
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("none");
 
   const attendanceMutation = useMutation({
     mutationFn: async ({
@@ -175,6 +180,39 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
     updateMemberMutation.mutate({ memberId, data: editData });
   };
 
+  const sortedMembers = useMemo(() => {
+    if (!sortKey || sortDir === "none") return team.members;
+    return [...team.members].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "name") {
+        cmp = a.name.localeCompare(b.name, "ko");
+      } else if (sortKey === "gender") {
+        cmp = a.gender.localeCompare(b.gender);
+      } else {
+        const rateA = calculateAttendanceRate(getMemberStatuses(a, team.dates));
+        const rateB = calculateAttendanceRate(getMemberStatuses(b, team.dates));
+        cmp = rateA - rateB;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [team.members, team.dates, sortKey, sortDir]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir("desc");
+    } else {
+      setSortDir((prev) =>
+        prev === "desc" ? "asc" : prev === "asc" ? "none" : "desc"
+      );
+      if (sortDir === "asc") setSortKey(null);
+    }
+  };
+
+  const sortIcon = (key: SortKey) => (
+    <ArrowUpDown className={`h-3 w-3 inline-block ml-0.5 ${sortKey === key && sortDir !== "none" ? "text-indigo-600" : "text-gray-400"}`} />
+  );
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       {/* Header */}
@@ -278,11 +316,17 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="sticky left-0 z-10 bg-gray-50 px-2 py-2 text-left font-medium text-gray-600 w-16 min-w-[64px]">
-                이름
+              <th
+                className="sticky left-0 z-10 bg-gray-50 px-2 py-2 text-left font-medium text-gray-600 w-16 min-w-[64px] cursor-pointer hover:text-indigo-600 select-none"
+                onClick={() => toggleSort("name")}
+              >
+                이름{sortIcon("name")}
               </th>
-              <th className="sticky left-16 z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-10 min-w-[40px] whitespace-nowrap">
-                성별
+              <th
+                className="sticky left-16 z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-10 min-w-[40px] whitespace-nowrap cursor-pointer hover:text-indigo-600 select-none"
+                onClick={() => toggleSort("gender")}
+              >
+                성별{sortIcon("gender")}
               </th>
               <th className="sticky left-[104px] z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-14 min-w-[56px]">
                 또래
@@ -307,17 +351,23 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                   </div>
                 </th>
               ))}
-              <th className="px-2 py-2 text-center font-medium text-gray-600 min-w-[50px]">
-                출석률
+              <th
+                className="px-2 py-2 text-center font-medium text-gray-600 min-w-[50px] cursor-pointer hover:text-indigo-600 select-none"
+                onClick={() => toggleSort("rate")}
+              >
+                출석률{sortIcon("rate")}
               </th>
-              <th className="px-2 py-2 text-center font-medium text-gray-600 min-w-[36px]">
-                등급
+              <th
+                className="px-2 py-2 text-center font-medium text-gray-600 min-w-[36px] cursor-pointer hover:text-indigo-600 select-none"
+                onClick={() => toggleSort("grade")}
+              >
+                등급{sortIcon("grade")}
               </th>
               <th className="px-1 py-2 w-8" />
             </tr>
           </thead>
           <tbody>
-            {team.members.map((member) => {
+            {sortedMembers.map((member) => {
               const statuses = getMemberStatuses(member, team.dates);
               const rate = calculateAttendanceRate(statuses);
               const grade = calculateGrade(rate);

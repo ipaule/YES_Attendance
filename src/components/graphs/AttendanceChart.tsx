@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import {
   LineChart,
   Line,
@@ -7,7 +8,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 
@@ -37,6 +37,16 @@ export function AttendanceChart({
   title,
   subtitle,
 }: AttendanceChartProps) {
+  const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
+
+  const overallKeys = ["전체", "합산"];
+
+  // Ensure 전체/합산 is always last
+  const sortedSeries = [
+    ...series.filter((s) => !overallKeys.includes(s)),
+    ...series.filter((s) => overallKeys.includes(s)),
+  ];
+
   // Filter out internal fields
   const filteredData = chartData.map((point) => {
     const filtered: Record<string, string | number> = {};
@@ -47,6 +57,23 @@ export function AttendanceChart({
     }
     return filtered;
   });
+
+  const handleLegendClick = useCallback((name: string) => {
+    setHiddenSeries((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  }, []);
+
+  const getColor = (name: string, index: number) => {
+    if (overallKeys.includes(name)) return "#1f2937";
+    return COLORS[index % COLORS.length];
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
@@ -62,49 +89,77 @@ export function AttendanceChart({
           데이터가 없습니다.
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={filteredData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 12 }}
-              stroke="#9ca3af"
-            />
-            <YAxis
-              domain={[0, 100]}
-              tick={{ fontSize: 12 }}
-              stroke="#9ca3af"
-              tickFormatter={(v) => `${v}%`}
-            />
-            <Tooltip
-              formatter={(value) => [`${value}%`, undefined]}
-              contentStyle={{
-                borderRadius: "8px",
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-              }}
-            />
-            <Legend />
-            {series.map((name, index) => {
-              const isOverall =
-                name === "전체" || name === "합산";
+        <>
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart data={filteredData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 12 }}
+                stroke="#9ca3af"
+              />
+              <YAxis
+                domain={[0, 100]}
+                tick={{ fontSize: 12 }}
+                stroke="#9ca3af"
+                tickFormatter={(v) => `${v}%`}
+              />
+              <Tooltip
+                formatter={(value) => [`${value}%`, undefined]}
+                contentStyle={{
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb",
+                  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                }}
+              />
+              {sortedSeries.map((name, index) => {
+                const isOverall = overallKeys.includes(name);
+                const isHidden = hiddenSeries.has(name);
+                return (
+                  <Line
+                    key={name}
+                    type="monotone"
+                    dataKey={name}
+                    stroke={getColor(name, index)}
+                    strokeWidth={isOverall ? 3 : 2}
+                    strokeDasharray={isOverall ? "5 5" : undefined}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
+                    hide={isHidden}
+                  />
+                );
+              })}
+            </LineChart>
+          </ResponsiveContainer>
+
+          {/* Custom legend */}
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3">
+            {sortedSeries.map((name, index) => {
+              const isHidden = hiddenSeries.has(name);
+              const color = getColor(name, index);
               return (
-                <Line
+                <button
                   key={name}
-                  type="monotone"
-                  dataKey={name}
-                  stroke={
-                    isOverall ? "#1f2937" : COLORS[index % COLORS.length]
-                  }
-                  strokeWidth={isOverall ? 3 : 2}
-                  strokeDasharray={isOverall ? "5 5" : undefined}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
+                  onClick={() => handleLegendClick(name)}
+                  className="flex items-center gap-1.5 text-xs py-1 cursor-pointer"
+                >
+                  <span
+                    className="inline-block w-3 h-0.5 rounded"
+                    style={{ backgroundColor: isHidden ? "#d1d5db" : color }}
+                  />
+                  <span
+                    style={{
+                      color: isHidden ? "#d1d5db" : "#374151",
+                      textDecoration: isHidden ? "line-through" : undefined,
+                    }}
+                  >
+                    {name}
+                  </span>
+                </button>
               );
             })}
-          </LineChart>
-        </ResponsiveContainer>
+          </div>
+        </>
       )}
     </div>
   );

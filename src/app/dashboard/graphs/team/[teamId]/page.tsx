@@ -13,7 +13,7 @@ export default function TeamGraphPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["graph", "team", teamId],
     queryFn: async () => {
-      const res = await fetch(`/api/graphs?scope=team&id=${teamId}`);
+      const res = await fetch(`/api/graphs?scope=team&id=${teamId}&mode=percentage`);
       if (!res.ok) throw new Error("Failed to fetch graph data");
       return res.json();
     },
@@ -52,6 +52,7 @@ export default function TeamGraphPage() {
         series={data.series}
         title={`${data.teamName} 출석률`}
         subtitle="순원별 출석률 추이 (점선: 전체 평균)"
+        mode="percentage"
       />
     </div>
   );

@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   X,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { User, Group } from "@/types";
@@ -153,27 +154,28 @@ function getNavItems(user: User, groups: Group[]) {
     });
   }
 
-  // Pastor: 공동체 관리 link + 8 group items (4 현황 + 4 그래프) + admin
+  // Pastor: 공동체 관리 + 샬롬 section + 공동체 section + admin
   if (user.role === "PASTOR" && groups.length > 0) {
+    const shalom = groups.find((g) => g.name === "샬롬");
+    const otherGroups = groups.filter((g) => g.name !== "샬롬");
+
+    // 공동체 관리 + other groups (사랑, 소망, 믿음)
     const groupItems: { label: string; href: string; icon: typeof ClipboardList }[] = [];
 
-    // 공동체 관리 tab on top
     groupItems.push({
       label: "공동체 관리",
       href: "/dashboard/groups",
       icon: Users,
     });
 
-    // 샬롬 현황, 사랑 현황, 소망 현황, 믿음 현황
-    for (const g of groups) {
+    for (const g of otherGroups) {
       groupItems.push({
         label: `${g.name} 현황`,
         href: `/dashboard/group/${g.id}`,
         icon: FolderOpen,
       });
     }
-    // 샬롬 그래프, 사랑 그래프, 소망 그래프, 믿음 그래프
-    for (const g of groups) {
+    for (const g of otherGroups) {
       groupItems.push({
         label: `${g.name} 그래프`,
         href: `/dashboard/graphs/group/${g.id}`,
@@ -185,6 +187,25 @@ function getNavItems(user: User, groups: Group[]) {
       title: "공동체",
       items: groupItems,
     });
+
+    // 샬롬 separate section
+    if (shalom) {
+      sections.push({
+        title: "샬롬",
+        items: [
+          {
+            label: "샬롬 현황",
+            href: `/dashboard/group/${shalom.id}`,
+            icon: FolderOpen,
+          },
+          {
+            label: "샬롬 그래프",
+            href: `/dashboard/graphs/group/${shalom.id}`,
+            icon: TrendingUp,
+          },
+        ],
+      });
+    }
 
     sections.push({
       title: "전체 관리",
@@ -198,6 +219,11 @@ function getNavItems(user: User, groups: Group[]) {
           label: "사용자 관리",
           href: "/dashboard/admin",
           icon: Settings,
+        },
+        {
+          label: "지난 텀 기록",
+          href: "/dashboard/history",
+          icon: History,
         },
       ],
     });

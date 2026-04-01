@@ -74,6 +74,13 @@ model GlobalDate {
   order Int      @default(0)
 }
 
+model TermHistory {
+  id        String   @id @default(cuid())
+  name      String
+  data      String   // JSON snapshot of all term data
+  createdAt DateTime @default(now())
+}
+
 model Attendance {
   id               String         @id @default(cuid())
   memberId         String

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -29,6 +29,7 @@ interface AttendanceChartProps {
   series: string[];
   title: string;
   subtitle?: string;
+  mode?: "count" | "percentage";
 }
 
 export function AttendanceChart({
@@ -36,18 +37,17 @@ export function AttendanceChart({
   series,
   title,
   subtitle,
+  mode = "count",
 }: AttendanceChartProps) {
   const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 
   const overallKeys = ["전체", "합산"];
 
-  // Ensure 전체/합산 is always last
   const sortedSeries = [
     ...series.filter((s) => !overallKeys.includes(s)),
     ...series.filter((s) => overallKeys.includes(s)),
   ];
 
-  // Filter out internal fields
   const filteredData = chartData.map((point) => {
     const filtered: Record<string, string | number> = {};
     for (const [key, value] of Object.entries(point)) {
@@ -57,6 +57,19 @@ export function AttendanceChart({
     }
     return filtered;
   });
+
+  const maxValue = useMemo(() => {
+    if (mode === "percentage") return 100;
+    let max = 0;
+    for (const point of filteredData) {
+      for (const [key, value] of Object.entries(point)) {
+        if (key !== "date" && typeof value === "number" && value > max) {
+          max = value;
+        }
+      }
+    }
+    return Math.max(max + 1, 5);
+  }, [filteredData, mode]);
 
   const handleLegendClick = useCallback((name: string) => {
     setHiddenSeries((prev) => {
@@ -74,6 +87,8 @@ export function AttendanceChart({
     if (overallKeys.includes(name)) return "#1f2937";
     return COLORS[index % COLORS.length];
   };
+
+  const unit = mode === "count" ? "명" : "%";
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
@@ -99,13 +114,14 @@ export function AttendanceChart({
                 stroke="#9ca3af"
               />
               <YAxis
-                domain={[0, 100]}
+                domain={[0, maxValue]}
                 tick={{ fontSize: 12 }}
                 stroke="#9ca3af"
-                tickFormatter={(v) => `${v}%`}
+                tickFormatter={(v) => `${v}${unit}`}
+                allowDecimals={false}
               />
               <Tooltip
-                formatter={(value) => [`${value}%`, undefined]}
+                formatter={(value) => [`${value}${unit}`, undefined]}
                 contentStyle={{
                   borderRadius: "8px",
                   border: "1px solid #e5e7eb",

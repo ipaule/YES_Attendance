@@ -36,8 +36,8 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
 
   type SortKey = "name" | "gender" | "rate" | "grade";
   type SortDir = "none" | "asc" | "desc";
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>("none");
+  const [sortKey, setSortKey] = useState<SortKey | null>("rate");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const attendanceMutation = useMutation({
     mutationFn: async ({

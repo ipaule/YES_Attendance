@@ -41,10 +41,14 @@ export async function GET(request: NextRequest) {
       return true;
     });
 
+    const rawVisit = filtered.filter((m) => m.status === "방문").length;
+    const rawEnroll = filtered.filter((m) => m.status === "등록").length;
+    const rawGrad = filtered.filter((m) => m.status === "졸업").length;
+
     const statusCounts = {
-      방문: filtered.filter((m) => m.status === "방문").length,
-      등록: filtered.filter((m) => m.status === "등록").length,
-      졸업: filtered.filter((m) => m.status === "졸업").length,
+      방문: rawVisit + rawEnroll + rawGrad,
+      등록: rawEnroll + rawGrad,
+      졸업: rawGrad,
     };
 
     // --- Bar Graph 2: 졸업 grade distribution (filtered by same date range) ---

@@ -121,11 +121,29 @@ export function AttendanceChart({
                 allowDecimals={false}
               />
               <Tooltip
-                formatter={(value) => [`${value}${unit}`, undefined]}
-                contentStyle={{
-                  borderRadius: "8px",
-                  border: "1px solid #e5e7eb",
-                  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const sorted = [...payload].sort((a, b) => {
+                    const aOverall = overallKeys.includes(String(a.name || ""));
+                    const bOverall = overallKeys.includes(String(b.name || ""));
+                    if (aOverall && !bOverall) return 1;
+                    if (!aOverall && bOverall) return -1;
+                    return 0;
+                  });
+                  return (
+                    <div className="bg-white rounded-lg border border-gray-200 shadow-lg p-3 text-xs">
+                      <p className="font-medium text-gray-700 mb-1.5">{label}</p>
+                      {sorted.map((entry) => (
+                        <div key={entry.name} className="flex items-center justify-between gap-4 py-0.5">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-0.5 rounded" style={{ backgroundColor: entry.color }} />
+                            {entry.name}
+                          </span>
+                          <span className="font-medium">{entry.value}{unit}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
                 }}
               />
               {sortedSeries.map((name, index) => {

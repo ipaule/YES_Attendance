@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
-  const dateObj = new Date(date);
+  const dateObj = new Date(date + "T12:00:00");
   const label = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
 
   // Check for duplicate

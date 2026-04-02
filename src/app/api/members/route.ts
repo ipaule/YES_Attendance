@@ -38,8 +38,22 @@ export async function POST(request: NextRequest) {
       teamId,
       order: (maxOrder?.order ?? -1) + 1,
     },
-    include: { attendances: true },
+    include: { attendances: true, team: { include: { group: { select: { name: true } } } } },
   });
+
+  // Update RosterMember groupName and teamName if found
+  const rosterMatch = await prisma.rosterMember.findFirst({
+    where: { name },
+  });
+  if (rosterMatch) {
+    await prisma.rosterMember.update({
+      where: { id: rosterMatch.id },
+      data: {
+        groupName: member.team.group.name,
+        teamName: member.team.name,
+      },
+    });
+  }
 
   return NextResponse.json({ member }, { status: 201 });
 }

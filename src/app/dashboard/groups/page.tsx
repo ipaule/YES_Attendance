@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FolderOpen, BarChart3, CalendarPlus, RotateCcw } from "lucide-react";
+import { FolderOpen, BarChart3, CalendarPlus, RotateCcw, ClipboardList, Settings, History, TrendingUp } from "lucide-react";
 import type { Group } from "@/types";
 
 export default function GroupsPage() {
@@ -281,35 +281,85 @@ export default function GroupsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {data?.filter((g) => g.name !== "샬롬").map((group) => (
-          <div key={group.id} className="contents">
-            <Link
-              href={`/dashboard/group/${group.id}`}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-indigo-300 hover:shadow-md transition-all flex items-center gap-3"
-            >
-              <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                <FolderOpen className="h-5 w-5 text-indigo-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-800">{group.name}</h3>
-                <p className="text-xs text-gray-500">공동체 현황</p>
-              </div>
+      {/* 공동체 */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">공동체</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {data?.filter((g) => g.name !== "샬롬").map((group) => (
+            <Link key={`g-${group.id}`} href={`/dashboard/group/${group.id}`}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-indigo-300 hover:shadow-md transition-all flex items-center gap-3">
+              <div className="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0"><FolderOpen className="h-4 w-4 text-indigo-600" /></div>
+              <div><h3 className="font-semibold text-sm text-gray-800">{group.name} 현황</h3></div>
             </Link>
-            <Link
-              href={`/dashboard/graphs/group/${group.id}`}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-emerald-300 hover:shadow-md transition-all flex items-center gap-3"
-            >
-              <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                <BarChart3 className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-800">{group.name}</h3>
-                <p className="text-xs text-gray-500">출석 그래프</p>
-              </div>
-            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* 샬롬 */}
+      {(() => {
+        const shalom = data?.find((g) => g.name === "샬롬");
+        if (!shalom) return null;
+        return (
+          <div>
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">샬롬</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <Link href={`/dashboard/group/${shalom.id}`}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-indigo-300 hover:shadow-md transition-all flex items-center gap-3">
+                <div className="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0"><FolderOpen className="h-4 w-4 text-indigo-600" /></div>
+                <div><h3 className="font-semibold text-sm text-gray-800">샬롬 현황</h3></div>
+              </Link>
+              <Link href="/dashboard/shalom"
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-amber-300 hover:shadow-md transition-all flex items-center gap-3">
+                <div className="w-9 h-9 bg-amber-50 rounded-lg flex items-center justify-center flex-shrink-0"><ClipboardList className="h-4 w-4 text-amber-600" /></div>
+                <div><h3 className="font-semibold text-sm text-gray-800">샬롬 리스트</h3></div>
+              </Link>
+              <Link href="/dashboard/graphs/shalom"
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-emerald-300 hover:shadow-md transition-all flex items-center gap-3">
+                <div className="w-9 h-9 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0"><TrendingUp className="h-4 w-4 text-emerald-600" /></div>
+                <div><h3 className="font-semibold text-sm text-gray-800">샬롬 그래프</h3></div>
+              </Link>
+            </div>
           </div>
-        ))}
+        );
+      })()}
+
+      {/* 전체 관리 */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">전체 관리</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Link href="/dashboard/graphs/combined"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-emerald-300 hover:shadow-md transition-all flex items-center gap-3">
+            <div className="w-9 h-9 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0"><BarChart3 className="h-4 w-4 text-emerald-600" /></div>
+            <div><h3 className="font-semibold text-sm text-gray-800">합산 그래프</h3></div>
+          </Link>
+          <Link href="/dashboard/roster"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-purple-300 hover:shadow-md transition-all flex items-center gap-3">
+            <div className="w-9 h-9 bg-purple-50 rounded-lg flex items-center justify-center flex-shrink-0"><ClipboardList className="h-4 w-4 text-purple-600" /></div>
+            <div><h3 className="font-semibold text-sm text-gray-800">전체 리스트</h3></div>
+          </Link>
+          <Link href="/dashboard/admin"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-gray-300 hover:shadow-md transition-all flex items-center gap-3">
+            <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"><Settings className="h-4 w-4 text-gray-600" /></div>
+            <div><h3 className="font-semibold text-sm text-gray-800">리더쉽 관리</h3></div>
+          </Link>
+        </div>
+      </div>
+
+      {/* 기록 */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">기록</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Link href="/dashboard/history"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-gray-300 hover:shadow-md transition-all flex items-center gap-3">
+            <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"><History className="h-4 w-4 text-gray-600" /></div>
+            <div><h3 className="font-semibold text-sm text-gray-800">지난 텀 기록</h3></div>
+          </Link>
+          <Link href="/dashboard/shalom/history"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-gray-300 hover:shadow-md transition-all flex items-center gap-3">
+            <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"><History className="h-4 w-4 text-gray-600" /></div>
+            <div><h3 className="font-semibold text-sm text-gray-800">샬롬 기록</h3></div>
+          </Link>
+        </div>
       </div>
     </div>
   );

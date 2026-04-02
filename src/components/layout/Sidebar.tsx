@@ -39,7 +39,7 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
 
   const roleLabel =
     user.role === "PASTOR"
-      ? "목사님"
+      ? "사역자"
       : user.role === "EXECUTIVE"
         ? "임원"
         : "순장";
@@ -50,10 +50,10 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
     <div className="flex flex-col h-full bg-white border-r border-gray-200">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-5 border-b border-gray-100">
-        <div>
-          <h2 className="text-lg font-bold text-gray-900">YES 청년부</h2>
+        <Link href="/dashboard/groups" onClick={onClose}>
+          <h2 className="text-lg font-bold text-gray-900 hover:text-indigo-600 transition-colors">YES 청년부</h2>
           <p className="text-xs text-gray-500">출석 관리 시스템</p>
-        </div>
+        </Link>
         {onClose && (
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 lg:hidden">
             <X className="h-5 w-5" />
@@ -181,27 +181,14 @@ function getNavItems(user: User, groups: Group[]) {
     const shalom = groups.find((g) => g.name === "샬롬");
     const otherGroups = groups.filter((g) => g.name !== "샬롬");
 
-    // 공동체 관리 + other groups (사랑, 소망, 믿음)
+    // other groups (사랑, 소망, 믿음)
     const groupItems: { label: string; href: string; icon: typeof ClipboardList }[] = [];
-
-    groupItems.push({
-      label: "공동체 관리",
-      href: "/dashboard/groups",
-      icon: Users,
-    });
 
     for (const g of otherGroups) {
       groupItems.push({
         label: `${g.name} 현황`,
         href: `/dashboard/group/${g.id}`,
         icon: FolderOpen,
-      });
-    }
-    for (const g of otherGroups) {
-      groupItems.push({
-        label: `${g.name} 그래프`,
-        href: `/dashboard/graphs/group/${g.id}`,
-        icon: TrendingUp,
       });
     }
 
@@ -243,10 +230,21 @@ function getNavItems(user: User, groups: Group[]) {
           icon: BarChart3,
         },
         {
-          label: "사용자 관리",
+          label: "전체 리스트",
+          href: "/dashboard/roster",
+          icon: ClipboardList,
+        },
+        {
+          label: "리더쉽 관리",
           href: "/dashboard/admin",
           icon: Settings,
         },
+      ],
+    });
+
+    sections.push({
+      title: "기록",
+      items: [
         {
           label: "지난 텀 기록",
           href: "/dashboard/history",

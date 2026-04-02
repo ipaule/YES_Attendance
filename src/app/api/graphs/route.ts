@@ -179,6 +179,11 @@ export async function GET(request: NextRequest) {
       });
     });
 
+    // Get roster count for percentage mode denominator
+    const rosterCount = mode === "percentage"
+      ? await prisma.rosterMember.count()
+      : 0;
+
     const allDates = Array.from(allDatesSet);
     const combinedChartData = allDates.map((date) => {
       const point: Record<string, string | number> = { date };
@@ -193,6 +198,7 @@ export async function GET(request: NextRequest) {
           if (mode === "count") {
             point[gd.groupName] = (matching._totalHere as number) || 0;
           } else {
+            // Per-group percentage: HERE / roster for that group
             point[gd.groupName] = matching["전체"] || 0;
           }
           totalHere += (matching._totalHere as number) || 0;
@@ -203,8 +209,9 @@ export async function GET(request: NextRequest) {
       if (mode === "count") {
         point["합산"] = totalHere;
       } else {
-        point["합산"] = totalEligible > 0
-          ? Math.round((totalHere / totalEligible) * 100)
+        // Use roster count as denominator so it matches the stat label
+        point["합산"] = rosterCount > 0
+          ? Math.round((totalHere / rosterCount) * 100)
           : 0;
       }
 

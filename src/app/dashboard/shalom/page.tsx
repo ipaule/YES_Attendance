@@ -336,7 +336,7 @@ export default function ShalomListPage() {
           <input type="date" value={newMember.visitDate} onChange={(e) => setNewMember((p) => ({ ...p, visitDate: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5" />
           <input type="text" placeholder="인도자" value={newMember.inviter} onChange={(e) => setNewMember((p) => ({ ...p, inviter: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 w-20" />
           <input type="text" placeholder="순장" value={newMember.leader} onChange={(e) => setNewMember((p) => ({ ...p, leader: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 w-20" />
-          <input type="text" placeholder="참조" value={newMember.note} onChange={(e) => setNewMember((p) => ({ ...p, note: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 flex-1 min-w-[120px]" />
+          <input type="text" placeholder="비고" value={newMember.note} onChange={(e) => setNewMember((p) => ({ ...p, note: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 flex-1 min-w-[120px]" />
           <button onClick={() => newMember.name && addMutation.mutate(newMember)} disabled={!newMember.name || addMutation.isPending} className="text-sm bg-indigo-600 text-white rounded-lg px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50 flex-shrink-0">추가</button>
           <button onClick={() => setShowAdd(false)} className="text-sm text-gray-500 hover:text-gray-700 flex-shrink-0">취소</button>
         </div>
@@ -361,7 +361,7 @@ export default function ShalomListPage() {
                 <th className="px-1 py-2 text-center font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("visitDate")}>방문 날짜{sortIcon("visitDate")}</th>
                 <th className="px-1 py-2 text-center font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("inviter")}>인도자{sortIcon("inviter")}</th>
                 <th className="px-1 py-2 text-center font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("leader")}>순장{sortIcon("leader")}</th>
-                <th className="px-1 py-2 text-left font-medium text-gray-600 min-w-[200px]">참조</th>
+                <th className="px-1 py-2 text-left font-medium text-gray-600 min-w-[200px]">비고</th>
                 <th className="px-1 py-2 text-center font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("status")}>상태{sortIcon("status")}</th>
                 <th className="px-1 py-2 w-8" />
               </tr>

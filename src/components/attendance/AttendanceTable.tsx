@@ -64,15 +64,17 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
     gender: "MALE",
     birthYear: "",
   });
+  const [suggestions, setSuggestions] = useState<{ id: string; name: string; gender: string; birthYear: string }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [newDate, setNewDate] = useState("");
   const [editingMember, setEditingMember] = useState<string | null>(null);
   const [editData, setEditData] = useState({ name: "", gender: "", birthYear: "" });
 
-  type SortKey = "name" | "gender" | "rate" | "grade";
+  type SortKey = "name" | "gender" | "birthYear" | "rate" | "grade";
   type SortDir = "none" | "asc" | "desc";
-  const [sortKey, setSortKey] = useState<SortKey | null>("rate");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("none");
 
   const attendanceMutation = useMutation({
     mutationFn: async ({
@@ -256,6 +258,9 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
         cmp = a.name.localeCompare(b.name, "ko");
       } else if (sortKey === "gender") {
         cmp = a.gender.localeCompare(b.gender);
+      } else if (sortKey === "birthYear") {
+        const toNum = (v: string) => { const n = parseInt(v) || 0; return n >= 50 ? 1900 + n : 2000 + n; };
+        cmp = toNum(a.birthYear) - toNum(b.birthYear);
       } else {
         const rateA = calculateAttendanceRate(getMemberStatuses(a, team.dates));
         const rateB = calculateAttendanceRate(getMemberStatuses(b, team.dates));
@@ -329,18 +334,55 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
         </div>
       )}
 
-      {/* Add member form */}
+      {/* Add member form with auto-complete */}
       {showAddMember && (
         <div className="px-4 py-3 border-b border-gray-100 bg-green-50 flex flex-wrap items-center gap-3">
-          <input
-            type="text"
-            placeholder="이름"
-            value={newMember.name}
-            onChange={(e) =>
-              setNewMember((prev) => ({ ...prev, name: e.target.value }))
-            }
-            className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 w-20 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="이름 검색"
+              value={newMember.name}
+              onChange={async (e) => {
+                const val = e.target.value;
+                setNewMember((prev) => ({ ...prev, name: val }));
+                if (val.length >= 1) {
+                  try {
+                    const res = await fetch(`/api/roster/autocomplete?groupName=${team.group?.name || ""}&q=${encodeURIComponent(val)}`);
+                    if (res.ok) {
+                      const data = await res.json();
+                      setSuggestions(data.suggestions);
+                      setShowSuggestions(true);
+                    }
+                  } catch { /* ignore */ }
+                } else {
+                  setShowSuggestions(false);
+                }
+              }}
+              onFocus={async () => {
+                if (newMember.name.length >= 1) setShowSuggestions(true);
+              }}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 w-32 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg w-48 max-h-40 overflow-y-auto">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.id}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setNewMember({ name: s.name, gender: s.gender || "MALE", birthYear: s.birthYear || "" });
+                      setShowSuggestions(false);
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-50 flex justify-between"
+                  >
+                    <span>{s.name}</span>
+                    <span className="text-xs text-gray-400">{s.gender === "MALE" ? "남" : s.gender === "FEMALE" ? "여" : ""} {s.birthYear}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <select
             value={newMember.gender}
             onChange={(e) =>
@@ -399,8 +441,11 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
               >
                 성별{sortIcon("gender")}
               </th>
-              <th className="sticky left-[136px] z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-14 min-w-[56px]">
-                또래
+              <th
+                className="sticky left-[136px] z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-14 min-w-[56px] cursor-pointer hover:text-indigo-600 select-none"
+                onClick={() => toggleSort("birthYear")}
+              >
+                또래{sortIcon("birthYear")}
               </th>
               {team.dates.map((date) => (
                 <th

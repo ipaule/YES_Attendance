@@ -30,6 +30,8 @@ interface AttendanceChartProps {
   title: string;
   subtitle?: string;
   mode?: "count" | "percentage";
+  maxOverride?: number;
+  onHoverDate?: (dateLabel: string | null) => void;
 }
 
 export function AttendanceChart({
@@ -37,6 +39,8 @@ export function AttendanceChart({
   series,
   title,
   subtitle,
+  maxOverride,
+  onHoverDate,
   mode = "count",
 }: AttendanceChartProps) {
   const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
@@ -59,6 +63,7 @@ export function AttendanceChart({
   });
 
   const maxValue = useMemo(() => {
+    if (maxOverride) return maxOverride;
     if (mode === "percentage") return 100;
     let max = 0;
     for (const point of filteredData) {
@@ -122,6 +127,10 @@ export function AttendanceChart({
               />
               <Tooltip
                 content={({ active, payload, label }) => {
+                  if (onHoverDate) {
+                    const newDate = active && payload?.length ? (label as string) : null;
+                    setTimeout(() => onHoverDate(newDate), 0);
+                  }
                   if (!active || !payload?.length) return null;
                   const sorted = [...payload].sort((a, b) => {
                     const aOverall = overallKeys.includes(String(a.name || ""));

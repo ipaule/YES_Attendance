@@ -43,13 +43,13 @@ export async function PATCH(request: NextRequest) {
     },
     update: {
       status,
-      awrReason: status === "AWR" ? awrReason || null : null,
+      awrReason: (status === "AWR" || status === "ABSENT") ? awrReason || null : null,
     },
     create: {
       memberId,
       attendanceDateId,
       status,
-      awrReason: status === "AWR" ? awrReason || null : null,
+      awrReason: (status === "AWR" || status === "ABSENT") ? awrReason || null : null,
     },
   });
 

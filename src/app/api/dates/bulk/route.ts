@@ -22,8 +22,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    // Use noon to avoid timezone shifts
+    const start = new Date(startDate + "T12:00:00");
+    const end = new Date(endDate + "T12:00:00");
 
     if (start > end) {
       return NextResponse.json(

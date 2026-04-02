@@ -65,7 +65,7 @@ export default function ShalomHistoryDetailPage() {
                 <th className="px-2 py-2 text-center font-medium text-gray-600">방문 날짜</th>
                 <th className="px-2 py-2 text-center font-medium text-gray-600">인도자</th>
                 <th className="px-2 py-2 text-center font-medium text-gray-600">샬롬 순장</th>
-                <th className="px-2 py-2 text-center font-medium text-gray-600">참조</th>
+                <th className="px-2 py-2 text-center font-medium text-gray-600">비고</th>
                 <th className="px-2 py-2 text-center font-medium text-gray-600">상태</th>
               </tr>
             </thead>

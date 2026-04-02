@@ -16,41 +16,46 @@ export function AttendanceCell({
   awrReason,
   onChange,
 }: AttendanceCellProps) {
-  const [showAwrInput, setShowAwrInput] = useState(false);
+  const [showReasonInput, setShowReasonInput] = useState<"ABSENT" | "AWR" | null>(null);
   const [reason, setReason] = useState(awrReason || "");
   const [showTooltip, setShowTooltip] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (showAwrInput && inputRef.current) {
+    if (showReasonInput && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [showAwrInput]);
+  }, [showReasonInput]);
 
   const handleClick = () => {
-    // Cycle: blank → O → X → AWR → O
+    // Cycle: blank → O → X → (reason popup for X) → AWR → (reason popup for AWR) → O
     if (status === "HERE") {
+      // Change to X immediately, then show reason popup
       onChange("ABSENT");
+      setReason("");
+      setTimeout(() => setShowReasonInput("ABSENT"), 50);
     } else if (status === "ABSENT") {
-      setShowAwrInput(true);
+      // Change to AWR immediately, then show reason popup
+      onChange("AWR");
+      setReason("");
+      setTimeout(() => setShowReasonInput("AWR"), 50);
     } else if (status === "AWR") {
       onChange("HERE");
     } else {
-      // blank/default → O
       onChange("HERE");
     }
   };
 
-  const handleAwrSubmit = () => {
-    onChange("AWR", reason);
-    setShowAwrInput(false);
+  const handleReasonSubmit = () => {
+    if (showReasonInput) {
+      onChange(showReasonInput, reason || undefined);
+      setShowReasonInput(null);
+    }
   };
 
-  const handleAwrCancel = () => {
-    setShowAwrInput(false);
-    setReason(awrReason || "");
-    // Skip AWR, go back to O
-    onChange("HERE");
+  const handleReasonCancel = () => {
+    setShowReasonInput(null);
+    setReason("");
   };
 
   const getStatusIcon = () => {
@@ -66,18 +71,20 @@ export function AttendanceCell({
     }
   };
 
+  const hasReason = (status === "ABSENT" || status === "AWR") && awrReason;
+
   return (
     <div className="relative">
       <button
         onClick={handleClick}
-        onMouseEnter={() => status === "AWR" && awrReason && setShowTooltip(true)}
+        onMouseEnter={() => hasReason && setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
         className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
       >
         {getStatusIcon()}
       </button>
 
-      {/* AWR Tooltip */}
+      {/* Reason Tooltip (for both X and AWR) */}
       {showTooltip && awrReason && (
         <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap shadow-lg">
           {awrReason}
@@ -85,31 +92,33 @@ export function AttendanceCell({
         </div>
       )}
 
-      {/* AWR Reason Input */}
-      {showAwrInput && (
+      {/* Reason Input (for both X and AWR) */}
+      {showReasonInput && (
         <div className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-48">
-          <p className="text-xs text-gray-500 mb-2">사유 입력</p>
+          <p className="text-xs text-gray-500 mb-2">
+            {showReasonInput === "ABSENT" ? "결석" : "사유결석"} 사유 입력
+          </p>
           <input
             ref={inputRef}
             type="text"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleAwrSubmit();
-              if (e.key === "Escape") handleAwrCancel();
+              if (e.key === "Enter") handleReasonSubmit();
+              if (e.key === "Escape") handleReasonCancel();
             }}
-            placeholder="사유를 입력하세요"
+            placeholder="사유 (선택)"
             className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
           <div className="flex gap-1 mt-2">
             <button
-              onClick={handleAwrSubmit}
+              onClick={handleReasonSubmit}
               className="flex-1 text-xs bg-indigo-600 text-white rounded px-2 py-1 hover:bg-indigo-700"
             >
               확인
             </button>
             <button
-              onClick={handleAwrCancel}
+              onClick={handleReasonCancel}
               className="flex-1 text-xs bg-gray-100 text-gray-600 rounded px-2 py-1 hover:bg-gray-200"
             >
               취소

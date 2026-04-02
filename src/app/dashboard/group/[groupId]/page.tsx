@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Plus, Users, Pencil, Trash2, Check, X, ArrowLeft, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { AttendanceChart } from "@/components/graphs/AttendanceChart";
 
 interface TeamSummary {
   id: string;
@@ -94,6 +95,19 @@ export default function GroupPage() {
       queryClient.invalidateQueries({ queryKey: ["teams", groupId] });
       queryClient.invalidateQueries({ queryKey: ["available-leaders", groupId] });
     },
+  });
+
+  const [graphMode, setGraphMode] = useState<"count" | "percentage">("count");
+  const isShalom = data?.[0]?.group?.name === "샬롬";
+
+  const { data: graphData } = useQuery({
+    queryKey: ["graph", "group", groupId, graphMode],
+    queryFn: async () => {
+      const res = await fetch(`/api/graphs?scope=group&id=${groupId}&mode=${graphMode}`);
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    enabled: !isShalom && !!data,
   });
 
   const groupName = data?.[0]?.group?.name || "";
@@ -268,6 +282,35 @@ export default function GroupPage() {
               위의 &quot;순 추가&quot; 버튼을 클릭하여 순을 만드세요.
             </p>
           )}
+        </div>
+      )}
+
+      {/* Graph (non-샬롬 only) */}
+      {!isShalom && graphData && (
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <div className="flex bg-gray-100 rounded-lg p-0.5">
+              <button
+                onClick={() => setGraphMode("count")}
+                className={`text-xs px-3 py-1.5 rounded-md transition-colors ${graphMode === "count" ? "bg-white text-indigo-700 font-medium shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                출석 인원
+              </button>
+              <button
+                onClick={() => setGraphMode("percentage")}
+                className={`text-xs px-3 py-1.5 rounded-md transition-colors ${graphMode === "percentage" ? "bg-white text-indigo-700 font-medium shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                출석률
+              </button>
+            </div>
+          </div>
+          <AttendanceChart
+            chartData={graphData.chartData}
+            series={graphData.series}
+            title={`${graphData.groupName} 공동체 ${graphMode === "count" ? "출석 인원" : "출석률"}`}
+            subtitle={graphMode === "count" ? "순별 출석 인원 추이 (점선: 전체 합계)" : "순별 출석률 추이 (점선: 공동체 전체 평균)"}
+            mode={graphMode}
+          />
         </div>
       )}
     </div>

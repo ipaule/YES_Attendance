@@ -8,15 +8,32 @@ import { AttendanceChart } from "@/components/graphs/AttendanceChart";
 
 type GraphMode = "count" | "percentage";
 
+interface RosterStats {
+  total: number;
+  assigned: number;
+  attendanceByDate: Record<string, number>;
+  closestSunday: string;
+}
+
 export default function CombinedGraphPage() {
   const router = useRouter();
   const [mode, setMode] = useState<GraphMode>("count");
+  const [hoveredDate, setHoveredDate] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["graph", "combined", mode],
     queryFn: async () => {
       const res = await fetch(`/api/graphs?scope=combined&mode=${mode}`);
-      if (!res.ok) throw new Error("Failed to fetch graph data");
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["roster-stats"],
+    queryFn: async (): Promise<RosterStats> => {
+      const res = await fetch("/api/roster/stats");
+      if (!res.ok) throw new Error("Failed");
       return res.json();
     },
   });
@@ -36,6 +53,13 @@ export default function CombinedGraphPage() {
       </div>
     );
   }
+
+  const activeDate = hoveredDate || stats?.closestSunday || "";
+  const attended = stats?.attendanceByDate?.[activeDate] || 0;
+  const total = stats?.total || 0;
+  const assigned = stats?.assigned || 0;
+  const pctOfTotal = total > 0 ? Math.round((attended / total) * 100) : 0;
+  const pctOfAssigned = assigned > 0 ? Math.round((attended / assigned) * 100) : 0;
 
   return (
     <div className="space-y-4 pb-20 lg:pb-4">
@@ -74,6 +98,30 @@ export default function CombinedGraphPage() {
         </div>
       </div>
 
+      {/* Stats label */}
+      {stats && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+            <p className="text-xs font-medium text-indigo-500 mb-1">재적</p>
+            <p className="text-3xl font-bold text-indigo-700">{total}<span className="text-lg ml-0.5">명</span></p>
+          </div>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+            <p className="text-xs font-medium text-emerald-500 mb-1">순 등록</p>
+            <p className="text-3xl font-bold text-emerald-700">{assigned}<span className="text-lg ml-0.5">명</span></p>
+            <p className="text-lg font-semibold text-emerald-600 mt-1">{total > 0 ? Math.round((assigned / total) * 100) : 0}%<span className="text-xs font-normal text-emerald-400 ml-1">of 재적</span></p>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <p className="text-sm font-semibold text-amber-600 mb-1">{activeDate || "-"} 출석</p>
+            <p className="text-3xl font-bold text-amber-700">{attended}<span className="text-lg ml-0.5">명</span></p>
+            <p className="text-lg font-semibold text-amber-600 mt-1">
+              {pctOfTotal}%<span className="text-xs font-normal text-amber-400 ml-1">재적</span>
+              <span className="text-amber-300 mx-1.5">·</span>
+              {pctOfAssigned}%<span className="text-xs font-normal text-amber-400 ml-1">순등록</span>
+            </p>
+          </div>
+        </div>
+      )}
+
       <AttendanceChart
         chartData={data.chartData}
         series={data.series}
@@ -84,6 +132,8 @@ export default function CombinedGraphPage() {
             : "공동체별 출석률 추이 (점선: 합산 평균)"
         }
         mode={mode}
+        maxOverride={mode === "count" && total > 0 ? total : undefined}
+        onHoverDate={setHoveredDate}
       />
     </div>
   );

@@ -69,7 +69,7 @@ export default function SignupPage() {
 
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-              아이디
+              이름
             </label>
             <input
               id="username"

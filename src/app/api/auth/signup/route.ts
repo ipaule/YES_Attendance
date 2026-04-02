@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       return NextResponse.json(
-        { error: "이미 사용 중인 아이디입니다. 다른 아이디를 입력해주세요." },
+        { error: "이미 사용 중인 이름입니다. 다른 이름을 입력해주세요." },
         { status: 409 }
       );
     }

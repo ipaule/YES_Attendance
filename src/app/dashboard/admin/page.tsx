@@ -1,8 +1,9 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, ArrowUpDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import type { Role } from "@/types";
 
@@ -19,6 +20,11 @@ interface UserRecord {
 
 export default function AdminPage() {
   const { user } = useAuth();
+
+  type SortKey = "username" | "role" | "group" | "team";
+  type SortDir = "none" | "asc" | "desc";
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("none");
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -78,6 +84,28 @@ export default function AdminPage() {
     },
   });
 
+  const sortedUsers = useMemo(() => {
+    if (!users || !sortKey || sortDir === "none") return users || [];
+    return [...users].sort((a, b) => {
+      let va = "", vb = "";
+      if (sortKey === "username") { va = a.username; vb = b.username; }
+      else if (sortKey === "role") { va = a.role; vb = b.role; }
+      else if (sortKey === "group") { va = a.group?.name || ""; vb = b.group?.name || ""; }
+      else if (sortKey === "team") { va = a.team?.name || ""; vb = b.team?.name || ""; }
+      const cmp = va.localeCompare(vb, "ko");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [users, sortKey, sortDir]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey !== key) { setSortKey(key); setSortDir("desc"); }
+    else setSortDir((p) => p === "desc" ? "asc" : p === "asc" ? "none" : "desc");
+  };
+
+  const sortIcon = (key: SortKey) => (
+    <ArrowUpDown className={`h-3 w-3 inline-block ml-0.5 ${sortKey === key && sortDir !== "none" ? "text-indigo-600" : "text-gray-400"}`} />
+  );
+
   if (user?.role !== "PASTOR") {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
@@ -130,15 +158,15 @@ export default function AdminPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="px-2 py-3 text-center font-medium text-gray-600 w-10">#</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">아이디</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">역할</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">공동체</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">담당 순</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("username")}>이름{sortIcon("username")}</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("role")}>역할{sortIcon("role")}</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("group")}>공동체{sortIcon("group")}</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("team")}>담당 순{sortIcon("team")}</th>
                 <th className="px-2 py-3 w-10" />
               </tr>
             </thead>
             <tbody>
-              {users?.map((u, idx) => (
+              {sortedUsers.map((u, idx) => (
                 <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-2 py-3 text-center text-xs text-gray-400">{idx + 1}</td>
                   <td className="px-4 py-3">

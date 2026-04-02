@@ -19,6 +19,7 @@ async function main() {
   await turso.$executeRawUnsafe("DELETE FROM Member");
   await turso.$executeRawUnsafe("DELETE FROM ShalomMember");
   await turso.$executeRawUnsafe("DELETE FROM ShalomHistory");
+  await turso.$executeRawUnsafe("DELETE FROM RosterMember");
   await turso.$executeRawUnsafe("DELETE FROM TermHistory");
   await turso.$executeRawUnsafe("DELETE FROM GlobalDate");
   await turso.$executeRawUnsafe("UPDATE User SET teamId = NULL");
@@ -110,6 +111,13 @@ async function main() {
     await turso.shalomHistory.create({ data: s });
   }
   console.log(`  ShalomHistory: ${shalomHistories.length}`);
+
+  // Sync RosterMembers
+  const rosterMembers = await local.rosterMember.findMany();
+  for (const r of rosterMembers) {
+    await turso.rosterMember.create({ data: r });
+  }
+  console.log(`  RosterMembers: ${rosterMembers.length}`);
 
   console.log("Done!");
 }

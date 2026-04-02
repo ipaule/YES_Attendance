@@ -202,13 +202,14 @@ export default function TermDetailPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="sticky left-0 z-10 bg-gray-50 px-2 py-2 text-left font-medium text-gray-600 w-16 min-w-[64px]">
+                      <th className="sticky left-0 z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-400 w-8 min-w-[32px]">#</th>
+                      <th className="sticky left-8 z-10 bg-gray-50 px-2 py-2 text-left font-medium text-gray-600 w-16 min-w-[64px]">
                         이름
                       </th>
-                      <th className="sticky left-16 z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-10 min-w-[40px] whitespace-nowrap">
+                      <th className="sticky left-24 z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-10 min-w-[40px] whitespace-nowrap">
                         성별
                       </th>
-                      <th className="sticky left-[104px] z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-14 min-w-[56px]">
+                      <th className="sticky left-[136px] z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-14 min-w-[56px]">
                         또래
                       </th>
                       {team.dates.map((date) => (
@@ -244,7 +245,7 @@ export default function TermDetailPage() {
                         );
                         return rateB - rateA;
                       })
-                      .map((member) => {
+                      .map((member, idx) => {
                         const statuses = team.dates.map((date) => {
                           const att = member.attendances.find(
                             (a) => a.attendanceDate.label === date.label
@@ -259,13 +260,14 @@ export default function TermDetailPage() {
                             key={member.id}
                             className="border-b border-gray-100"
                           >
-                            <td className="sticky left-0 z-10 bg-white px-2 py-1.5 text-sm">
+                            <td className="sticky left-0 z-10 bg-white px-1 py-1.5 text-center text-xs text-gray-400 w-8">{idx + 1}</td>
+                            <td className="sticky left-8 z-10 bg-white px-2 py-1.5 text-sm">
                               {member.name}
                             </td>
-                            <td className="sticky left-16 z-10 bg-white px-1 py-1.5 text-center text-xs text-gray-500">
+                            <td className="sticky left-24 z-10 bg-white px-1 py-1.5 text-center text-xs text-gray-500">
                               {member.gender === "MALE" ? "남" : "여"}
                             </td>
-                            <td className="sticky left-[104px] z-10 bg-white px-1 py-1.5 text-center text-xs text-gray-500">
+                            <td className="sticky left-[136px] z-10 bg-white px-1 py-1.5 text-center text-xs text-gray-500">
                               {member.birthYear}
                             </td>
                             {team.dates.map((date) => {

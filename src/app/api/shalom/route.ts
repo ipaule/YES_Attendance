@@ -11,7 +11,7 @@ export async function GET() {
   if (!hasAccess) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
 
   const members = await prisma.shalomMember.findMany({
-    orderBy: { visitDate: "desc" },
+    orderBy: { order: "asc" },
   });
 
   return NextResponse.json({ members });

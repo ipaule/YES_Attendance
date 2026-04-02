@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS "ShalomMember" (
     "inviter" TEXT NOT NULL DEFAULT '',
     "leader" TEXT NOT NULL DEFAULT '',
     "note" TEXT NOT NULL DEFAULT '',
+    "order" INTEGER NOT NULL DEFAULT 0,
     "status" TEXT NOT NULL DEFAULT '방문',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

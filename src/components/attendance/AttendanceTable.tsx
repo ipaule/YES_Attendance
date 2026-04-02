@@ -2,7 +2,23 @@
 
 import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, ArrowUpDown } from "lucide-react";
+import { Plus, Trash2, ArrowUpDown, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { AttendanceCell } from "./AttendanceCell";
 import {
   calculateAttendanceRate,
@@ -16,6 +32,25 @@ import type {
   AttendanceRecord,
   DateColumn,
 } from "@/types";
+
+function SortableTableRow({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <tr ref={setNodeRef} style={style} className="border-b border-gray-100 hover:bg-gray-50" {...attributes}>
+      <td className="px-1 py-1 text-center w-6">
+        <button {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+      </td>
+      {children}
+    </tr>
+  );
+}
 
 interface AttendanceTableProps {
   team: TeamWithData;
@@ -149,6 +184,39 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
       queryClient.invalidateQueries({ queryKey: ["team", team.id] });
     },
   });
+
+  const reorderMutation = useMutation({
+    mutationFn: async (memberIds: string[]) => {
+      const res = await fetch("/api/members/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId: team.id, memberIds }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["team", team.id] }),
+  });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor)
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    // Reset sort when dragging
+    setSortKey(null);
+    setSortDir("none");
+
+    const list = sortedMembers;
+    const oldIndex = list.findIndex((m) => m.id === active.id);
+    const newIndex = list.findIndex((m) => m.id === over.id);
+    const reordered = arrayMove(list, oldIndex, newIndex);
+    reorderMutation.mutate(reordered.map((m) => m.id));
+  };
 
   const getAttendance = (
     member: Member & { attendances: AttendanceRecord[] },
@@ -312,23 +380,26 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
       )}
 
       {/* Table */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
+              <th className="bg-gray-50 px-1 py-2 w-6" />
+              <th className="sticky left-0 z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-400 w-8 min-w-[32px]">#</th>
               <th
-                className="sticky left-0 z-10 bg-gray-50 px-2 py-2 text-left font-medium text-gray-600 w-16 min-w-[64px] cursor-pointer hover:text-indigo-600 select-none"
+                className="sticky left-8 z-10 bg-gray-50 px-2 py-2 text-left font-medium text-gray-600 w-16 min-w-[64px] cursor-pointer hover:text-indigo-600 select-none"
                 onClick={() => toggleSort("name")}
               >
                 이름{sortIcon("name")}
               </th>
               <th
-                className="sticky left-16 z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-10 min-w-[40px] whitespace-nowrap cursor-pointer hover:text-indigo-600 select-none"
+                className="sticky left-24 z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-10 min-w-[40px] whitespace-nowrap cursor-pointer hover:text-indigo-600 select-none"
                 onClick={() => toggleSort("gender")}
               >
                 성별{sortIcon("gender")}
               </th>
-              <th className="sticky left-[104px] z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-14 min-w-[56px]">
+              <th className="sticky left-[136px] z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-14 min-w-[56px]">
                 또래
               </th>
               {team.dates.map((date) => (
@@ -366,20 +437,19 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
               <th className="px-1 py-2 w-8" />
             </tr>
           </thead>
+          <SortableContext items={sortedMembers.map((m) => m.id)} strategy={verticalListSortingStrategy}>
           <tbody>
-            {sortedMembers.map((member) => {
+            {sortedMembers.map((member, idx) => {
               const statuses = getMemberStatuses(member, team.dates);
               const rate = calculateAttendanceRate(statuses);
               const grade = calculateGrade(rate);
               const isEditing = editingMember === member.id;
 
               return (
-                <tr
-                  key={member.id}
-                  className="border-b border-gray-100 hover:bg-gray-50"
-                >
+                <SortableTableRow key={member.id} id={member.id}>
+                  <td className="sticky left-0 z-10 bg-white px-1 py-1 text-center text-xs text-gray-400 w-8">{idx + 1}</td>
                   {/* Name */}
-                  <td className="sticky left-0 z-10 bg-white px-2 py-1 w-16">
+                  <td className="sticky left-8 z-10 bg-white px-2 py-1 w-16">
                     {isEditing ? (
                       <input
                         type="text"
@@ -403,7 +473,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     )}
                   </td>
                   {/* Gender */}
-                  <td className="sticky left-16 z-10 bg-white px-1 py-1 text-center w-10">
+                  <td className="sticky left-24 z-10 bg-white px-1 py-1 text-center w-10">
                     {isEditing ? (
                       <select
                         value={editData.gender}
@@ -422,7 +492,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     )}
                   </td>
                   {/* Birth Year */}
-                  <td className="sticky left-[104px] z-10 bg-white px-1 py-1 text-center w-14">
+                  <td className="sticky left-[136px] z-10 bg-white px-1 py-1 text-center w-14">
                     {isEditing ? (
                       <input
                         type="text"
@@ -510,10 +580,11 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                       </button>
                     )}
                   </td>
-                </tr>
+                </SortableTableRow>
               );
             })}
           </tbody>
+          </SortableContext>
         </table>
 
         {team.members.length === 0 && (
@@ -523,6 +594,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
           </div>
         )}
       </div>
+      </DndContext>
     </div>
   );
 }

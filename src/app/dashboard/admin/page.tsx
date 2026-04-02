@@ -129,6 +129,7 @@ export default function AdminPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-2 py-3 text-center font-medium text-gray-600 w-10">#</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">아이디</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600">역할</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600">공동체</th>
@@ -137,8 +138,9 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {users?.map((u) => (
+              {users?.map((u, idx) => (
                 <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-2 py-3 text-center text-xs text-gray-400">{idx + 1}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-800">{u.username}</span>

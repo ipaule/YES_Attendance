@@ -90,6 +90,7 @@ model ShalomMember {
   phone     String   @default("")
   visitDate String   @default("")
   inviter   String   @default("")
+  order     Int      @default(0)
   leader    String   @default("")
   note      String   @default("")
   status    String   @default("방문") // 방문, 등록, 졸업

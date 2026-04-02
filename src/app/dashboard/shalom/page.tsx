@@ -3,7 +3,23 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, ArrowUpDown, Save } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ArrowLeft, Plus, Trash2, ArrowUpDown, Save, GripVertical } from "lucide-react";
 
 interface ShalomMember {
   id: string;
@@ -26,6 +42,21 @@ interface HistorySummary {
 
 type SortKey = "name" | "gender" | "birthYear" | "visitDate" | "inviter" | "leader" | "status";
 type SortDir = "none" | "asc" | "desc";
+
+function SortableTableRow({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <tr ref={setNodeRef} style={style} className="border-b border-gray-100 hover:bg-gray-50" {...attributes}>
+      <td className="px-1 py-1 text-center w-6">
+        <button {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+      </td>
+      {children}
+    </tr>
+  );
+}
 
 export default function ShalomListPage() {
   const router = useRouter();
@@ -170,6 +201,38 @@ export default function ShalomListPage() {
     });
   };
 
+  const reorderMutation = useMutation({
+    mutationFn: async (memberIds: string[]) => {
+      const res = await fetch("/api/shalom/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberIds }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["shalom-members"] }),
+  });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor)
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !members) return;
+
+    // Reset sort when dragging
+    setSortKey("visitDate");
+    setSortDir("none");
+
+    const oldIndex = sorted.findIndex((m) => m.id === active.id);
+    const newIndex = sorted.findIndex((m) => m.id === over.id);
+    const reordered = arrayMove(sorted, oldIndex, newIndex);
+    reorderMutation.mutate(reordered.map((m) => m.id));
+  };
+
   const statusColor = (s: string) => {
     if (s === "방문") return "bg-blue-50 text-blue-700";
     if (s === "등록") return "bg-green-50 text-green-700";
@@ -280,14 +343,17 @@ export default function ShalomListPage() {
       )}
 
       {/* Table */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-2 py-2 w-8">
+                <th className="bg-gray-50 px-1 py-2 w-6" />
+                <th className="px-1 py-2 w-8">
                   <input type="checkbox" checked={members?.length ? selected.size === members.length : false} onChange={toggleSelectAll} className="rounded" />
                 </th>
+                <th className="px-1 py-2 text-center font-medium text-gray-400 w-8">#</th>
                 <th className="px-1 py-2 text-left font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("name")}>이름{sortIcon("name")}</th>
                 <th className="px-1 py-2 text-center font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("gender")}>성별{sortIcon("gender")}</th>
                 <th className="px-1 py-2 text-center font-medium text-gray-600">또래</th>
@@ -300,14 +366,16 @@ export default function ShalomListPage() {
                 <th className="px-1 py-2 w-8" />
               </tr>
             </thead>
+            <SortableContext items={sorted.map((m) => m.id)} strategy={verticalListSortingStrategy}>
             <tbody>
-              {sorted.map((m) => {
+              {sorted.map((m, idx) => {
                 const isEditing = editingId === m.id;
                 return (
-                  <tr key={m.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="px-2 py-1.5 text-center">
+                  <SortableTableRow key={m.id} id={m.id}>
+                    <td className="px-1 py-1.5 text-center">
                       <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} className="rounded" />
                     </td>
+                    <td className="px-1 py-1.5 text-center text-xs text-gray-400">{idx + 1}</td>
                     {isEditing ? (
                       <>
                         <td className="px-1 py-1"><input type="text" value={editData.name || ""} onChange={(e) => setEditData((p) => ({ ...p, name: e.target.value }))} className="w-full text-sm border border-indigo-300 rounded px-1 py-0.5" /></td>
@@ -356,10 +424,11 @@ export default function ShalomListPage() {
                         </td>
                       </>
                     )}
-                  </tr>
+                  </SortableTableRow>
                 );
               })}
             </tbody>
+            </SortableContext>
           </table>
           {(!members || members.length === 0) && (
             <div className="text-center py-12 text-gray-400">
@@ -368,6 +437,7 @@ export default function ShalomListPage() {
           )}
         </div>
       </div>
+      </DndContext>
     </div>
   );
 }

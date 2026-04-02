@@ -57,6 +57,7 @@ export default function ShalomHistoryDetailPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-2 py-2 text-center font-medium text-gray-400 w-8">#</th>
                 <th className="px-2 py-2 text-left font-medium text-gray-600">이름</th>
                 <th className="px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap">성별</th>
                 <th className="px-2 py-2 text-center font-medium text-gray-600">또래</th>
@@ -71,6 +72,7 @@ export default function ShalomHistoryDetailPage() {
             <tbody>
               {sorted.map((m, i) => (
                 <tr key={i} className="border-b border-gray-100">
+                  <td className="px-2 py-1.5 text-center text-xs text-gray-400">{i + 1}</td>
                   <td className="px-2 py-1.5 text-sm">{m.name || "-"}</td>
                   <td className="px-2 py-1.5 text-center text-xs text-gray-500">{m.gender === "MALE" ? "남" : m.gender === "FEMALE" ? "여" : "-"}</td>
                   <td className="px-2 py-1.5 text-center text-xs text-gray-500">{m.birthYear || "-"}</td>

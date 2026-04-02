@@ -90,7 +90,12 @@ export default function AdminPage() {
       let va = "", vb = "";
       if (sortKey === "username") { va = a.username; vb = b.username; }
       else if (sortKey === "role") { va = a.role; vb = b.role; }
-      else if (sortKey === "group") { va = a.group?.name || ""; vb = b.group?.name || ""; }
+      else if (sortKey === "group") {
+        const groupOrder: Record<string, number> = { "샬롬": 0, "사랑": 1, "소망": 2, "믿음": 3 };
+        const ia = groupOrder[a.group?.name || ""] ?? 99;
+        const ib = groupOrder[b.group?.name || ""] ?? 99;
+        return sortDir === "asc" ? ia - ib : ib - ia;
+      }
       else if (sortKey === "team") { va = a.team?.name || ""; vb = b.team?.name || ""; }
       const cmp = va.localeCompare(vb, "ko");
       return sortDir === "asc" ? cmp : -cmp;

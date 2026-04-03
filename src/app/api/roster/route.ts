@@ -86,7 +86,8 @@ export async function GET(request: NextRequest) {
       if (search && !m.name.includes(search)) return false;
       if (filterGender && m.gender !== filterGender) return false;
       if (filterBirthYear && m.birthYear !== filterBirthYear) return false;
-      if (filterGroup && m.groupName !== filterGroup) return false;
+      if (filterGroup === "-" && m.groupName) return false;
+      if (filterGroup && filterGroup !== "-" && m.groupName !== filterGroup) return false;
       if (filterGrade && m.grade !== filterGrade) return false;
       return true;
     });

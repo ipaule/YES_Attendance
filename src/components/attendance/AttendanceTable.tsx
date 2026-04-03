@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, ArrowUpDown, GripVertical } from "lucide-react";
 import {
@@ -33,7 +33,7 @@ import type {
   DateColumn,
 } from "@/types";
 
-function SortableTableRow({ id, children }: { id: string; children: React.ReactNode }) {
+function SortableTableRow({ id, children, editRowId }: { id: string; children: React.ReactNode; editRowId?: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -41,7 +41,7 @@ function SortableTableRow({ id, children }: { id: string; children: React.ReactN
     opacity: isDragging ? 0.5 : 1,
   };
   return (
-    <tr ref={setNodeRef} style={style} className="border-b border-gray-100 hover:bg-gray-50" {...attributes}>
+    <tr ref={setNodeRef} style={style} className="border-b border-gray-100 hover:bg-gray-50" {...attributes} data-edit-row={editRowId || undefined}>
       <td className="px-1 py-1 text-center w-6">
         <button {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
           <GripVertical className="h-3.5 w-3.5" />
@@ -162,10 +162,10 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
       if (!res.ok) throw new Error("Failed to update member");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_d, variables) => {
       queryClient.invalidateQueries({ queryKey: ["team", team.id] });
-      editingRef.current = null;
-      setEditingMember(null);
+      if (editingRef.current === variables.memberId) { editingRef.current = null; setEditingMember(null); }
+      savingRef.current = false;
     },
   });
 
@@ -267,13 +267,21 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
   };
 
   const savingRef = useRef(false);
-  const handleEditBlur = (memberId: string) => () => {
-    setTimeout(() => {
-      if (savingRef.current || editingRef.current !== memberId) return;
+
+  // Document click listener for auto-save on click outside
+  useEffect(() => {
+    if (!editingMember) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest(`[data-edit-row="${editingMember}"]`)) return;
+      if (savingRef.current || editingRef.current !== editingMember) return;
       savingRef.current = true;
-      handleEditSave(memberId);
-    }, 200);
-  };
+      handleEditSave(editingMember);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingMember]);
 
   const sortedMembers = useMemo(() => {
     if (!sortKey || sortDir === "none") return team.members;
@@ -520,7 +528,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
               const isEditing = editingMember === member.id;
 
               return (
-                <SortableTableRow key={member.id} id={member.id}>
+                <SortableTableRow key={member.id} id={member.id} editRowId={isEditing ? member.id : undefined}>
                   <td className="sticky left-0 z-10 bg-white px-1 py-1 text-center text-xs text-gray-400 w-8">{idx + 1}</td>
                   {/* Name */}
                   <td className="sticky left-8 z-10 bg-white px-2 py-1 w-16">
@@ -528,7 +536,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                       <input type="text" value={editData.name}
                         onChange={(e) => updateEdit((p) => ({ ...p, name: e.target.value }))}
                         onKeyDown={(e) => { if (e.key === "Enter") handleEditSave(member.id); if (e.key === "Escape") { editingRef.current = null; setEditingMember(null); } }}
-                        onBlur={handleEditBlur(member.id)}                        className="w-full text-sm border border-indigo-300 rounded px-1 py-0.5 focus:outline-none" />
+                                                className="w-full text-sm border border-indigo-300 rounded px-1 py-0.5 focus:outline-none" />
                     ) : (
                       <button onClick={() => handleEditStart(member)} className="text-left text-sm hover:text-indigo-600 transition-colors truncate block w-full">{member.name}</button>
                     )}
@@ -538,7 +546,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     {isEditing ? (
                       <select value={editData.gender}
                         onChange={(e) => updateEdit((p) => ({ ...p, gender: e.target.value }))}
-                        onBlur={handleEditBlur(member.id)}                        className="text-xs border border-indigo-300 rounded px-0.5 py-0.5 w-full">
+                                                className="text-xs border border-indigo-300 rounded px-0.5 py-0.5 w-full">
                         <option value="MALE">남</option><option value="FEMALE">여</option>
                       </select>
                     ) : (
@@ -551,7 +559,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                       <input type="text" value={editData.birthYear}
                         onChange={(e) => updateEdit((p) => ({ ...p, birthYear: e.target.value }))}
                         onKeyDown={(e) => { if (e.key === "Enter") handleEditSave(member.id); if (e.key === "Escape") { editingRef.current = null; setEditingMember(null); } }}
-                        onBlur={handleEditBlur(member.id)}                        className="w-full text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" />
+                                                className="w-full text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" />
                     ) : (
                       <span className="text-xs text-gray-500 cursor-pointer" onClick={() => handleEditStart(member)}>{member.birthYear}</span>
                     )}

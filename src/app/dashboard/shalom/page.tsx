@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
@@ -43,11 +43,11 @@ interface HistorySummary {
 type SortKey = "name" | "gender" | "birthYear" | "visitDate" | "inviter" | "leader" | "status";
 type SortDir = "none" | "asc" | "desc";
 
-function SortableTableRow({ id, children }: { id: string; children: React.ReactNode }) {
+function SortableTableRow({ id, children, editRowId }: { id: string; children: React.ReactNode; editRowId?: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
-    <tr ref={setNodeRef} style={style} className="border-b border-gray-100 hover:bg-gray-50" {...attributes}>
+    <tr ref={setNodeRef} style={style} className="border-b border-gray-100 hover:bg-gray-50" {...attributes} data-edit-row={editRowId || undefined}>
       <td className="px-1 py-1 text-center w-6">
         <button {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
           <GripVertical className="h-3.5 w-3.5" />
@@ -86,6 +86,21 @@ export default function ShalomListPage() {
   const [flushMode, setFlushMode] = useState<"new" | "existing">("new");
   const [flushName, setFlushName] = useState("");
   const [flushHistoryId, setFlushHistoryId] = useState("");
+
+  useEffect(() => {
+    if (!editingId) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest(`[data-edit-row="${editingId}"]`)) return;
+      if (savingRef.current || editingRef.current !== editingId) return;
+      savingRef.current = true;
+      const d = editDataRef.current;
+      updateMutation.mutate({ id: editingId, data: { name: d.name, gender: d.gender, birthYear: d.birthYear, phone: d.phone, visitDate: d.visitDate, inviter: d.inviter, note: d.note, status: d.status } });
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingId]);
 
   const { data: members } = useQuery({
     queryKey: ["shalom-members"],
@@ -133,9 +148,10 @@ export default function ShalomListPage() {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
-    onSettled: () => {
+    onSettled: (_d, _e, variables) => {
       queryClient.invalidateQueries({ queryKey: ["shalom-members"] });
-      editingRef.current = null; savingRef.current = false; setEditingId(null);
+      if (editingRef.current === variables.id) { editingRef.current = null; setEditingId(null); }
+      savingRef.current = false;
     },
   });
 
@@ -360,21 +376,19 @@ export default function ShalomListPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="bg-gray-50 px-1 py-2 w-6" />
-                <th className="px-1 py-2 w-8">
-                  <input type="checkbox" checked={members?.length ? selected.size === members.length : false} onChange={toggleSelectAll} className="rounded" />
-                </th>
-                <th className="px-1 py-2 text-center font-medium text-gray-400 w-8">#</th>
-                <th className="px-1 py-2 text-left font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("name")}>이름{sortIcon("name")}</th>
-                <th className="px-1 py-2 text-center font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("gender")}>성별{sortIcon("gender")}</th>
-                <th className="px-1 py-2 text-center font-medium text-gray-600">또래</th>
-                <th className="px-1 py-2 text-center font-medium text-gray-600">전화번호</th>
-                <th className="px-1 py-2 text-center font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("visitDate")}>방문 날짜{sortIcon("visitDate")}</th>
-                <th className="px-1 py-2 text-center font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("inviter")}>인도자{sortIcon("inviter")}</th>
-                <th className="px-1 py-2 text-center font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("leader")}>순장{sortIcon("leader")}</th>
-                <th className="px-1 py-2 text-left font-medium text-gray-600 min-w-[200px]">비고</th>
-                <th className="px-1 py-2 text-center font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("status")}>상태{sortIcon("status")}</th>
-                <th className="px-1 py-2 w-8" />
+                <th className="w-7 px-1 py-2" />
+                <th className="w-8 px-1 py-2"><input type="checkbox" checked={members?.length ? selected.size === members.length : false} onChange={toggleSelectAll} className="rounded" /></th>
+                <th className="w-8 px-1 py-2 text-center font-medium text-gray-400">#</th>
+                <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[80px] text-center" onClick={() => toggleSort("name")}><div className="flex items-center justify-center gap-0.5">이름{sortIcon("name")}</div></th>
+                <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[44px] text-center" onClick={() => toggleSort("gender")}><div className="flex items-center justify-center gap-0.5">성별{sortIcon("gender")}</div></th>
+                <th className="px-1 py-2 font-medium text-gray-600 whitespace-nowrap w-[44px] text-center">또래</th>
+                <th className="px-1 py-2 font-medium text-gray-600 whitespace-nowrap w-[120px] text-center">전화번호</th>
+                <th className="px-2 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[95px] text-center" onClick={() => toggleSort("visitDate")}><div className="flex items-center justify-center gap-0.5">방문 날짜{sortIcon("visitDate")}</div></th>
+                <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[80px] text-center" onClick={() => toggleSort("inviter")}><div className="flex items-center justify-center gap-0.5">인도자{sortIcon("inviter")}</div></th>
+                <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[80px] text-center" onClick={() => toggleSort("leader")}><div className="flex items-center justify-center gap-0.5">순장{sortIcon("leader")}</div></th>
+                <th className="px-2 py-2 font-medium text-gray-600 text-center">비고</th>
+                <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[50px] text-center" onClick={() => toggleSort("status")}><div className="flex items-center justify-center gap-0.5">상태{sortIcon("status")}</div></th>
+                <th className="w-8 px-1 py-2" />
               </tr>
             </thead>
             <SortableContext items={sorted.map((m) => m.id)} strategy={verticalListSortingStrategy}>
@@ -382,11 +396,11 @@ export default function ShalomListPage() {
               {sorted.map((m, idx) => {
                 const isEditing = editingId === m.id;
                 return (
-                  <SortableTableRow key={m.id} id={m.id}>
-                    <td className="px-1 py-1.5 text-center">
+                  <SortableTableRow key={m.id} id={m.id} editRowId={isEditing ? m.id : undefined}>
+                    <td className="px-1 py-1 text-center">
                       <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} className="rounded" />
                     </td>
-                    <td className="px-1 py-1.5 text-center text-xs text-gray-400">{idx + 1}</td>
+                    <td className="px-2 py-1 text-center text-xs text-gray-400">{idx + 1}</td>
                     {(() => {
                       const doSave = () => {
                         if (savingRef.current || editingRef.current !== m.id) return;
@@ -394,56 +408,22 @@ export default function ShalomListPage() {
                         const d = editDataRef.current;
                         updateMutation.mutate({ id: m.id, data: { name: d.name, gender: d.gender, birthYear: d.birthYear, phone: d.phone, visitDate: d.visitDate, inviter: d.inviter, note: d.note, status: d.status } });
                       };
-                      const ob = () => { setTimeout(doSave, 200); };
                       const kd = (e: React.KeyboardEvent) => { if (e.key === "Enter") doSave(); if (e.key === "Escape") { editingRef.current = null; setEditingId(null); } };
-                      return isEditing ? (
-                      <>
-                        <td className="px-1 py-1"><input type="text" value={editData.name || ""} onChange={(e) => updateEdit((p) => ({ ...p, name: e.target.value }))} onKeyDown={kd} onBlur={ob} className="w-full text-sm border border-indigo-300 rounded px-1 py-0.5" /></td>
-                        <td className="px-1 py-1"><select value={editData.gender || ""} onChange={(e) => updateEdit((p) => ({ ...p, gender: e.target.value }))} onBlur={ob} className="text-xs border border-indigo-300 rounded px-1 py-0.5"><option value="">-</option><option value="MALE">남</option><option value="FEMALE">여</option></select></td>
-                        <td className="px-1 py-1"><input type="text" value={editData.birthYear || ""} onChange={(e) => updateEdit((p) => ({ ...p, birthYear: e.target.value }))} onKeyDown={kd} onBlur={ob} className="w-14 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
-                        <td className="px-1 py-1"><input type="text" value={editData.phone || ""} onChange={(e) => updateEdit((p) => ({ ...p, phone: e.target.value }))} onKeyDown={kd} onBlur={ob} className="w-28 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
-                        <td className="px-1 py-1"><input type="date" value={editData.visitDate || ""} onChange={(e) => updateEdit((p) => ({ ...p, visitDate: e.target.value }))} onBlur={ob} className="text-xs border border-indigo-300 rounded px-1 py-0.5" /></td>
-                        <td className="px-1 py-1"><input type="text" value={editData.inviter || ""} onChange={(e) => updateEdit((p) => ({ ...p, inviter: e.target.value }))} onKeyDown={kd} onBlur={ob} className="w-16 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
-                        <td className="px-1 py-1 text-center text-xs text-gray-400">{m.leader || "-"}</td>
-                        <td className="px-1 py-1 min-w-[200px]"><input type="text" value={editData.note || ""} onChange={(e) => updateEdit((p) => ({ ...p, note: e.target.value }))} onKeyDown={kd} onBlur={ob} className="w-full text-xs border border-indigo-300 rounded px-1 py-0.5" /></td>
-                        <td className="px-2 py-1">
-                          <select value={editData.status || "방문"} onChange={(e) => updateEdit((p) => ({ ...p, status: e.target.value }))} onBlur={ob} className="text-xs border border-indigo-300 rounded px-1 py-0.5">
-                            <option value="방문">방문</option><option value="등록">등록</option><option value="졸업">졸업</option>
-                          </select>
-                        </td>
-                        <td className="px-1 py-1">
-                          <div className="flex flex-col gap-0.5">
-                            <button onClick={doSave} className="text-[10px] text-indigo-600">저장</button>
-                            <button onClick={() => { editingRef.current = null; setEditingId(null); }} className="text-[10px] text-gray-400">취소</button>
-                          </div>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="px-1 py-1.5 cursor-pointer" onClick={() => startEdit(m)}><span className="text-sm hover:text-indigo-600">{m.name || "-"}</span></td>
-                        <td className="px-1 py-1.5 text-center text-xs text-gray-500 cursor-pointer" onClick={() => startEdit(m)}>{m.gender === "MALE" ? "남" : m.gender === "FEMALE" ? "여" : "-"}</td>
-                        <td className="px-1 py-1.5 text-center text-xs text-gray-500 cursor-pointer" onClick={() => startEdit(m)}>{m.birthYear || "-"}</td>
-                        <td className="px-1 py-1.5 text-center text-xs text-gray-500 cursor-pointer" onClick={() => startEdit(m)}>{m.phone || "-"}</td>
-                        <td className="px-1 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap cursor-pointer" onClick={() => startEdit(m)}>{m.visitDate || "-"}</td>
-                        <td className="px-1 py-1.5 text-center text-xs text-gray-500 cursor-pointer" onClick={() => startEdit(m)}>{m.inviter || "-"}</td>
-                        <td className="px-1 py-1.5 text-center text-xs text-gray-500">{m.leader || "-"}</td>
-                        <td className="px-1 py-1.5 text-left text-xs text-gray-500 min-w-[200px] cursor-pointer" onClick={() => startEdit(m)}>{m.note || "-"}</td>
-                        <td className="px-2 py-1.5 text-center">
-                          <select
-                            value={m.status}
-                            onChange={(e) => updateMutation.mutate({ id: m.id, data: { status: e.target.value } })}
-                            className={`text-[10px] font-medium px-1 py-0.5 rounded-full border-0 cursor-pointer ${statusColor(m.status)}`}
-                          >
-                            <option value="방문">방문</option>
-                            <option value="등록">등록</option>
-                            <option value="졸업">졸업</option>
-                          </select>
-                        </td>
-                        <td className="px-1 py-1.5">
-                          <button onClick={() => { if (confirm(`${m.name}님을 삭제하시겠습니까?`)) deleteMutation.mutate(m.id); }} className="text-gray-300 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
-                        </td>
-                      </>
-                    );
+                      const se = () => startEdit(m);
+                      const ec = isEditing ? "bg-indigo-50" : "bg-transparent cursor-pointer appearance-none pointer-events-none";
+                      const ring = isEditing ? "focus:ring-1 focus:ring-indigo-300" : "";
+                      return (<>
+                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><input type="text" readOnly={!isEditing} value={isEditing ? (editData.name || "") : (m.name || "-")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, name: e.target.value })) : undefined} onKeyDown={isEditing ? kd : undefined} className={`w-full text-xs py-0.5 px-1 rounded focus:outline-none ${ec} ${ring}`} /></td>
+                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><select disabled={!isEditing} value={isEditing ? (editData.gender || "") : (m.gender || "")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, gender: e.target.value })) : undefined} className={`w-full text-xs py-0.5 rounded focus:outline-none ${ec} ${ring}`}><option value="">-</option><option value="MALE">남</option><option value="FEMALE">여</option></select></td>
+                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><input type="text" readOnly={!isEditing} value={isEditing ? (editData.birthYear || "") : (m.birthYear || "-")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, birthYear: e.target.value })) : undefined} onKeyDown={isEditing ? kd : undefined} className={`w-full text-xs py-0.5 px-1 text-center rounded focus:outline-none ${ec} ${ring}`} /></td>
+                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><input type="text" readOnly={!isEditing} value={isEditing ? (editData.phone || "") : (m.phone || "-")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, phone: e.target.value })) : undefined} onKeyDown={isEditing ? kd : undefined} className={`w-full text-xs py-0.5 px-1 text-center rounded focus:outline-none ${ec} ${ring}`} /></td>
+                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><input type={isEditing ? "date" : "text"} readOnly={!isEditing} value={isEditing ? (editData.visitDate || "") : (m.visitDate || "-")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, visitDate: e.target.value })) : undefined} className={`w-full text-xs py-0.5 px-1 rounded focus:outline-none ${ec} ${ring}`} /></td>
+                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><input type="text" readOnly={!isEditing} value={isEditing ? (editData.inviter || "") : (m.inviter || "-")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, inviter: e.target.value })) : undefined} onKeyDown={isEditing ? kd : undefined} className={`w-full text-xs py-0.5 px-1 text-center rounded focus:outline-none ${ec} ${ring}`} /></td>
+                        <td className="px-2 py-1 text-center text-xs text-gray-400">{m.leader || "-"}</td>
+                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><input type="text" readOnly={!isEditing} value={isEditing ? (editData.note || "") : (m.note || "-")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, note: e.target.value })) : undefined} onKeyDown={isEditing ? kd : undefined} className={`w-full text-xs py-0.5 px-1 rounded focus:outline-none ${ec} ${ring}`} /></td>
+                        <td className="px-2 py-1 text-center"><select value={isEditing ? (editData.status || "방문") : m.status} onChange={(e) => { if (isEditing) { updateEdit((p) => ({ ...p, status: e.target.value })); } else { updateMutation.mutate({ id: m.id, data: { status: e.target.value } }); } }} className={`text-[10px] font-medium px-1 py-0.5 rounded-full border-0 cursor-pointer ${statusColor(isEditing ? (editData.status || "방문") : m.status)}`}><option value="방문">방문</option><option value="등록">등록</option><option value="졸업">졸업</option></select></td>
+                        <td className="px-1 py-1"><button onClick={() => { if (confirm(`${m.name}님을 삭제하시겠습니까?`)) deleteMutation.mutate(m.id); }} className="text-gray-300 hover:text-red-500"><Trash2 className="h-3 w-3" /></button></td>
+                      </>);
                     })()}
                   </SortableTableRow>
                 );

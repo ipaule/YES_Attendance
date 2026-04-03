@@ -104,7 +104,16 @@ model RosterMember {
   birthYear String   @default("")
   groupName String   @default("")
   teamName  String   @default("")
+  ministry  String   @default("")
   note      String   @default("")
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Link {
+  id        String   @id @default(cuid())
+  title     String
+  url       String
   order     Int      @default(0)
   createdAt DateTime @default(now())
 }

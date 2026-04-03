@@ -160,6 +160,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
     }
 
+    const startDate = searchParams.get("startDate") || "";
+    const endDate = searchParams.get("endDate") || "";
     const desiredOrder = ["사랑", "소망", "믿음"];
     const groupsRaw = await prisma.group.findMany({
       where: { name: { in: desiredOrder } },
@@ -168,52 +170,129 @@ export async function GET(request: NextRequest) {
       .map((name) => groupsRaw.find((g) => g.name === name))
       .filter(Boolean) as typeof groupsRaw;
 
-    const allData = await Promise.all(
-      groups.map((g) => getGroupGraphData(g.id, g.name, mode))
-    );
+    // Collect all data points: { isoDate, dateLabel, groupHere: {사랑:n, 소망:n, 믿음:n} }
+    type DataPoint = { isoDate: string; label: string; here: Record<string, number> };
+    const allPoints: DataPoint[] = [];
 
-    const allDatesSet = new Set<string>();
-    allData.forEach((gd) => {
-      gd.chartData.forEach((point: Record<string, string | number>) => {
-        allDatesSet.add(point.date as string);
-      });
+    // 1. Current term data
+    const currentData = await Promise.all(
+      groups.map((g) => getGroupGraphData(g.id, g.name, "count"))
+    );
+    // Get actual ISO dates from AttendanceDate
+    const dateLabelsToIso: Record<string, string> = {};
+    const attDates = await prisma.attendanceDate.findMany({
+      where: { team: { groupId: { in: groups.map(g => g.id) } } },
+      select: { label: true, date: true },
+      distinct: ["label"],
+    });
+    for (const d of attDates) {
+      dateLabelsToIso[d.label] = new Date(d.date).toISOString().slice(0, 10);
+    }
+
+    const currentLabels = new Set<string>();
+    if (currentData[0]) {
+      for (const point of currentData[0].chartData) {
+        const label = point.date as string;
+        currentLabels.add(label);
+        const iso = dateLabelsToIso[label] || "";
+        const here: Record<string, number> = {};
+        for (const gd of currentData) {
+          const match = gd.chartData.find((p: Record<string, string | number>) => p.date === label);
+          here[gd.groupName] = match ? ((match._totalHere as number) || 0) : 0;
+        }
+        allPoints.push({ isoDate: iso, label, here });
+      }
+    }
+
+    // 2. Historical data from TermHistory (only when date range is specified)
+    const useHistory = startDate || endDate;
+    const termHistories = useHistory ? await prisma.termHistory.findMany() : [];
+    for (const th of termHistories) {
+      const data = JSON.parse(th.data) as {
+        teams: {
+          group: { name: string };
+          members: { attendances: { status: string; attendanceDate: { label: string; date: string } }[] }[];
+          dates: { label: string; date: string }[];
+        }[];
+      };
+
+      // Collect dates from this snapshot
+      const snapshotDates = new Map<string, { label: string; isoDate: string; here: Record<string, number> }>();
+
+      for (const team of data.teams) {
+        const gName = team.group?.name;
+        if (!gName || !desiredOrder.includes(gName)) continue;
+
+        for (const dateInfo of team.dates) {
+          const iso = dateInfo.date ? new Date(dateInfo.date).toISOString().slice(0, 10) : "";
+          const label = dateInfo.label;
+          // Skip if this date already exists in current term
+          if (currentLabels.has(label) && dateLabelsToIso[label] === iso) continue;
+
+          const key = iso || label;
+          if (!snapshotDates.has(key)) {
+            snapshotDates.set(key, { label, isoDate: iso, here: {} });
+          }
+          const entry = snapshotDates.get(key)!;
+          if (!entry.here[gName]) entry.here[gName] = 0;
+
+          // Count HERE for this team on this date
+          for (const member of team.members) {
+            const att = member.attendances.find(a => a.attendanceDate.label === label);
+            if (att?.status === "HERE") entry.here[gName]++;
+          }
+        }
+      }
+
+      for (const entry of snapshotDates.values()) {
+        allPoints.push(entry);
+      }
+    }
+
+    // Sort by ISO date
+    allPoints.sort((a, b) => a.isoDate.localeCompare(b.isoDate));
+
+    // Filter by date range
+    const filtered = allPoints.filter((p) => {
+      if (!p.isoDate) return true;
+      if (startDate && p.isoDate < startDate) return false;
+      if (endDate && p.isoDate > endDate) return false;
+      return true;
     });
 
-    // Get roster count for percentage mode denominator
-    const rosterCount = mode === "percentage"
-      ? await prisma.rosterMember.count()
-      : 0;
+    // Check if range spans multiple years
+    const years = new Set(filtered.map(p => p.isoDate.slice(0, 4)).filter(Boolean));
+    const multiYear = years.size > 1;
 
-    const allDates = Array.from(allDatesSet);
-    const combinedChartData = allDates.map((date) => {
-      const point: Record<string, string | number> = { date };
+    // Build chart data
+    const rosterCount = mode === "percentage" ? await prisma.rosterMember.count() : 0;
+
+    const combinedChartData = filtered.map((p) => {
+      const dateLabel = multiYear && p.isoDate
+        ? `${p.isoDate.slice(2, 4)}.${p.label}`
+        : p.label;
+
+      const point: Record<string, string | number> = { date: dateLabel };
       let totalHere = 0;
-      let totalEligible = 0;
 
-      allData.forEach((gd) => {
-        const matching = gd.chartData.find(
-          (p: Record<string, string | number>) => p.date === date
-        );
-        if (matching) {
-          if (mode === "count") {
-            point[gd.groupName] = (matching._totalHere as number) || 0;
-          } else {
-            // Per-group percentage: HERE / roster for that group
-            point[gd.groupName] = matching["전체"] || 0;
-          }
-          totalHere += (matching._totalHere as number) || 0;
-          totalEligible += (matching._totalEligible as number) || 0;
+      for (const gName of desiredOrder) {
+        const here = p.here[gName] || 0;
+        if (mode === "count") {
+          point[gName] = here;
+        } else {
+          point[gName] = 0; // per-group % not meaningful for historical
         }
-      });
+        totalHere += here;
+      }
 
       if (mode === "count") {
         point["합산"] = totalHere;
       } else {
-        // Use roster count as denominator so it matches the stat label
-        point["합산"] = rosterCount > 0
-          ? Math.round((totalHere / rosterCount) * 100)
-          : 0;
+        point["합산"] = rosterCount > 0 ? Math.round((totalHere / rosterCount) * 100) : 0;
       }
+
+      // Include raw attended count for hover stats
+      point._attended = totalHere;
 
       return point;
     });

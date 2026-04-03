@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FolderOpen, BarChart3, CalendarPlus, RotateCcw, ClipboardList, Settings, History, TrendingUp } from "lucide-react";
+import { FolderOpen, BarChart3, CalendarPlus, RotateCcw, ClipboardList, Settings, History, TrendingUp, Megaphone } from "lucide-react";
 import type { Group } from "@/types";
 
 export default function GroupsPage() {
@@ -281,6 +281,33 @@ export default function GroupsPage() {
         </div>
       )}
 
+      {/* 전체 관리 */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">전체 관리</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Link href="/dashboard/graphs/combined"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-emerald-300 hover:shadow-md transition-all flex items-center gap-3">
+            <div className="w-9 h-9 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0"><BarChart3 className="h-4 w-4 text-emerald-600" /></div>
+            <div><h3 className="font-semibold text-sm text-gray-800">합산 그래프</h3></div>
+          </Link>
+          <Link href="/dashboard/roster"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-purple-300 hover:shadow-md transition-all flex items-center gap-3">
+            <div className="w-9 h-9 bg-purple-50 rounded-lg flex items-center justify-center flex-shrink-0"><ClipboardList className="h-4 w-4 text-purple-600" /></div>
+            <div><h3 className="font-semibold text-sm text-gray-800">전체 리스트</h3></div>
+          </Link>
+          <Link href="/dashboard/admin"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-gray-300 hover:shadow-md transition-all flex items-center gap-3">
+            <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"><Settings className="h-4 w-4 text-gray-600" /></div>
+            <div><h3 className="font-semibold text-sm text-gray-800">리더쉽 관리</h3></div>
+          </Link>
+          <Link href="/dashboard/links"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-blue-300 hover:shadow-md transition-all flex items-center gap-3">
+            <div className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center flex-shrink-0"><Megaphone className="h-4 w-4 text-orange-600" /></div>
+            <div><h3 className="font-semibold text-sm text-gray-800">공지사항</h3></div>
+          </Link>
+        </div>
+      </div>
+
       {/* 공동체 */}
       <div>
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">공동체</h2>
@@ -322,28 +349,6 @@ export default function GroupsPage() {
           </div>
         );
       })()}
-
-      {/* 전체 관리 */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">전체 관리</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <Link href="/dashboard/graphs/combined"
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-emerald-300 hover:shadow-md transition-all flex items-center gap-3">
-            <div className="w-9 h-9 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0"><BarChart3 className="h-4 w-4 text-emerald-600" /></div>
-            <div><h3 className="font-semibold text-sm text-gray-800">합산 그래프</h3></div>
-          </Link>
-          <Link href="/dashboard/roster"
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-purple-300 hover:shadow-md transition-all flex items-center gap-3">
-            <div className="w-9 h-9 bg-purple-50 rounded-lg flex items-center justify-center flex-shrink-0"><ClipboardList className="h-4 w-4 text-purple-600" /></div>
-            <div><h3 className="font-semibold text-sm text-gray-800">전체 리스트</h3></div>
-          </Link>
-          <Link href="/dashboard/admin"
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-gray-300 hover:shadow-md transition-all flex items-center gap-3">
-            <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"><Settings className="h-4 w-4 text-gray-600" /></div>
-            <div><h3 className="font-semibold text-sm text-gray-800">리더쉽 관리</h3></div>
-          </Link>
-        </div>
-      </div>
 
       {/* 기록 */}
       <div>

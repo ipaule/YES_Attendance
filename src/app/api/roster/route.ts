@@ -102,10 +102,8 @@ export async function POST(request: NextRequest) {
 
   const data = await request.json();
 
-  const maxOrder = await prisma.rosterMember.findFirst({
-    orderBy: { order: "desc" },
-    select: { order: true },
-  });
+  // Shift all existing members down by 1 to add new at top
+  await prisma.$executeRawUnsafe('UPDATE RosterMember SET "order" = "order" + 1');
 
   const member = await prisma.rosterMember.create({
     data: {
@@ -114,8 +112,9 @@ export async function POST(request: NextRequest) {
       birthYear: data.birthYear || "",
       groupName: data.groupName || "",
       teamName: data.teamName || "",
+      ministry: data.ministry || "",
       note: data.note || "",
-      order: (maxOrder?.order ?? -1) + 1,
+      order: 0,
     },
   });
 

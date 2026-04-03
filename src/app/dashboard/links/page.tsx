@@ -15,6 +15,7 @@ interface LinkItem {
   id: string;
   title: string;
   url: string;
+  editedBy: string;
   order: number;
 }
 
@@ -242,7 +243,8 @@ export default function LinksPage() {
                     </div>
                     <p className="text-sm text-gray-600 whitespace-pre-wrap">{link.url}</p>
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-1">
                     <button
                       onClick={() => copyOne(link)}
                       className={`transition-colors p-1 rounded ${copied === link.id ? "text-green-500" : "text-gray-300 hover:text-indigo-500"}`}
@@ -265,6 +267,10 @@ export default function LinksPage() {
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </>
+                    )}
+                    </div>
+                    {link.editedBy && (
+                      <span className="text-[10px] text-gray-400">작성: {link.editedBy}</span>
                     )}
                   </div>
                 </div>

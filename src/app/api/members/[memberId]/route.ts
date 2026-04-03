@@ -58,7 +58,7 @@ export async function DELETE(
 
   const member = await prisma.member.findUnique({
     where: { id: memberId },
-    select: { teamId: true },
+    select: { teamId: true, name: true, team: { include: { group: { select: { name: true } } } } },
   });
 
   if (!member) {
@@ -71,6 +71,20 @@ export async function DELETE(
   }
 
   await prisma.member.delete({ where: { id: memberId } });
+
+  // Clear leader on shalom list if this was a shalom team member
+  if (member.team.group.name === "샬롬") {
+    const shalomMatch = await prisma.shalomMember.findFirst({ where: { name: member.name } });
+    if (shalomMatch) {
+      await prisma.shalomMember.update({ where: { id: shalomMatch.id }, data: { leader: "", status: "방문" } });
+    }
+  }
+
+  // Clear teamName on roster if applicable
+  const rosterMatch = await prisma.rosterMember.findFirst({ where: { name: member.name } });
+  if (rosterMatch) {
+    await prisma.rosterMember.update({ where: { id: rosterMatch.id }, data: { teamName: "" } });
+  }
 
   return NextResponse.json({ success: true });
 }

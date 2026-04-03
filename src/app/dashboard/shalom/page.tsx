@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
@@ -67,6 +67,18 @@ export default function ShalomListPage() {
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<ShalomMember>>({});
+  const editingRef = useRef<string | null>(null);
+  const editDataRef = useRef<Partial<ShalomMember>>({});
+  const savingRef = useRef(false);
+
+  const startEdit = useCallback((m: ShalomMember) => {
+    editingRef.current = m.id; savingRef.current = false;
+    setEditingId(m.id); setEditData(m); editDataRef.current = m;
+  }, []);
+
+  const updateEdit = useCallback((updater: (prev: Partial<ShalomMember>) => Partial<ShalomMember>) => {
+    setEditData((prev) => { const next = updater(prev); editDataRef.current = next; return next; });
+  }, []);
   const [sortKey, setSortKey] = useState<SortKey>("visitDate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -123,7 +135,7 @@ export default function ShalomListPage() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["shalom-members"] });
-      setEditingId(null);
+      editingRef.current = null; savingRef.current = false; setEditingId(null);
     },
   });
 
@@ -335,7 +347,6 @@ export default function ShalomListPage() {
           <input type="text" placeholder="전화번호" value={newMember.phone} onChange={(e) => setNewMember((p) => ({ ...p, phone: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 w-28" />
           <input type="date" value={newMember.visitDate} onChange={(e) => setNewMember((p) => ({ ...p, visitDate: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5" />
           <input type="text" placeholder="인도자" value={newMember.inviter} onChange={(e) => setNewMember((p) => ({ ...p, inviter: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 w-20" />
-          <input type="text" placeholder="순장" value={newMember.leader} onChange={(e) => setNewMember((p) => ({ ...p, leader: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 w-20" />
           <input type="text" placeholder="비고" value={newMember.note} onChange={(e) => setNewMember((p) => ({ ...p, note: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 flex-1 min-w-[120px]" />
           <button onClick={() => newMember.name && addMutation.mutate(newMember)} disabled={!newMember.name || addMutation.isPending} className="text-sm bg-indigo-600 text-white rounded-lg px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50 flex-shrink-0">추가</button>
           <button onClick={() => setShowAdd(false)} className="text-sm text-gray-500 hover:text-gray-700 flex-shrink-0">취소</button>
@@ -376,38 +387,47 @@ export default function ShalomListPage() {
                       <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} className="rounded" />
                     </td>
                     <td className="px-1 py-1.5 text-center text-xs text-gray-400">{idx + 1}</td>
-                    {isEditing ? (
+                    {(() => {
+                      const doSave = () => {
+                        if (savingRef.current || editingRef.current !== m.id) return;
+                        savingRef.current = true;
+                        const d = editDataRef.current;
+                        updateMutation.mutate({ id: m.id, data: { name: d.name, gender: d.gender, birthYear: d.birthYear, phone: d.phone, visitDate: d.visitDate, inviter: d.inviter, note: d.note, status: d.status } });
+                      };
+                      const ob = () => { setTimeout(doSave, 200); };
+                      const kd = (e: React.KeyboardEvent) => { if (e.key === "Enter") doSave(); if (e.key === "Escape") { editingRef.current = null; setEditingId(null); } };
+                      return isEditing ? (
                       <>
-                        <td className="px-1 py-1"><input type="text" value={editData.name || ""} onChange={(e) => setEditData((p) => ({ ...p, name: e.target.value }))} className="w-full text-sm border border-indigo-300 rounded px-1 py-0.5" /></td>
-                        <td className="px-1 py-1"><select value={editData.gender || ""} onChange={(e) => setEditData((p) => ({ ...p, gender: e.target.value }))} className="text-xs border border-indigo-300 rounded px-1 py-0.5"><option value="">-</option><option value="MALE">남</option><option value="FEMALE">여</option></select></td>
-                        <td className="px-1 py-1"><input type="text" value={editData.birthYear || ""} onChange={(e) => setEditData((p) => ({ ...p, birthYear: e.target.value }))} className="w-14 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
-                        <td className="px-1 py-1"><input type="text" value={editData.phone || ""} onChange={(e) => setEditData((p) => ({ ...p, phone: e.target.value }))} className="w-28 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
-                        <td className="px-1 py-1"><input type="date" value={editData.visitDate || ""} onChange={(e) => setEditData((p) => ({ ...p, visitDate: e.target.value }))} className="text-xs border border-indigo-300 rounded px-1 py-0.5" /></td>
-                        <td className="px-1 py-1"><input type="text" value={editData.inviter || ""} onChange={(e) => setEditData((p) => ({ ...p, inviter: e.target.value }))} className="w-16 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
-                        <td className="px-1 py-1"><input type="text" value={editData.leader || ""} onChange={(e) => setEditData((p) => ({ ...p, leader: e.target.value }))} className="w-16 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
-                        <td className="px-1 py-1 min-w-[200px]"><input type="text" value={editData.note || ""} onChange={(e) => setEditData((p) => ({ ...p, note: e.target.value }))} className="w-full text-xs border border-indigo-300 rounded px-1 py-0.5" /></td>
+                        <td className="px-1 py-1"><input type="text" value={editData.name || ""} onChange={(e) => updateEdit((p) => ({ ...p, name: e.target.value }))} onKeyDown={kd} onBlur={ob} className="w-full text-sm border border-indigo-300 rounded px-1 py-0.5" /></td>
+                        <td className="px-1 py-1"><select value={editData.gender || ""} onChange={(e) => updateEdit((p) => ({ ...p, gender: e.target.value }))} onBlur={ob} className="text-xs border border-indigo-300 rounded px-1 py-0.5"><option value="">-</option><option value="MALE">남</option><option value="FEMALE">여</option></select></td>
+                        <td className="px-1 py-1"><input type="text" value={editData.birthYear || ""} onChange={(e) => updateEdit((p) => ({ ...p, birthYear: e.target.value }))} onKeyDown={kd} onBlur={ob} className="w-14 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
+                        <td className="px-1 py-1"><input type="text" value={editData.phone || ""} onChange={(e) => updateEdit((p) => ({ ...p, phone: e.target.value }))} onKeyDown={kd} onBlur={ob} className="w-28 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
+                        <td className="px-1 py-1"><input type="date" value={editData.visitDate || ""} onChange={(e) => updateEdit((p) => ({ ...p, visitDate: e.target.value }))} onBlur={ob} className="text-xs border border-indigo-300 rounded px-1 py-0.5" /></td>
+                        <td className="px-1 py-1"><input type="text" value={editData.inviter || ""} onChange={(e) => updateEdit((p) => ({ ...p, inviter: e.target.value }))} onKeyDown={kd} onBlur={ob} className="w-16 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
+                        <td className="px-1 py-1 text-center text-xs text-gray-400">{m.leader || "-"}</td>
+                        <td className="px-1 py-1 min-w-[200px]"><input type="text" value={editData.note || ""} onChange={(e) => updateEdit((p) => ({ ...p, note: e.target.value }))} onKeyDown={kd} onBlur={ob} className="w-full text-xs border border-indigo-300 rounded px-1 py-0.5" /></td>
                         <td className="px-2 py-1">
-                          <select value={editData.status || "방문"} onChange={(e) => setEditData((p) => ({ ...p, status: e.target.value }))} className="text-xs border border-indigo-300 rounded px-1 py-0.5">
+                          <select value={editData.status || "방문"} onChange={(e) => updateEdit((p) => ({ ...p, status: e.target.value }))} onBlur={ob} className="text-xs border border-indigo-300 rounded px-1 py-0.5">
                             <option value="방문">방문</option><option value="등록">등록</option><option value="졸업">졸업</option>
                           </select>
                         </td>
                         <td className="px-1 py-1">
                           <div className="flex flex-col gap-0.5">
-                            <button onClick={() => updateMutation.mutate({ id: m.id, data: editData })} className="text-[10px] text-indigo-600">저장</button>
-                            <button onClick={() => setEditingId(null)} className="text-[10px] text-gray-400">취소</button>
+                            <button onClick={doSave} className="text-[10px] text-indigo-600">저장</button>
+                            <button onClick={() => { editingRef.current = null; setEditingId(null); }} className="text-[10px] text-gray-400">취소</button>
                           </div>
                         </td>
                       </>
                     ) : (
                       <>
-                        <td className="px-1 py-1.5"><button onClick={() => { setEditingId(m.id); setEditData(m); }} className="text-sm hover:text-indigo-600">{m.name || "-"}</button></td>
-                        <td className="px-1 py-1.5 text-center text-xs text-gray-500">{m.gender === "MALE" ? "남" : m.gender === "FEMALE" ? "여" : "-"}</td>
-                        <td className="px-1 py-1.5 text-center text-xs text-gray-500">{m.birthYear || "-"}</td>
-                        <td className="px-1 py-1.5 text-center text-xs text-gray-500">{m.phone || "-"}</td>
-                        <td className="px-1 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap">{m.visitDate || "-"}</td>
-                        <td className="px-1 py-1.5 text-center text-xs text-gray-500">{m.inviter || "-"}</td>
+                        <td className="px-1 py-1.5 cursor-pointer" onClick={() => startEdit(m)}><span className="text-sm hover:text-indigo-600">{m.name || "-"}</span></td>
+                        <td className="px-1 py-1.5 text-center text-xs text-gray-500 cursor-pointer" onClick={() => startEdit(m)}>{m.gender === "MALE" ? "남" : m.gender === "FEMALE" ? "여" : "-"}</td>
+                        <td className="px-1 py-1.5 text-center text-xs text-gray-500 cursor-pointer" onClick={() => startEdit(m)}>{m.birthYear || "-"}</td>
+                        <td className="px-1 py-1.5 text-center text-xs text-gray-500 cursor-pointer" onClick={() => startEdit(m)}>{m.phone || "-"}</td>
+                        <td className="px-1 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap cursor-pointer" onClick={() => startEdit(m)}>{m.visitDate || "-"}</td>
+                        <td className="px-1 py-1.5 text-center text-xs text-gray-500 cursor-pointer" onClick={() => startEdit(m)}>{m.inviter || "-"}</td>
                         <td className="px-1 py-1.5 text-center text-xs text-gray-500">{m.leader || "-"}</td>
-                        <td className="px-1 py-1.5 text-left text-xs text-gray-500 min-w-[200px]">{m.note || "-"}</td>
+                        <td className="px-1 py-1.5 text-left text-xs text-gray-500 min-w-[200px] cursor-pointer" onClick={() => startEdit(m)}>{m.note || "-"}</td>
                         <td className="px-2 py-1.5 text-center">
                           <select
                             value={m.status}
@@ -423,7 +443,8 @@ export default function ShalomListPage() {
                           <button onClick={() => { if (confirm(`${m.name}님을 삭제하시겠습니까?`)) deleteMutation.mutate(m.id); }} className="text-gray-300 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
                         </td>
                       </>
-                    )}
+                    );
+                    })()}
                   </SortableTableRow>
                 );
               })}

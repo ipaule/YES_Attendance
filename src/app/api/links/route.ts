@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   const maxOrder = await prisma.link.findFirst({ orderBy: { order: "desc" }, select: { order: true } });
 
   const link = await prisma.link.create({
-    data: { title, url: url || "", order: (maxOrder?.order ?? -1) + 1 },
+    data: { title, url: url || "", editedBy: session.username, order: (maxOrder?.order ?? -1) + 1 },
   });
 
   return NextResponse.json({ link }, { status: 201 });

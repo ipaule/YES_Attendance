@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, GripVertical, Search, ArrowUpDown } from "lucide-react";
@@ -43,6 +43,24 @@ export default function RosterPage() {
   const [newMember, setNewMember] = useState({ name: "", gender: "", birthYear: "", groupName: "", ministry: "", note: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<RosterMember>>({});
+  const editingRef = useRef<string | null>(null);
+  const editDataRef = useRef<Partial<RosterMember>>({});
+  const savingRef = useRef(false);
+
+  const setEditing = useCallback((id: string | null, data?: Partial<RosterMember>) => {
+    editingRef.current = id;
+    savingRef.current = false;
+    setEditingId(id);
+    if (data) { editDataRef.current = data; setEditData(data); }
+  }, []);
+
+  const updateEditData = useCallback((updater: (prev: Partial<RosterMember>) => Partial<RosterMember>) => {
+    setEditData((prev) => {
+      const next = updater(prev);
+      editDataRef.current = next;
+      return next;
+    });
+  }, []);
 
   type SortKey = "name" | "gender" | "birthYear" | "groupName" | "teamName" | "ministry" | "note" | "rate" | "grade";
   type SortDir = "none" | "asc" | "desc";
@@ -79,7 +97,7 @@ export default function RosterPage() {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["roster"] }); setEditingId(null); },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["roster"] }); editingRef.current = null; setEditingId(null); },
   });
 
   const deleteMutation = useMutation({
@@ -227,22 +245,30 @@ export default function RosterPage() {
                     {isEditing ? (
                       <>
                         {(() => {
-                          const save = () => updateMutation.mutate({ id: m.id, data: { name: editData.name, gender: editData.gender, birthYear: editData.birthYear, groupName: editData.groupName, ministry: editData.ministry, note: editData.note } });
-                          const kd = (e: React.KeyboardEvent) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditingId(null); };
+                          const save = () => {
+                            if (savingRef.current || editingRef.current !== m.id) return;
+                            savingRef.current = true;
+                            const d = editDataRef.current;
+                            updateMutation.mutate({ id: m.id, data: { name: d.name, gender: d.gender, birthYear: d.birthYear, groupName: d.groupName, ministry: d.ministry, note: d.note } });
+                          };
+                          const onBlur = () => {
+                            setTimeout(save, 200);
+                          };
+                          const kd = (e: React.KeyboardEvent) => { if (e.key === "Enter") save(); if (e.key === "Escape") { editingRef.current = null; setEditingId(null); } };
                           return (<>
-                        <td className="px-1 py-1"><input type="text" value={editData.name || ""} onChange={(e) => setEditData((p) => ({ ...p, name: e.target.value }))} onKeyDown={kd} className="w-full text-sm border border-indigo-300 rounded px-1 py-0.5" /></td>
-                        <td className="px-1 py-1"><select value={editData.gender || ""} onChange={(e) => setEditData((p) => ({ ...p, gender: e.target.value }))} onKeyDown={kd} className="text-xs border border-indigo-300 rounded px-1 py-0.5"><option value="">-</option><option value="MALE">남</option><option value="FEMALE">여</option></select></td>
-                        <td className="px-1 py-1"><input type="text" value={editData.birthYear || ""} onChange={(e) => setEditData((p) => ({ ...p, birthYear: e.target.value }))} onKeyDown={kd} className="w-14 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
-                        <td className="px-1 py-1"><select value={editData.groupName || ""} onChange={(e) => setEditData((p) => ({ ...p, groupName: e.target.value }))} onKeyDown={kd} className="text-xs border border-indigo-300 rounded px-1 py-0.5"><option value="">-</option><option value="사랑">사랑</option><option value="소망">소망</option><option value="믿음">믿음</option></select></td>
+                        <td className="px-1 py-1"><input type="text" value={editData.name || ""} onChange={(e) => updateEditData((p) => ({ ...p, name: e.target.value }))} onKeyDown={kd} onBlur={onBlur} className="w-full text-sm border border-indigo-300 rounded px-1 py-0.5" /></td>
+                        <td className="px-1 py-1"><select value={editData.gender || ""} onChange={(e) => updateEditData((p) => ({ ...p, gender: e.target.value }))} onKeyDown={kd} onBlur={onBlur} className="text-xs border border-indigo-300 rounded px-1 py-0.5"><option value="">-</option><option value="MALE">남</option><option value="FEMALE">여</option></select></td>
+                        <td className="px-1 py-1"><input type="text" value={editData.birthYear || ""} onChange={(e) => updateEditData((p) => ({ ...p, birthYear: e.target.value }))} onKeyDown={kd} onBlur={onBlur} className="w-14 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
+                        <td className="px-1 py-1"><select value={editData.groupName || ""} onChange={(e) => updateEditData((p) => ({ ...p, groupName: e.target.value }))} onKeyDown={kd} onBlur={onBlur} className="text-xs border border-indigo-300 rounded px-1 py-0.5"><option value="">-</option><option value="사랑">사랑</option><option value="소망">소망</option><option value="믿음">믿음</option></select></td>
                         <td className="px-1 py-1 text-center text-xs text-gray-400">{m.teamName || "-"}</td>
-                        <td className="px-1 py-1"><input type="text" value={editData.ministry || ""} onChange={(e) => setEditData((p) => ({ ...p, ministry: e.target.value }))} onKeyDown={kd} className="w-16 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
-                        <td className="px-1 py-1"><input type="text" value={editData.note || ""} onChange={(e) => setEditData((p) => ({ ...p, note: e.target.value }))} onKeyDown={kd} className="w-full text-xs border border-indigo-300 rounded px-1 py-0.5" /></td>
+                        <td className="px-1 py-1"><input type="text" value={editData.ministry || ""} onChange={(e) => updateEditData((p) => ({ ...p, ministry: e.target.value }))} onKeyDown={kd} onBlur={onBlur} className="w-16 text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" /></td>
+                        <td className="px-1 py-1"><input type="text" value={editData.note || ""} onChange={(e) => updateEditData((p) => ({ ...p, note: e.target.value }))} onKeyDown={kd} onBlur={onBlur} className="w-full text-xs border border-indigo-300 rounded px-1 py-0.5" /></td>
                         <td className="px-1 py-1 text-center text-xs text-gray-500">{m.rate >= 0 ? `${m.rate}%` : "-"}</td>
                         <td className="px-1 py-1 text-center">{m.grade !== "-" ? <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${getGradeColor(m.grade)}`}>{m.grade}</span> : <span className="text-xs text-gray-400">-</span>}</td>
                         <td className="px-1 py-1">
                           <div className="flex flex-col gap-0.5">
                             <button onClick={save} className="text-[10px] text-indigo-600">저장</button>
-                            <button onClick={() => setEditingId(null)} className="text-[10px] text-gray-400">취소</button>
+                            <button onClick={() => { editingRef.current = null; setEditingId(null); }} className="text-[10px] text-gray-400">취소</button>
                           </div>
                         </td>
                           </>);
@@ -251,7 +277,7 @@ export default function RosterPage() {
                     ) : (
                       <>
                         {(() => {
-                          const startEdit = () => { setEditingId(m.id); setEditData(m); };
+                          const startEdit = () => setEditing(m.id, m);
                           return (<>
                         <td className="px-1 py-1.5 cursor-pointer" onClick={startEdit}><span className="text-sm hover:text-indigo-600">{m.name || "-"}</span></td>
                         <td className="px-1 py-1.5 text-center text-xs text-gray-500 cursor-pointer" onClick={startEdit}>{m.gender === "MALE" ? "남" : m.gender === "FEMALE" ? "여" : "-"}</td>

@@ -15,7 +15,7 @@ export async function PATCH(
   const { linkId } = await params;
   const data = await request.json();
 
-  const link = await prisma.link.update({ where: { id: linkId }, data });
+  const link = await prisma.link.update({ where: { id: linkId }, data: { ...data, editedBy: session.username } });
   return NextResponse.json({ link });
 }
 

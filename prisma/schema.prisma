@@ -114,6 +114,7 @@ model Link {
   id        String   @id @default(cuid())
   title     String
   url       String
+  editedBy  String   @default("")
   order     Int      @default(0)
   createdAt DateTime @default(now())
 }

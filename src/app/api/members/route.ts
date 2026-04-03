@@ -55,5 +55,18 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  // Update ShalomMember leader field if this is a shalom team
+  if (member.team.group.name === "샬롬") {
+    const shalomMatch = await prisma.shalomMember.findFirst({
+      where: { name },
+    });
+    if (shalomMatch) {
+      await prisma.shalomMember.update({
+        where: { id: shalomMatch.id },
+        data: { leader: member.team.name, status: "등록" },
+      });
+    }
+  }
+
   return NextResponse.json({ member }, { status: 201 });
 }

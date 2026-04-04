@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ import {
   X,
   History,
   Megaphone,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { User, Group } from "@/types";
@@ -26,6 +28,31 @@ interface SidebarProps {
 
 export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const [showPwModal, setShowPwModal] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwMsg, setPwMsg] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const handlePasswordChange = async () => {
+    if (!pwCurrent || !pwNew) { setPwMsg("모든 필드를 입력해주세요."); return; }
+    if (pwNew !== pwConfirm) { setPwMsg("새 비밀번호가 일치하지 않습니다."); return; }
+    setPwLoading(true);
+    setPwMsg("");
+    try {
+      const res = await fetch("/api/auth/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: pwCurrent, newPassword: pwNew }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPwMsg(data.error); return; }
+      setPwMsg("비밀번호가 변경되었습니다.");
+      setTimeout(() => { setShowPwModal(false); setPwCurrent(""); setPwNew(""); setPwConfirm(""); setPwMsg(""); }, 1500);
+    } catch { setPwMsg("서버 오류가 발생했습니다."); }
+    finally { setPwLoading(false); }
+  };
 
   const { data: groups } = useQuery({
     queryKey: ["groups"],
@@ -42,7 +69,7 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
     user.role === "PASTOR"
       ? "사역자"
       : user.role === "EXECUTIVE"
-        ? "임원"
+        ? "공동체장"
         : "순장";
 
   const navItems = getNavItems(user, groups || []);
@@ -99,8 +126,15 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Logout */}
-      <div className="px-3 py-4 border-t border-gray-100">
+      {/* Password + Logout */}
+      <div className="px-3 py-4 border-t border-gray-100 space-y-1">
+        <button
+          onClick={() => setShowPwModal(true)}
+          className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+        >
+          <KeyRound className="h-4 w-4" />
+          비밀번호 변경
+        </button>
         <button
           onClick={onLogout}
           className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
@@ -109,6 +143,38 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
           로그아웃
         </button>
       </div>
+
+      {/* Password change modal */}
+      {showPwModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4">
+            <h3 className="text-lg font-bold text-gray-800">비밀번호 변경</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">현재 비밀번호</label>
+                <input type="password" value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">새 비밀번호</label>
+                <input type="password" value={pwNew} onChange={(e) => setPwNew(e.target.value)} className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">새 비밀번호 확인</label>
+                <input type="password" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handlePasswordChange(); }}
+                  className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+            </div>
+            {pwMsg && (
+              <div className={`text-sm rounded-lg p-3 ${pwMsg.includes("변경되었습니다") ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>{pwMsg}</div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => { setShowPwModal(false); setPwCurrent(""); setPwNew(""); setPwConfirm(""); setPwMsg(""); }} className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2">취소</button>
+              <button onClick={handlePasswordChange} disabled={pwLoading} className="text-sm bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700 disabled:opacity-50">{pwLoading ? "변경 중..." : "변경"}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

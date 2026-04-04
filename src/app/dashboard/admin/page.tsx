@@ -130,7 +130,7 @@ export default function AdminPage() {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case "PASTOR": return "사역자";
-      case "EXECUTIVE": return "임원";
+      case "EXECUTIVE": return "공동체장";
       case "LEADER": return "순장";
       default: return role;
     }
@@ -195,7 +195,7 @@ export default function AdminPage() {
                       className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
                     >
                       <option value="LEADER">순장</option>
-                      <option value="EXECUTIVE">임원</option>
+                      <option value="EXECUTIVE">공동체장</option>
                       <option value="PASTOR">사역자</option>
                     </select>
                   </td>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -78,9 +79,12 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
     <div className="flex flex-col h-full bg-white border-r border-gray-200">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-5 border-b border-gray-100">
-        <Link href="/dashboard" onClick={onClose}>
-          <h2 className="text-lg font-bold text-gray-900 hover:text-indigo-600 transition-colors">YES 청년부</h2>
-          <p className="text-xs text-gray-500">출석 관리 시스템</p>
+        <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2">
+          <Image src="/YES_Icon.png" alt="YES" width={36} height={36} />
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 hover:text-indigo-600 transition-colors">YES 청년부</h2>
+            <p className="text-xs text-gray-500">출석 관리 시스템</p>
+          </div>
         </Link>
         {onClose && (
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 lg:hidden">

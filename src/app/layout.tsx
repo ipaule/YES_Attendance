@@ -11,6 +11,10 @@ const notoSansKR = Noto_Sans_KR({
 export const metadata: Metadata = {
   title: "YES 청년부 출석표",
   description: "SRCC YES 청년부 출석 관리 시스템",
+  icons: {
+    icon: "/YES_Icon.png",
+    apple: "/YES_Icon.png",
+  },
 };
 
 export default function RootLayout({

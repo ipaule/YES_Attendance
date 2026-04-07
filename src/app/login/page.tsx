@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -42,6 +43,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
+          <Image src="/YES_Icon.png" alt="YES 청년부" width={100} height={100} className="mx-auto mb-3" />
           <h1 className="text-3xl font-bold text-gray-900">YES 청년부</h1>
           <p className="text-gray-500 mt-2">출석 관리 시스템</p>
         </div>

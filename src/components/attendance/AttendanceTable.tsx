@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, ArrowUpDown, GripVertical } from "lucide-react";
+import { Plus, Trash2, ArrowUpDown, GripVertical, Lock, Unlock } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -193,6 +193,21 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
     mutationFn: async (dateId: string) => {
       const res = await fetch(`/api/dates/${dateId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete date");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team", team.id] });
+    },
+  });
+
+  const toggleLockMutation = useMutation({
+    mutationFn: async ({ dateId, locked }: { dateId: string; locked: boolean }) => {
+      const res = await fetch(`/api/dates/${dateId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locked }),
+      });
+      if (!res.ok) throw new Error("Failed");
       return res.json();
     },
     onSuccess: () => {
@@ -489,18 +504,27 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                   key={date.id}
                   className="px-1 py-2 text-center font-medium text-gray-600 min-w-[56px]"
                 >
-                  <div className="flex items-center justify-center gap-1">
+                  <div className="flex flex-col items-center gap-0.5">
                     <span className="text-xs">{date.label}</span>
-                    <button
-                      onClick={() => {
-                        if (confirm("이 날짜를 삭제하시겠습니까?")) {
-                          deleteDateMutation.mutate(date.id);
-                        }
-                      }}
-                      className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => toggleLockMutation.mutate({ dateId: date.id, locked: !date.locked })}
+                        className={`transition-colors flex-shrink-0 ${date.locked ? "text-red-400 hover:text-red-600" : "text-gray-300 hover:text-gray-500"}`}
+                        title={date.locked ? "잠금 해제" : "잠금"}
+                      >
+                        {date.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm("이 날짜를 삭제하시겠습니까?")) {
+                            deleteDateMutation.mutate(date.id);
+                          }
+                        }}
+                        className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 </th>
               ))}
@@ -575,6 +599,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                               (att?.status as AttendanceStatus | "") || ""
                             }
                             awrReason={att?.awrReason || null}
+                            locked={!!date.locked}
                             onChange={(status, awrReason) => {
                               attendanceMutation.mutate({
                                 memberId: member.id,

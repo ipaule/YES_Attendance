@@ -3,6 +3,33 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { canAccessTeam } from "@/lib/permissions";
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ dateId: string }> }
+) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+
+  const { dateId } = await params;
+  const { locked } = await request.json();
+
+  const dateRecord = await prisma.attendanceDate.findUnique({
+    where: { id: dateId },
+    select: { teamId: true },
+  });
+  if (!dateRecord) return NextResponse.json({ error: "날짜를 찾을 수 없습니다." }, { status: 404 });
+
+  const hasAccess = await canAccessTeam(session, dateRecord.teamId);
+  if (!hasAccess) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+
+  const updated = await prisma.attendanceDate.update({
+    where: { id: dateId },
+    data: { locked: !!locked },
+  });
+
+  return NextResponse.json({ date: updated });
+}
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ dateId: string }> }

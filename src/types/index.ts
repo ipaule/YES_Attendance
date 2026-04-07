@@ -46,6 +46,7 @@ export interface DateColumn {
   label: string;
   teamId: string;
   order: number;
+  locked?: boolean;
 }
 
 export interface AttendanceRecord {

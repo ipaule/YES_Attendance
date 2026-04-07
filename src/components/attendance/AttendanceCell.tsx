@@ -9,12 +9,14 @@ interface AttendanceCellProps {
   status: CellStatus;
   awrReason: string | null;
   onChange: (status: AttendanceStatus | "", awrReason?: string) => void;
+  locked?: boolean;
 }
 
 export function AttendanceCell({
   status,
   awrReason,
   onChange,
+  locked,
 }: AttendanceCellProps) {
   const [showReasonInput, setShowReasonInput] = useState<"ABSENT" | "AWR" | null>(null);
   const [reason, setReason] = useState(awrReason || "");
@@ -28,16 +30,19 @@ export function AttendanceCell({
   }, [showReasonInput]);
 
   const handleClick = () => {
+    if (locked) return;
     // Cycle: blank → O → X(reason) → △(reason) → blank → O ...
     if (status === "HERE") {
       onChange("ABSENT");
       setReason("");
       setTimeout(() => setShowReasonInput("ABSENT"), 50);
     } else if (status === "ABSENT") {
+      setShowReasonInput(null);
       onChange("AWR");
       setReason("");
       setTimeout(() => setShowReasonInput("AWR"), 50);
     } else if (status === "AWR") {
+      setShowReasonInput(null);
       onChange("");
     } else {
       onChange("HERE");
@@ -77,7 +82,7 @@ export function AttendanceCell({
         onClick={handleClick}
         onMouseEnter={() => hasReason && setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
-        className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${locked ? "cursor-default opacity-60" : "hover:bg-gray-100 cursor-pointer"}`}
       >
         {getStatusIcon()}
       </button>

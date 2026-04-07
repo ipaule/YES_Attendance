@@ -9,7 +9,9 @@ export async function middleware(request: NextRequest) {
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname.startsWith("/api/auth/login") ||
-    pathname.startsWith("/api/auth/signup")
+    pathname.startsWith("/api/auth/signup") ||
+    pathname.startsWith("/api/auth/logout") ||
+    pathname.startsWith("/api/auth/password")
   ) {
     return NextResponse.next();
   }
@@ -38,5 +40,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/((?!auth/login|auth/signup|groups).*)"],
+  matcher: ["/dashboard/:path*", "/api/((?!auth/login|auth/signup|auth/logout|auth/password|groups).*)"],
 };

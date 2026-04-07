@@ -11,7 +11,7 @@ export function useAuth() {
 
   const fetchUser = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me");
+      const res = await fetch("/api/auth/me", { credentials: "same-origin" });
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
@@ -30,7 +30,7 @@ export function useAuth() {
   }, [fetchUser]);
 
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
     setUser(null);
     router.push("/login");
   };

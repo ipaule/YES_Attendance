@@ -65,7 +65,7 @@ function getMobileNavItems(user: User) {
   if (user.role === "PASTOR") {
     items.push({
       label: "공동체",
-      href: "/dashboard/groups",
+      href: "/dashboard",
       icon: FolderOpen,
     });
     items.push({

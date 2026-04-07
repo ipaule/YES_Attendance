@@ -12,7 +12,7 @@ export async function PATCH(request: NextRequest) {
   const { memberId, attendanceDateId, status, awrReason } =
     await request.json();
 
-  if (!memberId || !attendanceDateId || !status) {
+  if (!memberId || !attendanceDateId) {
     return NextResponse.json(
       { error: "필수 필드를 입력해주세요." },
       { status: 400 }
@@ -32,6 +32,14 @@ export async function PATCH(request: NextRequest) {
   const hasAccess = await canAccessTeam(session, member.teamId);
   if (!hasAccess) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  }
+
+  // Blank status = delete the attendance record
+  if (!status || status === "") {
+    await prisma.attendance.deleteMany({
+      where: { memberId, attendanceDateId },
+    });
+    return NextResponse.json({ attendance: null });
   }
 
   const attendance = await prisma.attendance.upsert({

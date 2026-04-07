@@ -8,7 +8,7 @@ type CellStatus = AttendanceStatus | "";
 interface AttendanceCellProps {
   status: CellStatus;
   awrReason: string | null;
-  onChange: (status: AttendanceStatus, awrReason?: string) => void;
+  onChange: (status: AttendanceStatus | "", awrReason?: string) => void;
 }
 
 export function AttendanceCell({
@@ -28,19 +28,17 @@ export function AttendanceCell({
   }, [showReasonInput]);
 
   const handleClick = () => {
-    // Cycle: blank → O → X → (reason popup for X) → AWR → (reason popup for AWR) → O
+    // Cycle: blank → O → X(reason) → △(reason) → blank → O ...
     if (status === "HERE") {
-      // Change to X immediately, then show reason popup
       onChange("ABSENT");
       setReason("");
       setTimeout(() => setShowReasonInput("ABSENT"), 50);
     } else if (status === "ABSENT") {
-      // Change to AWR immediately, then show reason popup
       onChange("AWR");
       setReason("");
       setTimeout(() => setShowReasonInput("AWR"), 50);
     } else if (status === "AWR") {
-      onChange("HERE");
+      onChange("");
     } else {
       onChange("HERE");
     }

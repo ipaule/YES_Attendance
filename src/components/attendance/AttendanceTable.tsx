@@ -97,7 +97,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
     }: {
       memberId: string;
       attendanceDateId: string;
-      status: AttendanceStatus;
+      status: AttendanceStatus | "";
       awrReason?: string;
     }) => {
       const res = await fetch("/api/attendance", {

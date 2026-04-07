@@ -266,6 +266,12 @@ export async function GET(request: NextRequest) {
 
     // Build chart data
     const rosterCount = mode === "percentage" ? await prisma.rosterMember.count() : 0;
+    const rosterByGroup: Record<string, number> = {};
+    if (mode === "percentage") {
+      for (const gName of desiredOrder) {
+        rosterByGroup[gName] = await prisma.rosterMember.count({ where: { groupName: gName } });
+      }
+    }
 
     const combinedChartData = filtered.map((p) => {
       const dateLabel = multiYear && p.isoDate
@@ -280,7 +286,8 @@ export async function GET(request: NextRequest) {
         if (mode === "count") {
           point[gName] = here;
         } else {
-          point[gName] = 0; // per-group % not meaningful for historical
+          const groupRoster = rosterByGroup[gName] || 1;
+          point[gName] = Math.round((here / groupRoster) * 100);
         }
         totalHere += here;
       }

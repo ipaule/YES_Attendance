@@ -133,14 +133,15 @@ export async function POST(request: NextRequest) {
     // 4. Clear global dates
     await prisma.globalDate.deleteMany();
 
-    // 5. Delete all users except AJ and 샬롬 users
+    // 5. Delete 사랑/소망/믿음 LEADER and EXECUTIVE users
+    // Keep: all PASTOR, 샬롬 users (leaders + executive)
     const shalomGroup = await prisma.group.findFirst({
       where: { name: "샬롬" },
       select: { id: true },
     });
     await prisma.user.deleteMany({
       where: {
-        username: { not: "AJ" },
+        role: { in: ["LEADER", "EXECUTIVE"] },
         ...(shalomGroup ? { groupId: { not: shalomGroup.id } } : {}),
       },
     });

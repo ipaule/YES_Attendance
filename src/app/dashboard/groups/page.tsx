@@ -122,8 +122,9 @@ export default function GroupsPage() {
                 <h3 className="text-lg font-bold text-red-600">새로운 텀 시작</h3>
                 <div className="bg-red-50 rounded-lg p-4 text-sm text-red-700 space-y-2">
                   <p className="font-semibold">이 작업은 되돌릴 수 없습니다!</p>
-                  <p>현재 사랑·소망·믿음의 모든 데이터(순, 순원, 출석, 날짜)가 히스토리에 저장된 후 삭제됩니다.</p>
-                  <p>모든 사용자 계정(AJ 제외)이 삭제됩니다.</p>
+                  <p>현재 사랑·소망·믿음의 모든 데이터(순, 순원, 출석, 날짜)가<br />기록된 후 삭제됩니다.</p>
+                  <p>모든 사랑·소망·믿음 순장의 계정정보가 삭제됩니다.</p>
+                  <p>계속 섬기시는 순장님들은 새롭게 회원 가입을 해주세요.</p>
                 </div>
                 <p className="text-sm text-gray-600">정말 새로운 텀을 시작하시겠습니까?</p>
                 <div className="flex gap-2 justify-end">
@@ -153,7 +154,7 @@ export default function GroupsPage() {
                   value={confirmText}
                   onChange={(e) => setConfirmText(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && confirmText === "새로운 텀 시작") setTermStep(3);
+                    if (e.key === "Enter" && !e.nativeEvent.isComposing && confirmText === "새로운 텀 시작") setTermStep(3);
                   }}
                   placeholder="새로운 텀 시작"
                   className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -187,7 +188,7 @@ export default function GroupsPage() {
                   value={termName}
                   onChange={(e) => setTermName(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && termName.trim()) newTermMutation.mutate(termName.trim());
+                    if (e.key === "Enter" && !e.nativeEvent.isComposing && termName.trim()) newTermMutation.mutate(termName.trim());
                   }}
                   placeholder="텀 이름"
                   className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"

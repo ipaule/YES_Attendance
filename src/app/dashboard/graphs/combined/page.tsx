@@ -44,13 +44,15 @@ export default function CombinedGraphPage() {
   const [preset, setPreset] = useState<Preset>("term");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
+  const [appliedStart, setAppliedStart] = useState("");
+  const [appliedEnd, setAppliedEnd] = useState("");
 
   const { startDate, endDate } = useMemo(() => {
-    if (preset === "custom") return { startDate: customStart, endDate: customEnd };
+    if (preset === "custom") return { startDate: appliedStart, endDate: appliedEnd };
     if (preset === "term") return { startDate: "", endDate: "" };
     const { start, end } = getPresetDates(preset);
     return { startDate: start, endDate: end };
-  }, [preset, customStart, customEnd]);
+  }, [preset, appliedStart, appliedEnd]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["graph", "combined", mode, startDate, endDate],
@@ -183,6 +185,12 @@ export default function CombinedGraphPage() {
               onChange={(e) => setCustomEnd(e.target.value)}
               className="text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
+            <button
+              onClick={() => { setAppliedStart(customStart); setAppliedEnd(customEnd); }}
+              className="text-xs bg-indigo-600 text-white rounded-lg px-3 py-1.5 hover:bg-indigo-700"
+            >
+              적용
+            </button>
           </div>
         )}
       </div>

@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
     const groupId = searchParams.get("groupId");
     const users = await prisma.user.findMany({
       where: {
-        role: { in: ["LEADER", "EXECUTIVE"] },
         teamId: null,
+        role: { in: ["LEADER", "EXECUTIVE", "PASTOR"] },
         ...(groupId ? { groupId } : {}),
       },
       select: {

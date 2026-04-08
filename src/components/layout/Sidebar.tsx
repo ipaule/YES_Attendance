@@ -117,7 +117,7 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
                 onClick={onClose}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
-                  pathname === item.href || pathname.startsWith(item.href + "/")
+                  pathname === item.href
                     ? "bg-indigo-50 text-indigo-700 font-medium"
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 )}

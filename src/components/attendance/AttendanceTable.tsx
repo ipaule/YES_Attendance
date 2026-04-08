@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, ArrowUpDown, GripVertical, Lock, Unlock } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   DndContext,
   closestCenter,
@@ -58,6 +59,8 @@ interface AttendanceTableProps {
 
 export function AttendanceTable({ team }: AttendanceTableProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canEditInfo = user?.role === "PASTOR" || user?.role === "EXECUTIVE";
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMember, setNewMember] = useState({
     name: "",
@@ -68,20 +71,6 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [newDate, setNewDate] = useState("");
-  const [editingMember, setEditingMember] = useState<string | null>(null);
-  const [editData, setEditData] = useState({ name: "", gender: "", birthYear: "" });
-  const editingRef = useRef<string | null>(null);
-  const editDataRef = useRef({ name: "", gender: "", birthYear: "" });
-
-  const setEditing = useCallback((id: string | null, data?: { name: string; gender: string; birthYear: string }) => {
-    editingRef.current = id;
-    setEditingMember(id);
-    if (data) { editDataRef.current = data; setEditData(data); }
-  }, []);
-
-  const updateEdit = useCallback((updater: (prev: typeof editData) => typeof editData) => {
-    setEditData((prev) => { const next = updater(prev); editDataRef.current = next; return next; });
-  }, []);
 
   type SortKey = "name" | "gender" | "birthYear" | "rate" | "grade";
   type SortDir = "none" | "asc" | "desc";
@@ -146,28 +135,6 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
     },
   });
 
-  const updateMemberMutation = useMutation({
-    mutationFn: async ({
-      memberId,
-      data,
-    }: {
-      memberId: string;
-      data: { name?: string; gender?: string; birthYear?: string };
-    }) => {
-      const res = await fetch(`/api/members/${memberId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to update member");
-      return res.json();
-    },
-    onSuccess: (_d, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["team", team.id] });
-      if (editingRef.current === variables.memberId) { editingRef.current = null; setEditingMember(null); }
-      savingRef.current = false;
-    },
-  });
 
   const addDateMutation = useMutation({
     mutationFn: async (date: string) => {
@@ -264,39 +231,6 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
       return att?.status || "";
     });
   };
-
-  const handleEditStart = (member: Member) => {
-    savingRef.current = false;
-    setEditing(member.id, {
-      name: member.name,
-      gender: member.gender,
-      birthYear: String(member.birthYear),
-    });
-  };
-
-  const handleEditSave = (memberId: string) => {
-    if (editingRef.current === memberId) {
-      updateMemberMutation.mutate({ memberId, data: editDataRef.current });
-      editingRef.current = null;
-    }
-  };
-
-  const savingRef = useRef(false);
-
-  // Document click listener for auto-save on click outside
-  useEffect(() => {
-    if (!editingMember) return;
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest(`[data-edit-row="${editingMember}"]`)) return;
-      if (savingRef.current || editingRef.current !== editingMember) return;
-      savingRef.current = true;
-      handleEditSave(editingMember);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingMember]);
 
   const sortedMembers = useMemo(() => {
     if (!sortKey || sortDir === "none") return team.members;
@@ -539,44 +473,20 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
               const statuses = getMemberStatuses(member, team.dates);
               const rate = calculateAttendanceRate(statuses);
               const grade = calculateGrade(rate);
-              const isEditing = editingMember === member.id;
-
               return (
-                <SortableTableRow key={member.id} id={member.id} editRowId={isEditing ? member.id : undefined}>
+                <SortableTableRow key={member.id} id={member.id}>
                   <td className="sticky left-0 z-10 bg-white px-1 py-1 text-center text-xs text-gray-400 w-8">{idx + 1}</td>
                   {/* Name */}
                   <td className="sticky left-8 z-10 bg-white px-2 py-1 w-16">
-                    {isEditing ? (
-                      <input type="text" value={editData.name}
-                        onChange={(e) => updateEdit((p) => ({ ...p, name: e.target.value }))}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleEditSave(member.id); if (e.key === "Escape") { editingRef.current = null; setEditingMember(null); } }}
-                                                className="w-full text-sm border border-indigo-300 rounded px-1 py-0.5 focus:outline-none" />
-                    ) : (
-                      <button onClick={() => handleEditStart(member)} className="text-left text-sm hover:text-indigo-600 transition-colors truncate block w-full">{member.name}</button>
-                    )}
+                    <span className="text-left text-sm truncate block w-full">{member.name}</span>
                   </td>
                   {/* Gender */}
                   <td className="sticky left-24 z-10 bg-white px-1 py-1 text-center w-10">
-                    {isEditing ? (
-                      <select value={editData.gender}
-                        onChange={(e) => updateEdit((p) => ({ ...p, gender: e.target.value }))}
-                                                className="text-xs border border-indigo-300 rounded px-0.5 py-0.5 w-full">
-                        <option value="MALE">남</option><option value="FEMALE">여</option>
-                      </select>
-                    ) : (
-                      <span className="text-xs text-gray-500 cursor-pointer" onClick={() => handleEditStart(member)}>{member.gender === "MALE" ? "남" : "여"}</span>
-                    )}
+                    <span className="text-xs text-gray-500">{member.gender === "MALE" ? "남" : "여"}</span>
                   </td>
                   {/* Birth Year */}
                   <td className="sticky left-[136px] z-10 bg-white px-1 py-1 text-center w-14">
-                    {isEditing ? (
-                      <input type="text" value={editData.birthYear}
-                        onChange={(e) => updateEdit((p) => ({ ...p, birthYear: e.target.value }))}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleEditSave(member.id); if (e.key === "Escape") { editingRef.current = null; setEditingMember(null); } }}
-                                                className="w-full text-xs border border-indigo-300 rounded px-1 py-0.5 text-center" />
-                    ) : (
-                      <span className="text-xs text-gray-500 cursor-pointer" onClick={() => handleEditStart(member)}>{member.birthYear}</span>
-                    )}
+                    <span className="text-xs text-gray-500">{member.birthYear}</span>
                   </td>
                   {/* Attendance cells */}
                   {team.dates.map((date) => {
@@ -617,24 +527,9 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                       {grade}
                     </span>
                   </td>
-                  {/* Actions */}
+                  {/* Delete (pastor/exec only) */}
                   <td className="px-1 py-1">
-                    {isEditing ? (
-                      <div className="flex flex-col gap-0.5">
-                        <button
-                          onClick={() => handleEditSave(member.id)}
-                          className="text-[10px] text-indigo-600 hover:text-indigo-800"
-                        >
-                          저장
-                        </button>
-                        <button
-                          onClick={() => { editingRef.current = null; setEditingMember(null); }}
-                          className="text-[10px] text-gray-400 hover:text-gray-600"
-                        >
-                          취소
-                        </button>
-                      </div>
-                    ) : (
+                    {canEditInfo && (
                       <button
                         onClick={() => {
                           if (confirm(`${member.name}님을 삭제하시겠습니까?`)) {

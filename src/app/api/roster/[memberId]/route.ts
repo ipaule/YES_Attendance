@@ -14,10 +14,26 @@ export async function PATCH(
   const { memberId } = await params;
   const data = await request.json();
 
+  const oldMember = await prisma.rosterMember.findUnique({ where: { id: memberId } });
   const member = await prisma.rosterMember.update({
     where: { id: memberId },
     data,
   });
+
+  // Sync name/gender/birthYear changes to team Member records
+  if (oldMember) {
+    const updates: Record<string, string> = {};
+    if (data.name !== undefined && data.name !== oldMember.name) updates.name = data.name;
+    if (data.gender !== undefined && data.gender !== oldMember.gender) updates.gender = data.gender;
+    if (data.birthYear !== undefined && data.birthYear !== oldMember.birthYear) updates.birthYear = data.birthYear;
+
+    if (Object.keys(updates).length > 0) {
+      await prisma.member.updateMany({
+        where: { name: oldMember.name },
+        data: updates,
+      });
+    }
+  }
 
   return NextResponse.json({ member });
 }

@@ -26,6 +26,15 @@ export async function POST(request: NextRequest) {
 
   const data = await request.json();
 
+  if (!data.name || !data.gender || !data.birthYear || !data.visitDate) {
+    return NextResponse.json({ error: "이름, 성별, 또래, 방문 날짜를 모두 입력해주세요." }, { status: 400 });
+  }
+
+  const existing = await prisma.shalomMember.findFirst({ where: { name: data.name } });
+  if (existing) {
+    return NextResponse.json({ error: "이미 같은 이름이 존재합니다." }, { status: 409 });
+  }
+
   const member = await prisma.shalomMember.create({
     data: {
       name: data.name || "",

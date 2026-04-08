@@ -98,13 +98,16 @@ export default function RosterPage() {
     },
   });
 
+  const [addError, setAddError] = useState("");
   const addMutation = useMutation({
     mutationFn: async (data: typeof newMember) => {
       const res = await fetch("/api/roster", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed");
+      return result;
     },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["roster"] }); setShowAdd(false); setNewMember({ name: "", gender: "", birthYear: "", groupName: "", ministry: "", note: "" }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["roster"] }); setShowAdd(false); setAddError(""); setNewMember({ name: "", gender: "", birthYear: "", groupName: "", ministry: "", note: "" }); },
+    onError: (e: Error) => { setAddError(e.message); },
   });
 
   const updateMutation = useMutation({
@@ -230,8 +233,13 @@ export default function RosterPage() {
           </select>
           <input type="text" placeholder="사역" value={newMember.ministry} onChange={(e) => setNewMember((p) => ({ ...p, ministry: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 w-20" />
           <input type="text" placeholder="비고" value={newMember.note} onChange={(e) => setNewMember((p) => ({ ...p, note: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 flex-1 min-w-[100px]" />
-          <button onClick={() => newMember.name && addMutation.mutate(newMember)} disabled={!newMember.name || addMutation.isPending} className="text-sm bg-indigo-600 text-white rounded-lg px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50 flex-shrink-0">추가</button>
-          <button onClick={() => setShowAdd(false)} className="text-sm text-gray-500 hover:text-gray-700 flex-shrink-0">취소</button>
+          <button onClick={() => {
+            setAddError("");
+            if (!newMember.name || !newMember.gender || !newMember.birthYear || !newMember.groupName) { setAddError("이름, 성별, 또래, 공동체를 모두 입력해주세요."); return; }
+            addMutation.mutate(newMember);
+          }} disabled={addMutation.isPending} className="text-sm bg-indigo-600 text-white rounded-lg px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50 flex-shrink-0">추가</button>
+          <button onClick={() => { setShowAdd(false); setAddError(""); }} className="text-sm text-gray-500 hover:text-gray-700 flex-shrink-0">취소</button>
+          {addError && <span className="text-xs text-red-500 w-full">{addError}</span>}
         </div>
       )}
 

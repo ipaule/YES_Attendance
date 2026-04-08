@@ -103,6 +103,15 @@ export async function POST(request: NextRequest) {
 
   const data = await request.json();
 
+  if (!data.name || !data.gender || !data.birthYear || !data.groupName) {
+    return NextResponse.json({ error: "이름, 성별, 또래, 공동체를 모두 입력해주세요." }, { status: 400 });
+  }
+
+  const existing = await prisma.rosterMember.findFirst({ where: { name: data.name } });
+  if (existing) {
+    return NextResponse.json({ error: "이미 같은 이름이 존재합니다." }, { status: 409 });
+  }
+
   // Shift all existing members down by 1 to add new at top
   await prisma.$executeRawUnsafe('UPDATE RosterMember SET "order" = "order" + 1');
 

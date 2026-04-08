@@ -382,17 +382,17 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
         </div>
       )}
 
-      {/* Add member form with auto-complete */}
+      {/* Add member form — dropdown only */}
       {showAddMember && (
         <div className="px-4 py-3 border-b border-gray-100 bg-green-50 flex flex-wrap items-center gap-3">
-          <div className="relative">
+          <div className="relative flex-1 min-w-[200px]">
             <input
               type="text"
-              placeholder="이름 검색"
+              placeholder="이름 검색..."
               value={newMember.name}
               onChange={async (e) => {
                 const val = e.target.value;
-                setNewMember((prev) => ({ ...prev, name: val }));
+                setNewMember((prev) => ({ ...prev, name: val, gender: "", birthYear: "" }));
                 if (val.length >= 1) {
                   try {
                     const isShalom = team.group?.name === "샬롬";
@@ -414,10 +414,10 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                 if (newMember.name.length >= 1) setShowSuggestions(true);
               }}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 w-32 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 w-full focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg w-48 max-h-40 overflow-y-auto">
+              <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg w-full max-h-48 overflow-y-auto">
                 {suggestions.map((s) => (
                   <button
                     key={s.id}
@@ -425,41 +425,31 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     onClick={() => {
                       setNewMember({ name: s.name, gender: s.gender || "MALE", birthYear: s.birthYear || "" });
                       setShowSuggestions(false);
+                      setSuggestions([]);
                     }}
-                    className="w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-50 flex justify-between"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 flex justify-between border-b border-gray-50"
                   >
-                    <span>{s.name}</span>
+                    <span className="font-medium">{s.name}</span>
                     <span className="text-xs text-gray-400">{s.gender === "MALE" ? "남" : s.gender === "FEMALE" ? "여" : ""} {s.birthYear}</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
-          <select
-            value={newMember.gender}
-            onChange={(e) =>
-              setNewMember((prev) => ({ ...prev, gender: e.target.value }))
-            }
-            className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          >
-            <option value="MALE">남</option>
-            <option value="FEMALE">여</option>
-          </select>
-          <input
-            type="text"
-            placeholder="또래"
-            value={newMember.birthYear}
-            onChange={(e) =>
-              setNewMember((prev) => ({ ...prev, birthYear: e.target.value }))
-            }
-            className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 w-20 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
+          {newMember.gender && (
+            <span className="text-xs text-gray-500 bg-white rounded-lg px-2 py-1.5 border border-gray-200">
+              {newMember.gender === "MALE" ? "남" : "여"} · {newMember.birthYear}
+            </span>
+          )}
           <button
-            onClick={() =>
-              newMember.name &&
-              addMemberMutation.mutate({ ...newMember, teamId: team.id })
-            }
-            disabled={!newMember.name || addMemberMutation.isPending}
+            onClick={() => {
+              if (!newMember.name || !newMember.gender) {
+                alert("목록에서 순원을 선택해주세요.");
+                return;
+              }
+              addMemberMutation.mutate({ ...newMember, teamId: team.id });
+            }}
+            disabled={addMemberMutation.isPending}
             className="text-xs bg-emerald-600 text-white rounded-lg px-3 py-1.5 hover:bg-emerald-700 disabled:opacity-50"
           >
             추가

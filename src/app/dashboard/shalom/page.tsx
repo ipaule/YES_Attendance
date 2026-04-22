@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
@@ -19,11 +19,13 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowLeft, Plus, Trash2, ArrowUpDown, Save, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, ArrowUpDown, Save, GripVertical, Search, MoveRight } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ShalomMember {
   id: string;
   name: string;
+  englishName: string;
   gender: string;
   birthYear: string;
   phone: string;
@@ -32,6 +34,7 @@ interface ShalomMember {
   leader: string;
   note: string;
   status: string;
+  movedToRosterAt: string | null;
 }
 
 interface HistorySummary {
@@ -43,11 +46,11 @@ interface HistorySummary {
 type SortKey = "name" | "gender" | "birthYear" | "visitDate" | "inviter" | "leader" | "status";
 type SortDir = "none" | "asc" | "desc";
 
-function SortableTableRow({ id, children, editRowId }: { id: string; children: React.ReactNode; editRowId?: string }) {
+function SortableTableRow({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
-    <tr ref={setNodeRef} style={style} className="border-b border-gray-100 hover:bg-gray-50" {...attributes} data-edit-row={editRowId || undefined}>
+    <tr ref={setNodeRef} style={style} className="border-b border-gray-100 hover:bg-gray-50" {...attributes}>
       <td className="px-1 py-1 text-center w-6">
         <button {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
           <GripVertical className="h-3.5 w-3.5" />
@@ -61,24 +64,9 @@ function SortableTableRow({ id, children, editRowId }: { id: string; children: R
 export default function ShalomListPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [showAdd, setShowAdd] = useState(false);
-  const [newMember, setNewMember] = useState({
-    name: "", gender: "", birthYear: "", phone: "", visitDate: "", inviter: "", leader: "", note: "", status: "방문",
-  });
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Partial<ShalomMember>>({});
-  const editingRef = useRef<string | null>(null);
-  const editDataRef = useRef<Partial<ShalomMember>>({});
-  const savingRef = useRef(false);
+  const { user } = useAuth();
+  const canMoveToRoster = user?.role === "PASTOR";
 
-  const startEdit = useCallback((m: ShalomMember) => {
-    editingRef.current = m.id; savingRef.current = false;
-    setEditingId(m.id); setEditData(m); editDataRef.current = m;
-  }, []);
-
-  const updateEdit = useCallback((updater: (prev: Partial<ShalomMember>) => Partial<ShalomMember>) => {
-    setEditData((prev) => { const next = updater(prev); editDataRef.current = next; return next; });
-  }, []);
   const [sortKey, setSortKey] = useState<SortKey>("visitDate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -86,21 +74,8 @@ export default function ShalomListPage() {
   const [flushMode, setFlushMode] = useState<"new" | "existing">("new");
   const [flushName, setFlushName] = useState("");
   const [flushHistoryId, setFlushHistoryId] = useState("");
-
-  useEffect(() => {
-    if (!editingId) return;
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest(`[data-edit-row="${editingId}"]`)) return;
-      if (savingRef.current || editingRef.current !== editingId) return;
-      savingRef.current = true;
-      const d = editDataRef.current;
-      updateMutation.mutate({ id: editingId, data: { name: d.name, gender: d.gender, birthYear: d.birthYear, phone: d.phone, visitDate: d.visitDate, inviter: d.inviter, note: d.note, status: d.status } });
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingId]);
+  const [moveTarget, setMoveTarget] = useState<ShalomMember | null>(null);
+  const [moveError, setMoveError] = useState<string | null>(null);
 
   const { data: members } = useQuery({
     queryKey: ["shalom-members"],
@@ -121,26 +96,6 @@ export default function ShalomListPage() {
     enabled: showFlush,
   });
 
-  const [addError, setAddError] = useState("");
-  const addMutation = useMutation({
-    mutationFn: async (data: typeof newMember) => {
-      const res = await fetch("/api/shalom", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Failed");
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["shalom-members"] });
-      setShowAdd(false); setAddError("");
-      setNewMember({ name: "", gender: "", birthYear: "", phone: "", visitDate: "", inviter: "", leader: "", note: "", status: "방문" });
-    },
-    onError: (e: Error) => { setAddError(e.message); },
-  });
-
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<ShalomMember> }) => {
       const res = await fetch(`/api/shalom/${id}`, {
@@ -151,11 +106,7 @@ export default function ShalomListPage() {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
-    onSettled: (_d, _e, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["shalom-members"] });
-      if (editingRef.current === variables.id) { editingRef.current = null; setEditingId(null); }
-      savingRef.current = false;
-    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["shalom-members"] }),
   });
 
   const deleteMutation = useMutation({
@@ -165,6 +116,23 @@ export default function ShalomListPage() {
       return res.json();
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["shalom-members"] }),
+  });
+
+  const moveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/shalom/${id}/move-to-roster`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "이동 실패");
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shalom-members"] });
+      queryClient.invalidateQueries({ queryKey: ["roster"] });
+      queryClient.invalidateQueries({ queryKey: ["unregistered"] });
+      setMoveTarget(null);
+      setMoveError(null);
+    },
+    onError: (e: Error) => setMoveError(e.message),
   });
 
   const flushMutation = useMutation({
@@ -190,10 +158,20 @@ export default function ShalomListPage() {
   const sorted = useMemo(() => {
     if (!members) return [];
     if (sortDir === "none") return members;
+    const toYearNum = (v: string) => {
+      const n = parseInt(v, 10);
+      if (!Number.isFinite(n)) return Number.MAX_SAFE_INTEGER;
+      return n >= 50 ? 1900 + n : 2000 + n;
+    };
     return [...members].sort((a, b) => {
-      const va = (a[sortKey] || "") as string;
-      const vb = (b[sortKey] || "") as string;
-      const cmp = va.localeCompare(vb, "ko");
+      let cmp = 0;
+      if (sortKey === "birthYear") {
+        cmp = toYearNum(a.birthYear) - toYearNum(b.birthYear);
+      } else {
+        const va = (a[sortKey] || "") as string;
+        const vb = (b[sortKey] || "") as string;
+        cmp = va.localeCompare(vb, "ko");
+      }
       return sortDir === "asc" ? cmp : -cmp;
     });
   }, [members, sortKey, sortDir]);
@@ -225,7 +203,6 @@ export default function ShalomListPage() {
     if (selected.size === 0) return;
     if (flushMode === "new" && !flushName.trim()) return;
     if (flushMode === "existing" && !flushHistoryId) return;
-
     flushMutation.mutate({
       memberIds: Array.from(selected),
       ...(flushMode === "new" ? { historyName: flushName } : { historyId: flushHistoryId }),
@@ -247,17 +224,14 @@ export default function ShalomListPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor)
+    useSensor(KeyboardSensor),
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id || !members) return;
-
-    // Reset sort when dragging
     setSortKey("visitDate");
     setSortDir("none");
-
     const oldIndex = sorted.findIndex((m) => m.id === active.id);
     const newIndex = sorted.findIndex((m) => m.id === over.id);
     const reordered = arrayMove(sorted, oldIndex, newIndex);
@@ -291,7 +265,7 @@ export default function ShalomListPage() {
             </button>
           )}
           <button
-            onClick={() => setShowAdd(!showAdd)}
+            onClick={() => router.push("/dashboard/shalom/new")}
             className="flex items-center gap-1.5 text-sm bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
@@ -355,97 +329,150 @@ export default function ShalomListPage() {
         </div>
       )}
 
-      {/* Add form */}
-      {showAdd && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-wrap items-end gap-2">
-          <input type="text" placeholder="이름" value={newMember.name} onChange={(e) => setNewMember((p) => ({ ...p, name: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 w-20" />
-          <select value={newMember.gender} onChange={(e) => setNewMember((p) => ({ ...p, gender: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5">
-            <option value="">성별</option><option value="MALE">남</option><option value="FEMALE">여</option>
-          </select>
-          <input type="text" placeholder="또래" value={newMember.birthYear} onChange={(e) => setNewMember((p) => ({ ...p, birthYear: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 w-16" />
-          <input type="text" placeholder="전화번호" value={newMember.phone} onChange={(e) => setNewMember((p) => ({ ...p, phone: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 w-28" />
-          <input type="date" value={newMember.visitDate} onChange={(e) => setNewMember((p) => ({ ...p, visitDate: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5" />
-          <input type="text" placeholder="인도자" value={newMember.inviter} onChange={(e) => setNewMember((p) => ({ ...p, inviter: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 w-20" />
-          <input type="text" placeholder="비고" value={newMember.note} onChange={(e) => setNewMember((p) => ({ ...p, note: e.target.value }))} className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 flex-1 min-w-[120px]" />
-          <button onClick={() => {
-            setAddError("");
-            if (!newMember.name || !newMember.gender || !newMember.birthYear || !newMember.visitDate) { setAddError("이름, 성별, 또래, 방문 날짜를 모두 입력해주세요."); return; }
-            addMutation.mutate(newMember);
-          }} disabled={addMutation.isPending} className="text-sm bg-indigo-600 text-white rounded-lg px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50 flex-shrink-0">추가</button>
-          <button onClick={() => { setShowAdd(false); setAddError(""); }} className="text-sm text-gray-500 hover:text-gray-700 flex-shrink-0">취소</button>
-          {addError && <span className="text-xs text-red-500 w-full">{addError}</span>}
+      {/* Move-to-roster confirmation dialog */}
+      {moveTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4">
+            <h3 className="text-lg font-bold text-gray-800">로스터로 이동</h3>
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">{moveTarget.name}</span>님을 로스터로 이동하시겠습니까?
+              <br />
+              <span className="text-xs text-gray-400">이동 후 미등록자 리스트에 추가됩니다.</span>
+            </p>
+            {moveError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-xs text-red-700">{moveError}</div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setMoveTarget(null); setMoveError(null); }}
+                disabled={moveMutation.isPending}
+                className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => moveMutation.mutate(moveTarget.id)}
+                disabled={moveMutation.isPending}
+                className="text-sm bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {moveMutation.isPending ? "이동 중..." : "이동"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Table */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="w-7 px-1 py-2" />
-                <th className="w-8 px-1 py-2"><input type="checkbox" checked={members?.length ? selected.size === members.length : false} onChange={toggleSelectAll} className="rounded" /></th>
-                <th className="w-8 px-1 py-2 text-center font-medium text-gray-400">#</th>
-                <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[80px] text-center" onClick={() => toggleSort("name")}><div className="flex items-center justify-center gap-0.5">이름{sortIcon("name")}</div></th>
-                <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[44px] text-center" onClick={() => toggleSort("gender")}><div className="flex items-center justify-center gap-0.5">성별{sortIcon("gender")}</div></th>
-                <th className="px-1 py-2 font-medium text-gray-600 whitespace-nowrap w-[44px] text-center">또래</th>
-                <th className="px-1 py-2 font-medium text-gray-600 whitespace-nowrap w-[120px] text-center">전화번호</th>
-                <th className="px-2 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[95px] text-center" onClick={() => toggleSort("visitDate")}><div className="flex items-center justify-center gap-0.5">방문 날짜{sortIcon("visitDate")}</div></th>
-                <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[80px] text-center" onClick={() => toggleSort("inviter")}><div className="flex items-center justify-center gap-0.5">인도자{sortIcon("inviter")}</div></th>
-                <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[80px] text-center" onClick={() => toggleSort("leader")}><div className="flex items-center justify-center gap-0.5">순장{sortIcon("leader")}</div></th>
-                <th className="px-2 py-2 font-medium text-gray-600 text-center">비고</th>
-                <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[50px] text-center" onClick={() => toggleSort("status")}><div className="flex items-center justify-center gap-0.5">상태{sortIcon("status")}</div></th>
-                <th className="w-8 px-1 py-2" />
-              </tr>
-            </thead>
-            <SortableContext items={sorted.map((m) => m.id)} strategy={verticalListSortingStrategy}>
-            <tbody>
-              {sorted.map((m, idx) => {
-                const isEditing = editingId === m.id;
-                return (
-                  <SortableTableRow key={m.id} id={m.id} editRowId={isEditing ? m.id : undefined}>
-                    <td className="px-1 py-1 text-center">
-                      <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} className="rounded" />
-                    </td>
-                    <td className="px-2 py-1 text-center text-xs text-gray-400">{idx + 1}</td>
-                    {(() => {
-                      const doSave = () => {
-                        if (savingRef.current || editingRef.current !== m.id) return;
-                        savingRef.current = true;
-                        const d = editDataRef.current;
-                        updateMutation.mutate({ id: m.id, data: { name: d.name, gender: d.gender, birthYear: d.birthYear, phone: d.phone, visitDate: d.visitDate, inviter: d.inviter, note: d.note, status: d.status } });
-                      };
-                      const kd = (e: React.KeyboardEvent) => { if (e.key === "Enter") doSave(); if (e.key === "Escape") { editingRef.current = null; setEditingId(null); } };
-                      const se = () => startEdit(m);
-                      const ec = isEditing ? "bg-indigo-50" : "bg-transparent cursor-pointer appearance-none pointer-events-none";
-                      const ring = isEditing ? "focus:ring-1 focus:ring-indigo-300" : "";
-                      return (<>
-                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><input type="text" readOnly={!isEditing} value={isEditing ? (editData.name || "") : (m.name || "-")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, name: e.target.value })) : undefined} onKeyDown={isEditing ? kd : undefined} className={`w-full text-xs py-0.5 px-1 rounded focus:outline-none ${ec} ${ring}`} /></td>
-                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><select disabled={!isEditing} value={isEditing ? (editData.gender || "") : (m.gender || "")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, gender: e.target.value })) : undefined} className={`w-full text-xs py-0.5 rounded focus:outline-none ${ec} ${ring}`}><option value="">-</option><option value="MALE">남</option><option value="FEMALE">여</option></select></td>
-                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><input type="text" readOnly={!isEditing} value={isEditing ? (editData.birthYear || "") : (m.birthYear || "-")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, birthYear: e.target.value })) : undefined} onKeyDown={isEditing ? kd : undefined} className={`w-full text-xs py-0.5 px-1 text-center rounded focus:outline-none ${ec} ${ring}`} /></td>
-                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><input type="text" readOnly={!isEditing} value={isEditing ? (editData.phone || "") : (m.phone || "-")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, phone: e.target.value })) : undefined} onKeyDown={isEditing ? kd : undefined} className={`w-full text-xs py-0.5 px-1 text-center rounded focus:outline-none ${ec} ${ring}`} /></td>
-                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><input type={isEditing ? "date" : "text"} readOnly={!isEditing} value={isEditing ? (editData.visitDate || "") : (m.visitDate || "-")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, visitDate: e.target.value })) : undefined} className={`w-full text-xs py-0.5 px-1 rounded focus:outline-none ${ec} ${ring}`} /></td>
-                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><input type="text" readOnly={!isEditing} value={isEditing ? (editData.inviter || "") : (m.inviter || "-")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, inviter: e.target.value })) : undefined} onKeyDown={isEditing ? kd : undefined} className={`w-full text-xs py-0.5 px-1 text-center rounded focus:outline-none ${ec} ${ring}`} /></td>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="w-7 px-1 py-2" />
+                  <th className="w-8 px-1 py-2"><input type="checkbox" checked={members?.length ? selected.size === members.length : false} onChange={toggleSelectAll} className="rounded" /></th>
+                  <th className="w-8 px-1 py-2 text-center font-medium text-gray-400">#</th>
+                  <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[80px] text-center" onClick={() => toggleSort("name")}><div className="flex items-center justify-center gap-0.5">이름{sortIcon("name")}</div></th>
+                  <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[44px] text-center" onClick={() => toggleSort("gender")}><div className="flex items-center justify-center gap-0.5">성별{sortIcon("gender")}</div></th>
+                  <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[44px] text-center" onClick={() => toggleSort("birthYear")}><div className="flex items-center justify-center gap-0.5">또래{sortIcon("birthYear")}</div></th>
+                  <th className="px-1 py-2 font-medium text-gray-600 whitespace-nowrap w-[120px] text-center">전화번호</th>
+                  <th className="px-2 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[95px] text-center" onClick={() => toggleSort("visitDate")}><div className="flex items-center justify-center gap-0.5">방문 날짜{sortIcon("visitDate")}</div></th>
+                  <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[80px] text-center" onClick={() => toggleSort("inviter")}><div className="flex items-center justify-center gap-0.5">인도자{sortIcon("inviter")}</div></th>
+                  <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[80px] text-center" onClick={() => toggleSort("leader")}><div className="flex items-center justify-center gap-0.5">순장{sortIcon("leader")}</div></th>
+                  <th className="px-2 py-2 font-medium text-gray-600 text-center">비고</th>
+                  <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[50px] text-center" onClick={() => toggleSort("status")}><div className="flex items-center justify-center gap-0.5">상태{sortIcon("status")}</div></th>
+                  <th className="w-20 px-1 py-2" />
+                </tr>
+              </thead>
+              <SortableContext items={sorted.map((m) => m.id)} strategy={verticalListSortingStrategy}>
+                <tbody>
+                  {sorted.map((m, idx) => {
+                    const moved = !!m.movedToRosterAt;
+                    const canShowMoveButton = canMoveToRoster && !moved;
+                    const moveEnabled = m.status === "졸업";
+                    return (
+                      <SortableTableRow key={m.id} id={m.id}>
+                        <td className="px-1 py-1 text-center">
+                          <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} className="rounded" />
+                        </td>
+                        <td className="px-2 py-1 text-center text-xs text-gray-400">{idx + 1}</td>
+                        <td className="px-2 py-1">
+                          <button
+                            onClick={() => router.push(`/dashboard/shalom/${m.id}`)}
+                            className="text-sm text-gray-800 hover:text-indigo-600 hover:underline"
+                          >
+                            {m.name || "-"}
+                          </button>
+                        </td>
+                        <td className="px-2 py-1 text-center">
+                          <span className={`text-xs font-medium ${m.gender === "남" ? "text-blue-600" : m.gender === "여" ? "text-red-600" : "text-gray-400"}`}>
+                            {m.gender || "-"}
+                          </span>
+                        </td>
+                        <td className="px-2 py-1 text-center text-xs text-gray-500">{m.birthYear || "-"}</td>
+                        <td className="px-2 py-1 text-center text-xs text-gray-500">{m.phone || "-"}</td>
+                        <td className="px-2 py-1 text-center text-xs text-gray-500">{m.visitDate || "-"}</td>
+                        <td className="px-2 py-1 text-center text-xs text-gray-500">{m.inviter || "-"}</td>
                         <td className="px-2 py-1 text-center text-xs text-gray-400">{m.leader || "-"}</td>
-                        <td className="px-2 py-1" onClick={!isEditing ? se : undefined}><input type="text" readOnly={!isEditing} value={isEditing ? (editData.note || "") : (m.note || "-")} onChange={isEditing ? (e) => updateEdit((p) => ({ ...p, note: e.target.value })) : undefined} onKeyDown={isEditing ? kd : undefined} className={`w-full text-xs py-0.5 px-1 rounded focus:outline-none ${ec} ${ring}`} /></td>
-                        <td className="px-2 py-1 text-center"><select value={isEditing ? (editData.status || "방문") : m.status} onChange={(e) => { if (isEditing) { updateEdit((p) => ({ ...p, status: e.target.value })); } else { updateMutation.mutate({ id: m.id, data: { status: e.target.value } }); } }} className={`text-[10px] font-medium px-1 py-0.5 rounded-full border-0 cursor-pointer ${statusColor(isEditing ? (editData.status || "방문") : m.status)}`}><option value="방문">방문</option><option value="등록">등록</option><option value="졸업">졸업</option></select></td>
-                        <td className="px-1 py-1"><button onClick={() => { if (confirm(`${m.name}님을 삭제하시겠습니까?`)) deleteMutation.mutate(m.id); }} className="text-gray-300 hover:text-red-500"><Trash2 className="h-3 w-3" /></button></td>
-                      </>);
-                    })()}
-                  </SortableTableRow>
-                );
-              })}
-            </tbody>
-            </SortableContext>
-          </table>
-          {(!members || members.length === 0) && (
-            <div className="text-center py-12 text-gray-400">
-              <p>아직 샬롬 리스트가 비어있습니다.</p>
-            </div>
-          )}
+                        <td className="px-2 py-1 text-xs text-gray-500 truncate max-w-[200px]">{m.note || "-"}</td>
+                        <td className="px-2 py-1 text-center">
+                          <select
+                            value={m.status}
+                            onChange={(e) => updateMutation.mutate({ id: m.id, data: { status: e.target.value } })}
+                            className={`text-[10px] font-medium px-1 py-0.5 rounded-full border-0 cursor-pointer ${statusColor(m.status)}`}
+                          >
+                            <option value="방문">방문</option>
+                            <option value="등록">등록</option>
+                            <option value="졸업">졸업</option>
+                          </select>
+                        </td>
+                        <td className="px-1 py-1">
+                          <div className="flex items-center gap-1 justify-center">
+                            {moved ? (
+                              <span className="text-[10px] text-gray-400" title="이미 이동됨">
+                                이동됨
+                              </span>
+                            ) : canShowMoveButton ? (
+                              <button
+                                onClick={() => {
+                                  setMoveError(null);
+                                  setMoveTarget(m);
+                                }}
+                                disabled={!moveEnabled}
+                                title={moveEnabled ? "로스터로 이동" : "졸업 상태에서만 이동 가능"}
+                                className={`${moveEnabled ? "text-gray-400 hover:text-indigo-600" : "text-gray-200 cursor-not-allowed"}`}
+                              >
+                                <MoveRight className="h-3.5 w-3.5" />
+                              </button>
+                            ) : null}
+                            <button
+                              onClick={() => router.push(`/dashboard/shalom/${m.id}`)}
+                              className="text-gray-400 hover:text-indigo-600"
+                              title="상세 보기"
+                            >
+                              <Search className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => { if (confirm(`${m.name}님을 삭제하시겠습니까?`)) deleteMutation.mutate(m.id); }}
+                              className="text-gray-300 hover:text-red-500"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </td>
+                      </SortableTableRow>
+                    );
+                  })}
+                </tbody>
+              </SortableContext>
+            </table>
+            {(!members || members.length === 0) && (
+              <div className="text-center py-12 text-gray-400">
+                <p>아직 샬롬 리스트가 비어있습니다.</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
       </DndContext>
     </div>
   );

@@ -13,6 +13,7 @@ interface TeamSummary {
   groupId: string;
   group: { id: string; name: string };
   leader: { id: string; username: string } | null;
+  members: { id: string; name: string }[];
   _count: { members: number };
 }
 
@@ -111,7 +112,7 @@ export default function GroupPage() {
   });
 
   const groupName = data?.[0]?.group?.name || "";
-  const canManage = user?.role === "PASTOR" || user?.role === "EXECUTIVE";
+  const canManage = user?.role === "PASTOR";
 
   if (isLoading) {
     return (
@@ -270,6 +271,11 @@ export default function GroupPage() {
               <Users className="h-4 w-4" />
               <span>순원 {team._count.members}명</span>
             </div>
+            {team.members && team.members.length > 0 && (
+              <div className="mt-2 text-xs text-gray-400 leading-relaxed">
+                {team.members.map((m) => m.name).join(", ")}
+              </div>
+            )}
           </div>
         ))}
       </div>

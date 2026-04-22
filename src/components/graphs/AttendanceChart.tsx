@@ -24,6 +24,8 @@ const COLORS = [
   "#6366f1",
 ];
 
+const OVERALL_KEYS = ["전체", "합산"];
+
 interface AttendanceChartProps {
   chartData: Record<string, string | number>[];
   series: string[];
@@ -45,11 +47,9 @@ export function AttendanceChart({
 }: AttendanceChartProps) {
   const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 
-  const overallKeys = ["전체", "합산"];
-
   const sortedSeries = [
-    ...series.filter((s) => !overallKeys.includes(s)),
-    ...series.filter((s) => overallKeys.includes(s)),
+    ...series.filter((s) => !OVERALL_KEYS.includes(s)),
+    ...series.filter((s) => OVERALL_KEYS.includes(s)),
   ];
 
   const filteredData = chartData.map((point) => {
@@ -63,18 +63,23 @@ export function AttendanceChart({
   });
 
   const maxValue = useMemo(() => {
-    if (maxOverride) return maxOverride;
+    // Respect maxOverride (e.g. roster total) only while an overall series is
+    // visible — once user hides 합산/전체, auto-zoom into the remaining lines.
+    const anyOverallVisible = series.some(
+      (s) => OVERALL_KEYS.includes(s) && !hiddenSeries.has(s),
+    );
+    if (maxOverride && anyOverallVisible) return maxOverride;
     if (mode === "percentage") return 100;
     let max = 0;
     for (const point of filteredData) {
       for (const [key, value] of Object.entries(point)) {
-        if (key !== "date" && typeof value === "number" && value > max) {
-          max = value;
-        }
+        if (key === "date" || typeof value !== "number") continue;
+        if (hiddenSeries.has(key)) continue;
+        if (value > max) max = value;
       }
     }
     return Math.max(max + 1, 5);
-  }, [filteredData, mode]);
+  }, [filteredData, mode, hiddenSeries, maxOverride, series]);
 
   const handleLegendClick = useCallback((name: string) => {
     setHiddenSeries((prev) => {
@@ -89,7 +94,7 @@ export function AttendanceChart({
   }, []);
 
   const getColor = (name: string, index: number) => {
-    if (overallKeys.includes(name)) return "#1f2937";
+    if (OVERALL_KEYS.includes(name)) return "#1f2937";
     return COLORS[index % COLORS.length];
   };
 
@@ -133,8 +138,8 @@ export function AttendanceChart({
                   }
                   if (!active || !payload?.length) return null;
                   const sorted = [...payload].sort((a, b) => {
-                    const aOverall = overallKeys.includes(String(a.name || ""));
-                    const bOverall = overallKeys.includes(String(b.name || ""));
+                    const aOverall = OVERALL_KEYS.includes(String(a.name || ""));
+                    const bOverall = OVERALL_KEYS.includes(String(b.name || ""));
                     if (aOverall && !bOverall) return 1;
                     if (!aOverall && bOverall) return -1;
                     return 0;
@@ -156,7 +161,7 @@ export function AttendanceChart({
                 }}
               />
               {sortedSeries.map((name, index) => {
-                const isOverall = overallKeys.includes(name);
+                const isOverall = OVERALL_KEYS.includes(name);
                 const isHidden = hiddenSeries.has(name);
                 return (
                   <Line

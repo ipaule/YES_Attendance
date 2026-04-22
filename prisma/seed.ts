@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hashSync } from "bcryptjs";
+import { seedDropdownOptions } from "../src/lib/dropdownSeeds";
 
 const prisma = new PrismaClient();
 
@@ -30,7 +31,9 @@ async function main() {
     },
   });
 
-  console.log("Seed completed: 4 groups + admin user AJ created");
+  await seedDropdownOptions(prisma);
+
+  console.log("Seed completed: 4 groups + admin user AJ + dropdown options");
 }
 
 main()

@@ -26,8 +26,12 @@ export async function POST(request: NextRequest) {
 
   const data = await request.json();
 
-  if (!data.name || !data.gender || !data.birthYear || !data.visitDate) {
-    return NextResponse.json({ error: "이름, 성별, 또래, 방문 날짜를 모두 입력해주세요." }, { status: 400 });
+  if (!data.name || !data.gender) {
+    return NextResponse.json({ error: "이름과 성별은 필수입니다." }, { status: 400 });
+  }
+
+  if (data.phone && !/^\d{3}-\d{3}-\d{4}$/.test(data.phone)) {
+    return NextResponse.json({ error: "전화번호 형식: XXX-XXX-XXXX" }, { status: 400 });
   }
 
   const existing = await prisma.shalomMember.findFirst({ where: { name: data.name } });
@@ -37,8 +41,9 @@ export async function POST(request: NextRequest) {
 
   const member = await prisma.shalomMember.create({
     data: {
-      name: data.name || "",
-      gender: data.gender || "",
+      name: data.name,
+      englishName: data.englishName || "",
+      gender: data.gender,
       birthYear: data.birthYear || "",
       phone: data.phone || "",
       visitDate: data.visitDate || "",

@@ -17,6 +17,8 @@ import {
   History,
   Megaphone,
   KeyRound,
+  UserX,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { User, Group } from "@/types";
@@ -130,8 +132,23 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Password + Logout */}
+      {/* Admin + Password + Logout */}
       <div className="px-3 py-4 border-t border-gray-100 space-y-1">
+        {user.role === "PASTOR" && (
+          <Link
+            href="/dashboard/admin"
+            onClick={onClose}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm transition-colors",
+              pathname === "/dashboard/admin"
+                ? "bg-indigo-50 text-indigo-700 font-medium"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            )}
+          >
+            <Settings className="h-4 w-4" />
+            리더쉽 관리
+          </Link>
+        )}
         <button
           onClick={() => setShowPwModal(true)}
           className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
@@ -267,15 +284,20 @@ function getNavItems(user: User, groups: Group[]) {
       title: "전체 관리",
       items: [
         { label: "합산 그래프", href: "/dashboard/graphs/combined", icon: BarChart3 },
-        { label: "전체 리스트", href: "/dashboard/roster", icon: ClipboardList },
-        { label: "리더쉽 관리", href: "/dashboard/admin", icon: Settings },
+        { label: "재적 리스트", href: "/dashboard/roster", icon: ClipboardList },
+        { label: "미등록자 관리", href: "/dashboard/unregistered", icon: UserX },
+        { label: "한주의 준비", href: "/dashboard/weekly-prep", icon: CalendarDays },
       ],
     });
 
     // 공동체
+    const groupOrder = ["믿음", "소망", "사랑"];
+    const sortedGroups = [...otherGroups].sort(
+      (a, b) => groupOrder.indexOf(a.name) - groupOrder.indexOf(b.name)
+    );
     sections.push({
       title: "공동체",
-      items: otherGroups.map((g) => ({
+      items: sortedGroups.map((g) => ({
         label: `${g.name} 현황`,
         href: `/dashboard/group/${g.id}`,
         icon: FolderOpen,

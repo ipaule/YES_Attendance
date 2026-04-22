@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { calculateAttendanceRate, calculateGrade } from "@/lib/attendance";
+import { validateProfilePatch } from "@/lib/profile";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -15,6 +16,8 @@ export async function GET(request: NextRequest) {
   const filterBirthYear = searchParams.get("birthYear") || "";
   const filterGroup = searchParams.get("groupName") || "";
   const filterGrade = searchParams.get("grade") || "";
+  const filterTraining = searchParams.get("training") || "";
+  const filterBaptism = searchParams.get("baptismStatus") || "";
 
   const members = await prisma.rosterMember.findMany({
     orderBy: { order: "asc" },
@@ -89,6 +92,8 @@ export async function GET(request: NextRequest) {
       if (filterGroup === "-" && m.groupName) return false;
       if (filterGroup && filterGroup !== "-" && m.groupName !== filterGroup) return false;
       if (filterGrade && m.grade !== filterGrade) return false;
+      if (filterTraining && m.training !== filterTraining) return false;
+      if (filterBaptism && m.baptismStatus !== filterBaptism) return false;
       return true;
     });
 
@@ -103,8 +108,18 @@ export async function POST(request: NextRequest) {
 
   const data = await request.json();
 
-  if (!data.name || !data.gender || !data.birthYear || !data.groupName) {
-    return NextResponse.json({ error: "이름, 성별, 또래, 공동체를 모두 입력해주세요." }, { status: 400 });
+  if (!data.name || !data.gender || !data.groupName) {
+    return NextResponse.json({ error: "이름, 성별, 공동체는 필수입니다." }, { status: 400 });
+  }
+
+  const validationError = validateProfilePatch({
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    birthday: data.birthday,
+  });
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 });
   }
 
   const existing = await prisma.rosterMember.findFirst({ where: { name: data.name } });
@@ -117,16 +132,63 @@ export async function POST(request: NextRequest) {
 
   const member = await prisma.rosterMember.create({
     data: {
-      name: data.name || "",
-      gender: data.gender || "",
+      name: data.name,
+      englishName: data.englishName || "",
+      gender: data.gender,
       birthYear: data.birthYear || "",
-      groupName: data.groupName || "",
+      birthday: data.birthday || "",
+      groupName: data.groupName,
       teamName: data.teamName || "",
       ministry: data.ministry || "",
       note: data.note || "",
+      email: data.email || "",
+      phone: data.phone || "",
+      address: data.address || "",
+      salvationAssurance: data.salvationAssurance || "",
+      training: data.training || "",
+      memberNumber: data.memberNumber || "",
+      prayerRequest: data.prayerRequest || "",
+      photo: data.photo || "",
+      baptismStatus: data.baptismStatus || "",
       order: 0,
     },
   });
+
+  // Sync to attendance Member table if a team is assigned
+  if (data.teamName && data.groupName) {
+    const group = await prisma.group.findFirst({
+      where: { name: data.groupName },
+      select: { id: true },
+    });
+    if (group) {
+      const team = await prisma.team.findFirst({
+        where: { name: data.teamName, groupId: group.id },
+        select: { id: true },
+      });
+      if (team) {
+        const already = await prisma.member.findFirst({
+          where: { name: data.name, teamId: team.id },
+          select: { id: true },
+        });
+        if (!already) {
+          const maxOrder = await prisma.member.findFirst({
+            where: { teamId: team.id },
+            orderBy: { order: "desc" },
+            select: { order: true },
+          });
+          await prisma.member.create({
+            data: {
+              name: data.name,
+              gender: data.gender,
+              birthYear: data.birthYear || "",
+              teamId: team.id,
+              order: (maxOrder?.order ?? -1) + 1,
+            },
+          });
+        }
+      }
+    }
+  }
 
   return NextResponse.json({ member }, { status: 201 });
 }

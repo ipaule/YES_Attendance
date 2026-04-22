@@ -1,5 +1,5 @@
 export type Role = "PASTOR" | "EXECUTIVE" | "LEADER";
-export type Gender = "MALE" | "FEMALE";
+export type Gender = "남" | "여";
 export type AttendanceStatus = "HERE" | "ABSENT" | "AWR";
 
 export interface User {

@@ -1,10 +1,46 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /tmp/dropdown_test.txt -w \"HTTP %{http_code}\\\\n\" \"http://localhost:3000/api/dropdown-options?category=community\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT category || ': ' || GROUP_CONCAT\\(value, ', '\\) FROM DropdownOption GROUP BY category;\")",
+      "Bash(awk '{print $6, $7, $8, $9}')",
+      "Bash(ps -p 24065 -o pid,lstart,command)",
+      "Bash(kill 24065)",
+      "Bash(curl -s -o /tmp/dt.txt -w \"HTTP %{http_code}\\\\n\" \"http://localhost:3000/api/dropdown-options?category=community\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT value FROM DropdownOption WHERE category = 'recent_attendance' ORDER BY \\\\\"order\\\\\";\")",
+      "Bash(disown)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/api/health)",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT value, color FROM DropdownOption WHERE category = 'recent_attendance' ORDER BY \\\\\"order\\\\\";\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db)",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT g.name, COUNT\\(DISTINCT t.id\\) as team_count, COUNT\\(DISTINCT m.id\\) as member_count FROM \\\\`Group\\\\` g LEFT JOIN Team t ON g.id = t.groupId LEFT JOIN Member m ON t.id = m.teamId WHERE g.name IN \\('믿음', '소망', '사랑', '샬롬'\\) GROUP BY g.name ORDER BY g.order;\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT g.name, COUNT\\(DISTINCT t.id\\) as team_count FROM \\\\\"Group\\\\\" g LEFT JOIN Team t ON g.id = t.groupId WHERE g.name IN \\('믿음', '소망', '사랑', '샬롬'\\) GROUP BY g.name;\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT t.id, t.name, g.name as group_name, COUNT\\(m.id\\) as member_count FROM Team t LEFT JOIN \\\\\"Group\\\\\" g ON t.groupId = g.id LEFT JOIN Member m ON t.id = m.teamId WHERE g.name IN \\('믿음', '소망', '사랑', '샬롬'\\) GROUP BY t.id ORDER BY g.name, t.name;\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT COUNT\\(*\\) FROM Team WHERE groupId IN \\(SELECT id FROM \\\\\"Group\\\\\" WHERE name = '믿음'\\);\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT value FROM DropdownOption WHERE category = 'baptism_status' ORDER BY \\\\\"order\\\\\";\")",
+      "Bash(kill 4398)",
+      "Bash(curl -s -o /dev/null -w \"weekly-prep HTTP %{http_code}\\\\n\" http://localhost:3000/dashboard/weekly-prep)",
+      "Bash(curl -s -o /dev/null -w \"api/health HTTP %{http_code}\\\\n\" http://localhost:3000/api/health)",
+      "Bash(grep -v \"^$\")",
+      "Bash(2>/dev/null)",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT COUNT\\(*\\) FROM RosterMember;\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT COUNT\\(*\\) FROM RosterMember; SELECT COUNT\\(*\\) FROM ShalomMember;\")",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js|prisma\\)$\")"
+    ],
+    "additionalDirectories": [
+      "/tmp"
+    ]
+  },
+  "model": "opusplan",
   "hooks": {
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": "npm run typecheck --silent 2>&1 | tail -20" }
+          {
+            "type": "command",
+            "command": "npm run typecheck --silent 2>&1 | tail -20"
+          }
         ]
       }
     ]

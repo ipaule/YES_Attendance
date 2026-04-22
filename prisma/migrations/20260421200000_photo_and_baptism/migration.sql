@@ -1,0 +1,2 @@
+ALTER TABLE "RosterMember" ADD COLUMN "photo" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "RosterMember" ADD COLUMN "baptismStatus" TEXT NOT NULL DEFAULT '';

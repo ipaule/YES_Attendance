@@ -56,7 +56,7 @@ export default function DashboardPage() {
       title: "전체 관리",
       items: [
         mk("합산 그래프", "/dashboard/graphs/combined", BarChart3, "emerald"),
-        mk("전체 리스트", "/dashboard/roster", ClipboardList, "purple"),
+        mk("재적 리스트", "/dashboard/roster", ClipboardList, "purple"),
         mk("리더쉽 관리", "/dashboard/admin", Settings, "gray"),
       ],
     });

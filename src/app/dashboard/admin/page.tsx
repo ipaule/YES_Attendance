@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Trash2, ArrowUpDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { chipClassFor } from "@/lib/dropdownColors";
 import type { Role } from "@/types";
 
 interface UserRecord {
@@ -21,10 +22,10 @@ interface UserRecord {
 export default function AdminPage() {
   const { user } = useAuth();
 
-  type SortKey = "username" | "role" | "group" | "team";
+  type SortKey = "username" | "role" | "group";
   type SortDir = "none" | "asc" | "desc";
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>("none");
+  const [sortKey, setSortKey] = useState<SortKey | null>("group");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -48,6 +49,21 @@ export default function AdminPage() {
       return data.groups;
     },
   });
+
+  const { data: communityOptions = [] } = useQuery({
+    queryKey: ["dropdown-options", "community"],
+    queryFn: async (): Promise<{ value: string; color: string }[]> => {
+      const res = await fetch("/api/dropdown-options?category=community");
+      if (!res.ok) throw new Error("Failed");
+      return (await res.json()).options;
+    },
+    staleTime: 30_000,
+  });
+  const communityColor = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const opt of communityOptions) map[opt.value] = opt.color;
+    return map;
+  }, [communityOptions]);
 
   const updateUserMutation = useMutation({
     mutationFn: async ({
@@ -85,25 +101,24 @@ export default function AdminPage() {
   });
 
   const sortedUsers = useMemo(() => {
-    if (!users || !sortKey || sortDir === "none") return users || [];
+    if (!users || !sortKey || sortDir === "none") return users ?? [];
     return [...users].sort((a, b) => {
       let va = "", vb = "";
       if (sortKey === "username") { va = a.username; vb = b.username; }
       else if (sortKey === "role") { va = a.role; vb = b.role; }
       else if (sortKey === "group") {
-        const groupOrder: Record<string, number> = { "샬롬": 0, "사랑": 1, "소망": 2, "믿음": 3 };
+        const groupOrder: Record<string, number> = { "믿음": 0, "소망": 1, "사랑": 2, "샬롬": 3 };
         const ia = groupOrder[a.group?.name || ""] ?? 99;
         const ib = groupOrder[b.group?.name || ""] ?? 99;
         return sortDir === "asc" ? ia - ib : ib - ia;
       }
-      else if (sortKey === "team") { va = a.team?.name || ""; vb = b.team?.name || ""; }
       const cmp = va.localeCompare(vb, "ko");
       return sortDir === "asc" ? cmp : -cmp;
     });
   }, [users, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
-    if (sortKey !== key) { setSortKey(key); setSortDir("desc"); }
+    if (sortKey !== key) { setSortKey(key); setSortDir("asc"); }
     else setSortDir((p) => p === "desc" ? "asc" : p === "asc" ? "none" : "desc");
   };
 
@@ -166,7 +181,6 @@ export default function AdminPage() {
                 <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("username")}>이름{sortIcon("username")}</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("role")}>역할{sortIcon("role")}</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("group")}>공동체{sortIcon("group")}</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600 cursor-pointer select-none" onClick={() => toggleSort("team")}>담당 순{sortIcon("team")}</th>
                 <th className="px-2 py-3 w-10" />
               </tr>
             </thead>
@@ -199,11 +213,14 @@ export default function AdminPage() {
                       <option value="PASTOR">사역자</option>
                     </select>
                   </td>
-                  <td className="px-4 py-3 text-center text-xs text-gray-500">
-                    {u.group?.name || "-"}
-                  </td>
-                  <td className="px-4 py-3 text-center text-gray-500 text-xs">
-                    {u.team?.name || "-"}
+                  <td className="px-4 py-3 text-center">
+                    {u.group?.name ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${chipClassFor(communityColor[u.group.name])}`}>
+                        {u.group.name}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">-</span>
+                    )}
                   </td>
                   <td className="px-2 py-3 text-center">
                     {u.id !== user?.id && (

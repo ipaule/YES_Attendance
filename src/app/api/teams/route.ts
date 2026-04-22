@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { canManageTeamsInGroup } from "@/lib/permissions";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -11,15 +10,20 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const groupId = searchParams.get("groupId");
+  const groupName = searchParams.get("groupName");
+
+  const filter: { groupId?: string; group?: { name: string }; leaderId?: string } = {};
+  if (groupId) filter.groupId = groupId;
+  else if (groupName) filter.group = { name: groupName };
 
   let teams;
-
   if (session.role === "PASTOR") {
     teams = await prisma.team.findMany({
-      where: groupId ? { groupId } : undefined,
+      where: Object.keys(filter).length ? filter : undefined,
       include: {
         group: { select: { id: true, name: true } },
         leader: { select: { id: true, username: true } },
+        members: { select: { id: true, name: true }, orderBy: { order: "asc" } },
         _count: { select: { members: true } },
       },
       orderBy: [{ updatedAt: "desc" }],
@@ -30,6 +34,7 @@ export async function GET(request: NextRequest) {
       include: {
         group: { select: { id: true, name: true } },
         leader: { select: { id: true, username: true } },
+        members: { select: { id: true, name: true }, orderBy: { order: "asc" } },
         _count: { select: { members: true } },
       },
       orderBy: { updatedAt: "desc" },
@@ -40,6 +45,7 @@ export async function GET(request: NextRequest) {
       include: {
         group: { select: { id: true, name: true } },
         leader: { select: { id: true, username: true } },
+        members: { select: { id: true, name: true }, orderBy: { order: "asc" } },
         _count: { select: { members: true } },
       },
     });
@@ -50,8 +56,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+  if (!session || session.role !== "PASTOR") {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
   const { groupId, leaderId } = await request.json();
@@ -61,11 +67,6 @@ export async function POST(request: NextRequest) {
       { error: "공동체와 순장을 선택해주세요." },
       { status: 400 }
     );
-  }
-
-  const canManage = await canManageTeamsInGroup(session, groupId);
-  if (!canManage) {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
   // Use leader's username as the team name

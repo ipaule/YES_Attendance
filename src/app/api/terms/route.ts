@@ -130,6 +130,12 @@ export async function POST(request: NextRequest) {
       where: { groupId: { in: targetGroupIds } },
     });
 
+    // 3.5 Clear roster teamName for flushed groups
+    await prisma.rosterMember.updateMany({
+      where: { groupName: { in: ["사랑", "소망", "믿음"] } },
+      data: { teamName: "" },
+    });
+
     // 4. Clear global dates
     await prisma.globalDate.deleteMany();
 

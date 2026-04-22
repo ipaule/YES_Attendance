@@ -46,7 +46,7 @@ model Team {
 model Member {
   id          String       @id @default(cuid())
   name        String
-  gender      String       // MALE, FEMALE
+  gender      String       // 남, 여
   birthYear   String       @default("")
   teamId      String
   team        Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -84,31 +84,61 @@ model TermHistory {
 }
 
 model ShalomMember {
-  id        String   @id @default(cuid())
-  name      String
-  gender    String   @default("")
-  birthYear String   @default("")
-  phone     String   @default("")
-  visitDate String   @default("")
-  inviter   String   @default("")
-  order     Int      @default(0)
-  leader    String   @default("")
-  note      String   @default("")
-  status    String   @default("방문") // 방문, 등록, 졸업
-  createdAt DateTime @default(now())
+  id              String    @id @default(cuid())
+  name            String
+  englishName     String    @default("")
+  gender          String    @default("")
+  birthYear       String    @default("")
+  phone           String    @default("")
+  visitDate       String    @default("")
+  inviter         String    @default("")
+  order           Int       @default(0)
+  leader          String    @default("")
+  note            String    @default("")
+  status          String    @default("방문") // 방문, 등록, 졸업
+  movedToRosterAt DateTime?
+  createdAt       DateTime  @default(now())
 }
 
 model RosterMember {
+  id                       String   @id @default(cuid())
+  name                     String
+  englishName              String   @default("")
+  gender                   String   @default("")
+  birthYear                String   @default("")
+  birthday                 String   @default("")
+  groupName                String   @default("")
+  teamName                 String   @default("")
+  ministry                 String   @default("")
+  note                     String   @default("")
+  email                    String   @default("")
+  phone                    String   @default("")
+  address                  String   @default("")
+  salvationAssurance       String   @default("")
+  training                 String   @default("")
+  memberNumber             String   @default("")
+  prayerRequest            String   @default("")
+  peerGroup                String   @default("")
+  photo                    String   @default("")
+  baptismStatus            String   @default("")
+  recentAttendanceOverride String   @default("")
+  contactStatus            String   @default("")
+  personStatus             String   @default("")
+  statusReason             String   @default("")
+  assignee                 String   @default("")
+  order                    Int      @default(0)
+  createdAt                DateTime @default(now())
+}
+
+model DropdownOption {
   id        String   @id @default(cuid())
-  name      String
-  gender    String   @default("")
-  birthYear String   @default("")
-  groupName String   @default("")
-  teamName  String   @default("")
-  ministry  String   @default("")
-  note      String   @default("")
+  category  String
+  value     String
+  color     String
   order     Int      @default(0)
   createdAt DateTime @default(now())
+
+  @@unique([category, value])
 }
 
 model Link {

@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
 import { createClient } from "@libsql/client";
 import { hashSync } from "bcryptjs";
+import { seedDropdownOptions } from "../src/lib/dropdownSeeds";
 
 const url = process.env.TURSO_DATABASE_URL;
 const authToken = process.env.TURSO_AUTH_TOKEN;
@@ -42,7 +43,9 @@ async function main() {
     },
   });
 
-  console.log("Turso seed completed: 4 groups + admin user AJ created");
+  await seedDropdownOptions(prisma);
+
+  console.log("Turso seed completed: 4 groups + admin user AJ + dropdown options");
 }
 
 main()

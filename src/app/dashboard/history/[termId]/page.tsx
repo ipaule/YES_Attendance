@@ -264,8 +264,8 @@ export default function TermDetailPage() {
                             <td className="sticky left-8 z-10 bg-white px-2 py-1.5 text-sm">
                               {member.name}
                             </td>
-                            <td className="sticky left-24 z-10 bg-white px-1 py-1.5 text-center text-xs text-gray-500">
-                              {member.gender === "MALE" ? "남" : "여"}
+                            <td className={`sticky left-24 z-10 bg-white px-1 py-1.5 text-center text-xs font-medium ${member.gender === "남" ? "text-blue-600" : member.gender === "여" ? "text-red-600" : "text-gray-500"}`}>
+                              {member.gender || "-"}
                             </td>
                             <td className="sticky left-[136px] z-10 bg-white px-1 py-1.5 text-center text-xs text-gray-500">
                               {member.birthYear}

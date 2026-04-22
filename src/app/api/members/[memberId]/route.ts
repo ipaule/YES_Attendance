@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { canAccessTeam } from "@/lib/permissions";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ memberId: string }> }
 ) {
   const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+  if (!session || session.role !== "PASTOR") {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
   const { memberId } = await params;
@@ -21,11 +20,6 @@ export async function PATCH(
 
   if (!member) {
     return NextResponse.json({ error: "멤버를 찾을 수 없습니다." }, { status: 404 });
-  }
-
-  const hasAccess = await canAccessTeam(session, member.teamId);
-  if (!hasAccess) {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
   const data = await request.json();
@@ -50,8 +44,8 @@ export async function DELETE(
   { params }: { params: Promise<{ memberId: string }> }
 ) {
   const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+  if (!session || session.role !== "PASTOR") {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
   const { memberId } = await params;
@@ -63,11 +57,6 @@ export async function DELETE(
 
   if (!member) {
     return NextResponse.json({ error: "멤버를 찾을 수 없습니다." }, { status: 404 });
-  }
-
-  const hasAccess = await canAccessTeam(session, member.teamId);
-  if (!hasAccess) {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
   await prisma.member.delete({ where: { id: memberId } });

@@ -74,7 +74,7 @@ export default function ShalomHistoryDetailPage() {
                 <tr key={i} className="border-b border-gray-100">
                   <td className="px-2 py-1.5 text-center text-xs text-gray-400">{i + 1}</td>
                   <td className="px-2 py-1.5 text-sm">{m.name || "-"}</td>
-                  <td className="px-2 py-1.5 text-center text-xs text-gray-500">{m.gender === "MALE" ? "남" : m.gender === "FEMALE" ? "여" : "-"}</td>
+                  <td className={`px-2 py-1.5 text-center text-xs font-medium ${m.gender === "남" ? "text-blue-600" : m.gender === "여" ? "text-red-600" : "text-gray-500"}`}>{m.gender || "-"}</td>
                   <td className="px-2 py-1.5 text-center text-xs text-gray-500">{m.birthYear || "-"}</td>
                   <td className="px-2 py-1.5 text-center text-xs text-gray-500">{m.phone || "-"}</td>
                   <td className="px-2 py-1.5 text-center text-xs text-gray-500">{m.visitDate || "-"}</td>

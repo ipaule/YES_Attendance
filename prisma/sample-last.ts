@@ -13,7 +13,7 @@ const usedNames = new Set<string>();
 function uname(): string { let n: string; do { n = pick(lastNames) + pick(firstNames); } while (usedNames.has(n)); usedNames.add(n); return n; }
 
 const birthYears = ["96","97","98","99","00","01","02","03"];
-const genders = ["MALE","FEMALE"];
+const genders = ["남","여"];
 const reasons = ["병가","출장","가족행사","시험기간","여행","개인사정","야근","감기","봉사활동"];
 const inviters = ["김목사","이집사","박권사","최장로","정전도사","친구","가족","지인","동아리","교회"];
 

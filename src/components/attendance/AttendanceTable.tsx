@@ -60,11 +60,12 @@ interface AttendanceTableProps {
 export function AttendanceTable({ team }: AttendanceTableProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const canEditInfo = user?.role === "PASTOR" || user?.role === "EXECUTIVE";
+  const canManageMembers = user?.role === "PASTOR";
+  const canManageDates = user?.role === "PASTOR" || user?.role === "EXECUTIVE";
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMember, setNewMember] = useState({
     name: "",
-    gender: "MALE",
+    gender: "남",
     birthYear: "",
   });
   const [suggestions, setSuggestions] = useState<{ id: string; name: string; gender: string; birthYear: string }[]>([]);
@@ -120,7 +121,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team", team.id] });
       setShowAddMember(false);
-      setNewMember({ name: "", gender: "MALE", birthYear: "" });
+      setNewMember({ name: "", gender: "남", birthYear: "" });
     },
   });
 
@@ -274,20 +275,24 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
         <h3 className="font-semibold text-gray-800">{team.name}</h3>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowDatePicker(!showDatePicker)}
-            className="flex items-center gap-1 text-xs bg-indigo-600 text-white rounded-lg px-3 py-1.5 hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="h-3 w-3" />
-            날짜 추가
-          </button>
-          <button
-            onClick={() => setShowAddMember(!showAddMember)}
-            className="flex items-center gap-1 text-xs bg-emerald-600 text-white rounded-lg px-3 py-1.5 hover:bg-emerald-700 transition-colors"
-          >
-            <Plus className="h-3 w-3" />
-            순원 추가
-          </button>
+          {canManageDates && (
+            <button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="flex items-center gap-1 text-xs bg-indigo-600 text-white rounded-lg px-3 py-1.5 hover:bg-indigo-700 transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+              날짜 추가
+            </button>
+          )}
+          {canManageMembers && (
+            <button
+              onClick={() => setShowAddMember(!showAddMember)}
+              className="flex items-center gap-1 text-xs bg-emerald-600 text-white rounded-lg px-3 py-1.5 hover:bg-emerald-700 transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+              순원 추가
+            </button>
+          )}
         </div>
       </div>
 
@@ -357,14 +362,14 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     key={s.id}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
-                      setNewMember({ name: s.name, gender: s.gender || "MALE", birthYear: s.birthYear || "" });
+                      setNewMember({ name: s.name, gender: s.gender || "남", birthYear: s.birthYear || "" });
                       setShowSuggestions(false);
                       setSuggestions([]);
                     }}
                     className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 flex justify-between border-b border-gray-50"
                   >
                     <span className="font-medium">{s.name}</span>
-                    <span className="text-xs text-gray-400">{s.gender === "MALE" ? "남" : s.gender === "FEMALE" ? "여" : ""} {s.birthYear}</span>
+                    <span className="text-xs text-gray-400">{s.gender || ""} {s.birthYear}</span>
                   </button>
                 ))}
               </div>
@@ -372,7 +377,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
           </div>
           {newMember.gender && (
             <span className="text-xs text-gray-500 bg-white rounded-lg px-2 py-1.5 border border-gray-200">
-              {newMember.gender === "MALE" ? "남" : "여"} · {newMember.birthYear}
+              {newMember.gender} · {newMember.birthYear}
             </span>
           )}
           <button
@@ -430,25 +435,27 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                 >
                   <div className="flex flex-col items-center gap-0.5">
                     <span className="text-xs">{date.label}</span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => toggleLockMutation.mutate({ dateId: date.id, locked: !date.locked })}
-                        className={`transition-colors flex-shrink-0 ${date.locked ? "text-red-400 hover:text-red-600" : "text-gray-300 hover:text-gray-500"}`}
-                        title={date.locked ? "잠금 해제" : "잠금"}
-                      >
-                        {date.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm("이 날짜를 삭제하시겠습니까?")) {
-                            deleteDateMutation.mutate(date.id);
-                          }
-                        }}
-                        className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
+                    {canManageDates && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => toggleLockMutation.mutate({ dateId: date.id, locked: !date.locked })}
+                          className={`transition-colors flex-shrink-0 ${date.locked ? "text-red-400 hover:text-red-600" : "text-gray-300 hover:text-gray-500"}`}
+                          title={date.locked ? "잠금 해제" : "잠금"}
+                        >
+                          {date.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm("이 날짜를 삭제하시겠습니까?")) {
+                              deleteDateMutation.mutate(date.id);
+                            }
+                          }}
+                          className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </th>
               ))}
@@ -482,7 +489,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                   </td>
                   {/* Gender */}
                   <td className="sticky left-24 z-10 bg-white px-1 py-1 text-center w-10">
-                    <span className="text-xs text-gray-500">{member.gender === "MALE" ? "남" : "여"}</span>
+                    <span className={`text-xs font-medium ${member.gender === "남" ? "text-blue-600" : member.gender === "여" ? "text-red-600" : "text-gray-500"}`}>{member.gender || "-"}</span>
                   </td>
                   {/* Birth Year */}
                   <td className="sticky left-[136px] z-10 bg-white px-1 py-1 text-center w-14">
@@ -529,7 +536,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                   </td>
                   {/* Delete (pastor/exec only) */}
                   <td className="px-1 py-1">
-                    {canEditInfo && (
+                    {canManageMembers && (
                       <button
                         onClick={() => {
                           if (confirm(`${member.name}님을 삭제하시겠습니까?`)) {

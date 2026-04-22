@@ -40,6 +40,7 @@ export default function RosterDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["roster-detail", id] });
       queryClient.invalidateQueries({ queryKey: ["roster"] });
       queryClient.invalidateQueries({ queryKey: ["unregistered"] });
+      router.push("/dashboard/roster");
     },
     onError: (e: Error) => setSaveError(e.message),
   });

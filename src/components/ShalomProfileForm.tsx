@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Save, X, Pencil, ArrowLeft } from "lucide-react";
+import { Save, X, ArrowLeft } from "lucide-react";
 import { ColoredDropdown } from "./ColoredDropdown";
 import { chipClassFor } from "@/lib/dropdownColors";
 import { PHONE_RE, formatPhoneInput } from "@/lib/profile";
@@ -52,7 +52,6 @@ export function emptyShalomProfile(): ShalomProfileData {
 export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, saveError }: Props) {
   const router = useRouter();
   const [data, setData] = useState<ShalomProfileData>(initial);
-  const [editing, setEditing] = useState(mode === "create");
   const [validationError, setValidationError] = useState<string | null>(null);
   const dirtyRef = useRef(false);
 
@@ -61,10 +60,6 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
   }, [initial]);
 
   useEffect(() => {
-    if (!editing) {
-      dirtyRef.current = false;
-      return;
-    }
     const handler = (e: BeforeUnloadEvent) => {
       if (dirtyRef.current) {
         e.preventDefault();
@@ -73,7 +68,7 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [editing]);
+  }, []);
 
   const update = <K extends keyof ShalomProfileData>(key: K, value: ShalomProfileData[K]) => {
     dirtyRef.current = true;
@@ -99,20 +94,16 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
     }
     await onSave(data);
     dirtyRef.current = false;
-    if (mode === "view") setEditing(false);
   };
 
   const handleCancel = () => {
     if (dirtyRef.current && !confirm("변경사항이 저장되지 않았습니다. 취소하시겠습니까?")) return;
     dirtyRef.current = false;
-    setData(initial);
-    setValidationError(null);
-    if (mode === "view") setEditing(false);
-    else onCancel();
+    onCancel();
   };
 
   const handleBack = () => {
-    if (editing && dirtyRef.current && !confirm("변경사항이 저장되지 않았습니다. 나가시겠습니까?")) return;
+    if (dirtyRef.current && !confirm("변경사항이 저장되지 않았습니다. 나가시겠습니까?")) return;
     dirtyRef.current = false;
     router.back();
   };
@@ -146,30 +137,21 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
           )}
         </div>
         <div className="flex items-center gap-2">
-          {mode === "view" && !editing && (
-            <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 text-sm bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700">
-              <Pencil className="h-4 w-4" /> 수정
-            </button>
-          )}
-          {editing && (
-            <>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center gap-1.5 text-sm bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700 disabled:opacity-50"
-              >
-                <Save className="h-4 w-4" />
-                {saving ? "저장 중..." : "저장"}
-              </button>
-              <button
-                onClick={handleCancel}
-                disabled={saving}
-                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 px-4 py-2 disabled:opacity-50"
-              >
-                <X className="h-4 w-4" /> 취소
-              </button>
-            </>
-          )}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-1.5 text-sm bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700 disabled:opacity-50"
+          >
+            <Save className="h-4 w-4" />
+            {saving ? "저장 중..." : "저장"}
+          </button>
+          <button
+            onClick={handleCancel}
+            disabled={saving}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 px-4 py-2 disabled:opacity-50"
+          >
+            <X className="h-4 w-4" /> 취소
+          </button>
         </div>
       </div>
 
@@ -182,51 +164,42 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
       {/* Header card */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex gap-5">
         <div className="w-[150px] h-[150px] flex-shrink-0 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs">
-          {editing ? "사진 업로드" : "사진 없음"}
+          사진 업로드
         </div>
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="이름 (한글)">
-            {editing ? (
-              <input
-                type="text"
-                value={data.name}
-                onChange={(e) => update("name", e.target.value)}
-                className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-              />
-            ) : renderText(data.name)}
+            <input
+              type="text"
+              value={data.name}
+              onChange={(e) => update("name", e.target.value)}
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+            />
           </Field>
           <Field label="이름 (영문)">
-            {editing ? (
-              <input
-                type="text"
-                value={data.englishName}
-                onChange={(e) => update("englishName", e.target.value)}
-                className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-              />
-            ) : renderText(data.englishName)}
+            <input
+              type="text"
+              value={data.englishName}
+              onChange={(e) => update("englishName", e.target.value)}
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+            />
           </Field>
           <Field label="성별">
-            <div className={editing ? "" : "py-1"}>
-              <ColoredDropdown
-                category="gender"
-                value={data.gender}
-                onChange={(v) => update("gender", v)}
-                disabled={!editing}
-                allowAdd={editing}
-                allowManage={editing}
-              />
-            </div>
+            <ColoredDropdown
+              category="gender"
+              value={data.gender}
+              onChange={(v) => update("gender", v)}
+              allowAdd
+              allowManage
+            />
           </Field>
           <Field label="또래">
-            {editing ? (
-              <input
-                type="text"
-                value={data.birthYear}
-                onChange={(e) => update("birthYear", e.target.value)}
-                placeholder="97"
-                className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-              />
-            ) : renderText(data.birthYear)}
+            <input
+              type="text"
+              value={data.birthYear}
+              onChange={(e) => update("birthYear", e.target.value)}
+              placeholder="97"
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+            />
           </Field>
         </div>
       </div>
@@ -234,85 +207,69 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
       {/* 방문 정보 */}
       <Section title="방문 정보">
         <Field label="방문 날짜">
-          {editing ? (
-            <input
-              type="date"
-              value={data.visitDate}
-              onChange={(e) => update("visitDate", e.target.value)}
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-            />
-          ) : renderText(data.visitDate)}
+          <input
+            type="date"
+            value={data.visitDate}
+            onChange={(e) => update("visitDate", e.target.value)}
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+          />
         </Field>
         <Field label="인도자">
-          {editing ? (
-            <input
-              type="text"
-              value={data.inviter}
-              onChange={(e) => update("inviter", e.target.value)}
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-            />
-          ) : renderText(data.inviter)}
+          <input
+            type="text"
+            value={data.inviter}
+            onChange={(e) => update("inviter", e.target.value)}
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+          />
         </Field>
         <Field label="순장">
-          {editing ? (
-            <input
-              type="text"
-              value={data.leader}
-              onChange={(e) => update("leader", e.target.value)}
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-            />
-          ) : renderText(data.leader)}
+          <input
+            type="text"
+            value={data.leader}
+            onChange={(e) => update("leader", e.target.value)}
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+          />
         </Field>
       </Section>
 
       {/* 연락처 */}
       <Section title="연락처">
         <Field label="전화번호">
-          {editing ? (
-            <input
-              type="text"
-              value={data.phone}
-              onChange={(e) => update("phone", formatPhoneInput(e.target.value))}
-              placeholder="XXX-XXX-XXXX"
-              className={`w-full text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300 ${
-                data.phone && !PHONE_RE.test(data.phone) ? "border-red-300" : "border-gray-300"
-              }`}
-            />
-          ) : renderText(data.phone)}
+          <input
+            type="text"
+            value={data.phone}
+            onChange={(e) => update("phone", formatPhoneInput(e.target.value))}
+            placeholder="XXX-XXX-XXXX"
+            className={`w-full text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300 ${
+              data.phone && !PHONE_RE.test(data.phone) ? "border-red-300" : "border-gray-300"
+            }`}
+          />
         </Field>
       </Section>
 
       {/* 상태 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
         <h3 className="text-sm font-semibold text-gray-700 mb-3">상태</h3>
-        {editing ? (
-          <select
-            value={data.status}
-            onChange={(e) => update("status", e.target.value)}
-            className={`text-xs font-medium px-2 py-1 rounded-full border cursor-pointer ${statusChipClass(data.status)}`}
-          >
-            <option value="방문">방문</option>
-            <option value="등록">등록</option>
-            <option value="졸업">졸업</option>
-          </select>
-        ) : (
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${statusChipClass(data.status)}`}>
-            {data.status}
-          </span>
-        )}
+        <select
+          value={data.status}
+          onChange={(e) => update("status", e.target.value)}
+          className={`text-xs font-medium px-2 py-1 rounded-full border cursor-pointer ${statusChipClass(data.status)}`}
+        >
+          <option value="방문">방문</option>
+          <option value="등록">등록</option>
+          <option value="졸업">졸업</option>
+        </select>
       </div>
 
       {/* Note */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
         <Field label="비고">
-          {editing ? (
-            <textarea
-              value={data.note}
-              onChange={(e) => update("note", e.target.value)}
-              rows={3}
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-            />
-          ) : renderText(data.note)}
+          <textarea
+            value={data.note}
+            onChange={(e) => update("note", e.target.value)}
+            rows={3}
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+          />
         </Field>
       </div>
     </div>
@@ -333,14 +290,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <label className="block text-xs text-gray-500 mb-1">{label}</label>
       {children}
-    </div>
-  );
-}
-
-function renderText(value: string) {
-  return (
-    <div className="text-sm text-gray-800 bg-gray-50 rounded px-2 py-1.5 min-h-[34px]">
-      {value || <span className="text-gray-300">—</span>}
     </div>
   );
 }

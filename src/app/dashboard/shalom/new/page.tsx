@@ -21,10 +21,10 @@ export default function ShalomNewPage() {
       if (!res.ok) throw new Error(json.error || "추가 실패");
       return json.member as { id: string };
     },
-    onSuccess: (member) => {
+    onSuccess: () => {
       setSaveError(null);
       queryClient.invalidateQueries({ queryKey: ["shalom-members"] });
-      router.replace(`/dashboard/shalom/${member.id}`);
+      router.replace("/dashboard/shalom");
     },
     onError: (e: Error) => setSaveError(e.message),
   });

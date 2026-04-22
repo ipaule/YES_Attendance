@@ -25,7 +25,12 @@
       "Bash(2>/dev/null)",
       "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT COUNT\\(*\\) FROM RosterMember;\")",
       "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT COUNT\\(*\\) FROM RosterMember; SELECT COUNT\\(*\\) FROM ShalomMember;\")",
-      "Bash(grep -E \"\\\\.\\(ts|tsx|js|prisma\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js|prisma\\)$\")",
+      "Bash(xargs ls *)",
+      "Bash(npx ts-node --skip-project -e ' *)",
+      "Bash(node -e ' *)",
+      "Bash(git diff *)",
+      "Bash(git rm *)"
     ],
     "additionalDirectories": [
       "/tmp"

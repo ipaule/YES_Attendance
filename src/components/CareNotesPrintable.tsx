@@ -60,30 +60,38 @@ function bannerBg(color: string): string {
   return BANNER_BG[color] || BANNER_BG.gray;
 }
 
-function buildPagesForTeam(team: CareNoteTeam): Row[][] {
+type Page = { rows: Row[]; isPadding: boolean };
+
+const GROUP_ORDER = ["믿음", "소망", "사랑", "샬롬"];
+
+function buildPagesForTeam(team: CareNoteTeam): Page[] {
   const rows: Row[] = [];
   if (team.leader) rows.push({ kind: "leader", row: team.leader });
   team.members.forEach((m, i) => rows.push({ kind: "member", row: m, number: i + 1 }));
 
-  const pages: Row[][] = [];
+  const contentPages: Page[] = [];
   for (let i = 0; i < rows.length; i += ROWS_PER_PAGE) {
     const chunk = rows.slice(i, i + ROWS_PER_PAGE);
     while (chunk.length < ROWS_PER_PAGE) chunk.push({ kind: "blank" });
-    pages.push(chunk);
+    contentPages.push({ rows: chunk, isPadding: false });
   }
-  if (pages.length === 0) {
-    // Empty team — still print one page so the team isn't silent.
-    pages.push(new Array(ROWS_PER_PAGE).fill(null).map(() => ({ kind: "blank" })));
+  if (contentPages.length === 0) {
+    contentPages.push({ rows: new Array(ROWS_PER_PAGE).fill(null).map(() => ({ kind: "blank" as const })), isPadding: false });
   }
-  // Ensure even page count for double-sided printing.
-  if (pages.length % 2 === 1) {
-    pages.push(new Array(ROWS_PER_PAGE).fill(null).map(() => ({ kind: "blank" })));
+  // Ensure even page count for double-sided printing; padding page is blank white.
+  if (contentPages.length % 2 === 1) {
+    contentPages.push({ rows: [], isPadding: true });
   }
-  return pages;
+  return contentPages;
 }
 
 export function CareNotesPrintable({ teams, filterTeamId }: Props) {
-  const toRender = filterTeamId ? teams.filter((t) => t.teamId === filterTeamId) : teams;
+  const filtered = filterTeamId ? teams.filter((t) => t.teamId === filterTeamId) : teams;
+  const toRender = [...filtered].sort((a, b) => {
+    const ai = GROUP_ORDER.indexOf(a.groupName);
+    const bi = GROUP_ORDER.indexOf(b.groupName);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
   return (
     <div className="care-notes-root">
       <style jsx global>{`
@@ -231,18 +239,24 @@ export function CareNotesPrintable({ teams, filterTeamId }: Props) {
       {toRender.flatMap((team) => {
         const pages = buildPagesForTeam(team);
         const color = bannerBg(team.groupColor);
-        return pages.map((rows, pageIdx) => (
+        return pages.map((page, pageIdx) => (
           <div key={`${team.teamId}-${pageIdx}`} className="care-note-page">
-            <div className="care-note-banner" style={{ background: color }}>
-              &lt;YES 청년부 순모임 CARE NOTE {team.sundayLabel}&gt;
-            </div>
-            <div className="care-note-subbanner">
-              <span>출석현황</span>
-              <span>
-                주일예배출석: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                순모임 출석: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명
-              </span>
-            </div>
+            {page.isPadding ? null : (
+              <>
+                {pageIdx === 0 && (
+                  <>
+                    <div className="care-note-banner" style={{ background: color }}>
+                      &lt;YES 청년부 순모임 CARE NOTE {team.sundayLabel}&gt;
+                    </div>
+                    <div className="care-note-subbanner">
+                      <span>출석현황</span>
+                      <span>
+                        주일예배출석: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        순모임 출석: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명
+                      </span>
+                    </div>
+                  </>
+                )}
             <table className="care-note-table">
               <thead>
                 <tr>
@@ -258,7 +272,7 @@ export function CareNotesPrintable({ teams, filterTeamId }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r, i) => (
+                {page.rows.map((r, i) => (
                   <tr key={i} className="care-note-row">
                     {r.kind === "leader" ? (
                       <>
@@ -304,6 +318,8 @@ export function CareNotesPrintable({ teams, filterTeamId }: Props) {
                 ))}
               </tbody>
             </table>
+              </>
+            )}
           </div>
         ));
       })}

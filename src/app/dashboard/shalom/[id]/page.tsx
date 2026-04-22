@@ -39,6 +39,7 @@ export default function ShalomDetailPage() {
       setSaveError(null);
       queryClient.invalidateQueries({ queryKey: ["shalom-detail", id] });
       queryClient.invalidateQueries({ queryKey: ["shalom-members"] });
+      router.push("/dashboard/shalom");
     },
     onError: (e: Error) => setSaveError(e.message),
   });

@@ -39,6 +39,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "이미 같은 이름이 존재합니다." }, { status: 409 });
   }
 
+  await prisma.$executeRawUnsafe('UPDATE "ShalomMember" SET "order" = "order" + 1');
+
   const member = await prisma.shalomMember.create({
     data: {
       name: data.name,
@@ -51,6 +53,7 @@ export async function POST(request: NextRequest) {
       leader: data.leader || "",
       note: data.note || "",
       status: data.status || "방문",
+      order: 0,
     },
   });
 

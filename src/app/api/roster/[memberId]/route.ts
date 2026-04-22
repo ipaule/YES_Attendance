@@ -93,6 +93,13 @@ export async function PATCH(
     patch.assignee = "";
   }
 
+  // Shift everyone else down, then move this member to the top.
+  await prisma.$executeRawUnsafe(
+    `UPDATE RosterMember SET "order" = "order" + 1 WHERE id != $1`,
+    memberId
+  );
+  patch.order = 0;
+
   const member = await prisma.rosterMember.update({
     where: { id: memberId },
     data: patch,

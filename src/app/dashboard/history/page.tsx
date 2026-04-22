@@ -153,7 +153,7 @@ export default function HistoryPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-4">
           <div>
             <h3 className="text-sm font-semibold text-gray-800 mb-1">일요일 날짜 일괄 추가</h3>
-            <p className="text-xs text-gray-500">시작일부터 종료일까지의 모든 일요일을 사랑·소망·믿음 순에 추가합니다.</p>
+            <p className="text-xs text-gray-500">시작일부터 종료일까지의 모든 일요일을 믿음·소망·사랑 순에 추가합니다.</p>
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <div>

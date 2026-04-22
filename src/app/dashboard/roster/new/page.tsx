@@ -21,11 +21,11 @@ export default function RosterNewPage() {
       if (!res.ok) throw new Error(json.error || "추가 실패");
       return json.member as { id: string };
     },
-    onSuccess: (member) => {
+    onSuccess: () => {
       setSaveError(null);
       queryClient.invalidateQueries({ queryKey: ["roster"] });
       queryClient.invalidateQueries({ queryKey: ["unregistered"] });
-      router.replace(`/dashboard/roster/${member.id}`);
+      router.replace("/dashboard/roster");
     },
     onError: (e: Error) => setSaveError(e.message),
   });

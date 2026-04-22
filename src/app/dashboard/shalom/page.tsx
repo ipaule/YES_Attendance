@@ -68,7 +68,7 @@ export default function ShalomListPage() {
   const canMoveToRoster = user?.role === "PASTOR";
 
   const [sortKey, setSortKey] = useState<SortKey>("visitDate");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortDir, setSortDir] = useState<SortDir>("none");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showFlush, setShowFlush] = useState(false);
   const [flushMode, setFlushMode] = useState<"new" | "existing">("new");
@@ -255,15 +255,14 @@ export default function ShalomListPage() {
           <h1 className="text-xl font-bold text-gray-900">샬롬 리스트</h1>
         </div>
         <div className="flex items-center gap-2">
-          {selected.size > 0 && (
-            <button
-              onClick={() => setShowFlush(true)}
-              className="flex items-center gap-1.5 text-sm bg-amber-600 text-white rounded-lg px-4 py-2 hover:bg-amber-700 transition-colors"
-            >
-              <Save className="h-4 w-4" />
-              선택 기록 저장 ({selected.size})
-            </button>
-          )}
+          <button
+            onClick={() => setShowFlush(true)}
+            disabled={selected.size === 0}
+            className="flex items-center gap-1.5 text-sm bg-amber-600 text-white rounded-lg px-4 py-2 hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Save className="h-4 w-4" />
+            선택 기록 저장 ({selected.size})
+          </button>
           <button
             onClick={() => router.push("/dashboard/shalom/new")}
             className="flex items-center gap-1.5 text-sm bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700 transition-colors"

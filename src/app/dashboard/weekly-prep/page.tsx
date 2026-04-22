@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer, Copy, Check } from "lucide-react";
 import { CareNotesPrintable } from "@/components/CareNotesPrintable";
 
 interface BirthdayEntry {
@@ -39,6 +39,16 @@ export default function WeeklyPrepPage() {
   const [careTeams, setCareTeams] = useState<CareNoteTeam[] | null>(null);
   const [printing, setPrinting] = useState(false);
   const [printTeamId, setPrintTeamId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyBirthdays = () => {
+    if (!birthdays) return;
+    const text = birthdays.entries.map((e) => `${e.mmdd} ${e.name}`).join("\n");
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   const { data: birthdays, isLoading } = useQuery<BirthdayResponse>({
     queryKey: ["weekly-prep-birthdays"],
@@ -119,21 +129,32 @@ export default function WeeklyPrepPage() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-1">
-          이번 주 생일
-          {birthdays && (
-            <span className="text-xs text-gray-400 font-normal ml-2">
-              ({birthdays.rangeStart} ~ {birthdays.rangeEnd})
-            </span>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-sm font-semibold text-gray-700">
+            이번 주 생일
+            {birthdays && (
+              <span className="text-xs text-gray-400 font-normal ml-2">
+                ({birthdays.rangeStart} ~ {birthdays.rangeEnd})
+              </span>
+            )}
+          </h2>
+          {birthdays && birthdays.entries.length > 0 && (
+            <button
+              onClick={handleCopyBirthdays}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "복사됨" : "복사"}
+            </button>
           )}
-        </h2>
+        </div>
         {isLoading ? (
           <p className="text-sm text-gray-400">로딩 중...</p>
         ) : birthdays && birthdays.entries.length > 0 ? (
           <div className="mt-3 space-y-1 font-mono text-sm text-gray-800">
             {birthdays.entries.map((e, i) => (
               <div key={i}>
-                {e.mmdd}&nbsp;&nbsp;{e.name}
+                {e.mmdd} {e.name}
               </div>
             ))}
           </div>

@@ -30,7 +30,18 @@
       "Bash(npx ts-node --skip-project -e ' *)",
       "Bash(node -e ' *)",
       "Bash(git diff *)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT id, username, name FROM User LIMIT 10;\")",
+      "Bash(curl -s \"http://localhost:5555/api/db-browser/query?query=SELECT%20id,username,name%20FROM%20User\")",
+      "Bash(openssl rand *)",
+      "Bash(echo \"Dev server PID: $!\")",
+      "Bash(curl -s http://localhost:3000/api/roster)",
+      "Bash(npx -y node -e ' *)",
+      "Bash(python3 -c ' *)",
+      "Bash(git checkout *)",
+      "Bash(vercel whoami *)",
+      "Bash(npx vercel *)",
+      "Bash(curl -s https://yesattendance.vercel.app/api/health)"
     ],
     "additionalDirectories": [
       "/tmp"

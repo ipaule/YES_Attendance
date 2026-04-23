@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { calculateAttendanceRate, calculateGrade } from "@/lib/attendance";
-import { validateProfilePatch } from "@/lib/profile";
+import { validateProfilePatch, normalizeBirthYear } from "@/lib/profile";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
     .filter((m) => {
       if (search && !m.name.includes(search)) return false;
       if (filterGender && m.gender !== filterGender) return false;
-      if (filterBirthYear && m.birthYear !== filterBirthYear) return false;
+      if (filterBirthYear && normalizeBirthYear(m.birthYear) !== normalizeBirthYear(filterBirthYear)) return false;
       if (filterGroup === "-" && m.groupName) return false;
       if (filterGroup && filterGroup !== "-" && m.groupName !== filterGroup) return false;
       if (filterGrade && m.grade !== filterGrade) return false;

@@ -21,6 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { ArrowLeft, Plus, Trash2, ArrowUpDown, Save, GripVertical, Search, MoveRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { normalizeBirthYear } from "@/lib/profile";
 
 interface ShalomMember {
   id: string;
@@ -70,6 +71,10 @@ export default function ShalomListPage() {
   const [sortKey, setSortKey] = useState<SortKey>("visitDate");
   const [sortDir, setSortDir] = useState<SortDir>("none");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+  const [filterGender, setFilterGender] = useState("");
+  const [filterBirthYear, setFilterBirthYear] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   const [showFlush, setShowFlush] = useState(false);
   const [flushMode, setFlushMode] = useState<"new" | "existing">("new");
   const [flushName, setFlushName] = useState("");
@@ -155,15 +160,25 @@ export default function ShalomListPage() {
     },
   });
 
-  const sorted = useMemo(() => {
+  const filtered = useMemo(() => {
     if (!members) return [];
-    if (sortDir === "none") return members;
+    return members.filter((m) => {
+      if (search && !m.name.includes(search)) return false;
+      if (filterGender && m.gender !== filterGender) return false;
+      if (filterBirthYear && normalizeBirthYear(m.birthYear) !== normalizeBirthYear(filterBirthYear)) return false;
+      if (filterStatus && m.status !== filterStatus) return false;
+      return true;
+    });
+  }, [members, search, filterGender, filterBirthYear, filterStatus]);
+
+  const sorted = useMemo(() => {
+    if (sortDir === "none") return filtered;
     const toYearNum = (v: string) => {
       const n = parseInt(v, 10);
       if (!Number.isFinite(n)) return Number.MAX_SAFE_INTEGER;
       return n >= 50 ? 1900 + n : 2000 + n;
     };
-    return [...members].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "birthYear") {
         cmp = toYearNum(a.birthYear) - toYearNum(b.birthYear);
@@ -174,7 +189,7 @@ export default function ShalomListPage() {
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [members, sortKey, sortDir]);
+  }, [filtered, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey !== key) { setSortKey(key); setSortDir("desc"); }
@@ -271,6 +286,59 @@ export default function ShalomListPage() {
             추가
           </button>
         </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-1 min-w-[150px]">
+          <Search className="h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="이름 검색"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="text-sm border-0 focus:outline-none flex-1"
+          />
+        </div>
+        <select
+          value={filterGender}
+          onChange={(e) => setFilterGender(e.target.value)}
+          className="text-xs border border-gray-300 rounded-lg px-2 py-1.5"
+        >
+          <option value="">성별</option>
+          <option value="남">남</option>
+          <option value="여">여</option>
+        </select>
+        <input
+          type="text"
+          placeholder="또래"
+          value={filterBirthYear}
+          onChange={(e) => setFilterBirthYear(e.target.value)}
+          className="text-xs border border-gray-300 rounded-lg px-2 py-1.5 w-16"
+        />
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="text-xs border border-gray-300 rounded-lg px-2 py-1.5"
+        >
+          <option value="">상태</option>
+          <option value="방문">방문</option>
+          <option value="등록">등록</option>
+          <option value="졸업">졸업</option>
+        </select>
+        {(search || filterGender || filterBirthYear || filterStatus) && (
+          <button
+            onClick={() => {
+              setSearch("");
+              setFilterGender("");
+              setFilterBirthYear("");
+              setFilterStatus("");
+            }}
+            className="text-xs text-gray-500 hover:text-gray-700"
+          >
+            초기화
+          </button>
+        )}
       </div>
 
       {/* Flush dialog */}
@@ -465,9 +533,9 @@ export default function ShalomListPage() {
                 </tbody>
               </SortableContext>
             </table>
-            {(!members || members.length === 0) && (
+            {sorted.length === 0 && (
               <div className="text-center py-12 text-gray-400">
-                <p>아직 샬롬 리스트가 비어있습니다.</p>
+                <p>{members?.length ? "검색 결과가 없습니다." : "아직 샬롬 리스트가 비어있습니다."}</p>
               </div>
             )}
           </div>

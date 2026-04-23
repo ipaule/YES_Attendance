@@ -279,7 +279,7 @@ export function RosterProfileForm({ initial, mode, onSave, onCancel, saving, sav
             disabled={!data.groupName}
             className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300 disabled:bg-gray-50 disabled:text-gray-400"
           >
-            <option value="">{data.groupName ? "미배정" : "공동체를 먼저 선택하세요"}</option>
+            <option value="">{data.groupName ? "" : "공동체를 먼저 선택하세요"}</option>
             {groupTeams.map((t) => (
               <option key={t.id} value={t.name}>{t.name}</option>
             ))}

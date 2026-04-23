@@ -1,4 +1,4 @@
-// Pure date helpers for the 한주의 준비 weekly-prep view.
+// Pure date helpers for the 한 주의 준비 weekly-prep view.
 
 // Returns the upcoming Sun→Sat week block. If today is Sunday, returns the
 // NEXT Sunday's block (not today's), matching the user's requirement that

@@ -52,6 +52,19 @@ export function computeAge(birthday: string, birthYear: string): number | null {
   return today.getFullYear() - year;
 }
 
+// Normalize birthYear to canonical 4-digit form for filter comparisons.
+// "97" → "1997", "03" → "2003", "1997" → "1997", "" → "".
+export function normalizeBirthYear(raw: string): string {
+  const trimmed = (raw || "").trim();
+  if (!trimmed) return "";
+  if (/^\d{4}$/.test(trimmed)) return trimmed;
+  if (/^\d{1,2}$/.test(trimmed)) {
+    const n = parseInt(trimmed, 10);
+    return String(n >= 50 ? 1900 + n : 2000 + n);
+  }
+  return trimmed;
+}
+
 // MM/DD display from birthday string. Returns "—" if missing.
 export function formatBirthdayMD(birthday: string): string {
   if (!BIRTHDAY_RE.test(birthday)) return "—";

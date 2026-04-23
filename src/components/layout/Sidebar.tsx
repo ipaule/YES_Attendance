@@ -286,7 +286,7 @@ function getNavItems(user: User, groups: Group[]) {
         { label: "합산 그래프", href: "/dashboard/graphs/combined", icon: BarChart3 },
         { label: "재적 리스트", href: "/dashboard/roster", icon: ClipboardList },
         { label: "미등록자 관리", href: "/dashboard/unregistered", icon: UserX },
-        { label: "한주의 준비", href: "/dashboard/weekly-prep", icon: CalendarDays },
+        { label: "한 주의 준비", href: "/dashboard/weekly-prep", icon: CalendarDays },
       ],
     });
 

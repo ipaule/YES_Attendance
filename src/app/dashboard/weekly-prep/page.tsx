@@ -98,7 +98,7 @@ export default function WeeklyPrepPage() {
           <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-600">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-xl font-bold text-gray-900">한주의 준비</h1>
+          <h1 className="text-xl font-bold text-gray-900">한 주의 준비</h1>
         </div>
         <div className="flex items-center gap-2">
           <select

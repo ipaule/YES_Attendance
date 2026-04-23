@@ -252,7 +252,7 @@ export default function RosterPage() {
         </select>
         <input type="text" placeholder="또래" value={filterBirthYear} onChange={(e) => setFilterBirthYear(e.target.value)} className="text-xs border border-gray-300 rounded-lg px-2 py-1.5 w-16" />
         <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} className="text-xs border border-gray-300 rounded-lg px-2 py-1.5">
-          <option value="">전체</option>
+          <option value="">공동체</option>
           <option value="사랑">사랑</option>
           <option value="소망">소망</option>
           <option value="믿음">믿음</option>

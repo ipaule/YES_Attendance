@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "encrypt:backfill": "tsx --env-file=.env.local scripts/encrypt-existing-data.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

@@ -1,3 +1,4 @@
+// Uses raw PrismaClient on both sides by design — sync passes ciphertext through unchanged.
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
 import { createClient } from "@libsql/client";
@@ -25,7 +26,8 @@ async function main() {
   await turso.$executeRawUnsafe("UPDATE User SET teamId = NULL");
   await turso.$executeRawUnsafe("UPDATE Team SET leaderId = NULL");
   await turso.$executeRawUnsafe("DELETE FROM Team");
-  await turso.$executeRawUnsafe("DELETE FROM User");
+  // Preserve AJ's account — delete all other users
+  await turso.$executeRawUnsafe("DELETE FROM User WHERE username != 'AJ'");
   await turso.$executeRawUnsafe('DELETE FROM "Group"');
   console.log("  Turso cleared");
 
@@ -37,9 +39,14 @@ async function main() {
   console.log(`  Groups: ${groups.length}`);
 
   // Sync Users (without teamId first to avoid FK issues)
+  // Uses upsert so the preserved AJ row is refreshed without a unique-constraint error
   const users = await local.user.findMany();
   for (const u of users) {
-    await turso.user.create({ data: { ...u, teamId: null } });
+    await turso.user.upsert({
+      where: { username: u.username },
+      create: { ...u, teamId: null },
+      update: { ...u, teamId: null },
+    });
   }
   console.log(`  Users: ${users.length}`);
 

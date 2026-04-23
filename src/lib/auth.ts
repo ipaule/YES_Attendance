@@ -1,9 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || "yes-attendance-secret-key-2024"
-);
+if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is required but not set");
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export interface JWTPayload {
   userId: string;

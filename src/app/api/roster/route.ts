@@ -12,12 +12,27 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") || "";
-  const filterGender = searchParams.get("gender") || "";
   const filterBirthYear = searchParams.get("birthYear") || "";
-  const filterGroup = searchParams.get("groupName") || "";
-  const filterGrade = searchParams.get("grade") || "";
-  const filterTraining = searchParams.get("training") || "";
-  const filterBaptism = searchParams.get("baptismStatus") || "";
+
+  const parseCsv = (v: string | null) =>
+    (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+
+  const filterGenders  = parseCsv(searchParams.get("gender"));
+  const filterGroups   = parseCsv(searchParams.get("groupName"));
+  const filterTeams    = parseCsv(searchParams.get("teamName"));
+  const filterGrades   = parseCsv(searchParams.get("grade"));
+  const filterTrainings = parseCsv(searchParams.get("training"));
+  const filterBaptisms = parseCsv(searchParams.get("baptismStatus"));
+
+  // Returns true if the filter is empty (match all) or the value satisfies it.
+  // "-" in the filter list matches blank/null values (unassigned sentinel).
+  const inFilter = (list: string[], value: string | null | undefined): boolean => {
+    if (!list.length) return true;
+    const v = value ?? "";
+    const wantsUnassigned = list.includes("-");
+    const named = list.filter((x) => x !== "-");
+    return (wantsUnassigned && !v) || (named.length > 0 && named.includes(v));
+  };
 
   const members = await prisma.rosterMember.findMany({
     orderBy: { order: "asc" },
@@ -87,13 +102,13 @@ export async function GET(request: NextRequest) {
     })
     .filter((m) => {
       if (search && !m.name.includes(search)) return false;
-      if (filterGender && m.gender !== filterGender) return false;
       if (filterBirthYear && normalizeBirthYear(m.birthYear) !== normalizeBirthYear(filterBirthYear)) return false;
-      if (filterGroup === "-" && m.groupName) return false;
-      if (filterGroup && filterGroup !== "-" && m.groupName !== filterGroup) return false;
-      if (filterGrade && m.grade !== filterGrade) return false;
-      if (filterTraining && m.training !== filterTraining) return false;
-      if (filterBaptism && m.baptismStatus !== filterBaptism) return false;
+      if (!inFilter(filterGenders, m.gender)) return false;
+      if (!inFilter(filterGroups, m.groupName)) return false;
+      if (!inFilter(filterTeams, m.teamName)) return false;
+      if (!inFilter(filterGrades, m.grade)) return false;
+      if (!inFilter(filterTrainings, m.training)) return false;
+      if (!inFilter(filterBaptisms, m.baptismStatus)) return false;
       return true;
     });
 

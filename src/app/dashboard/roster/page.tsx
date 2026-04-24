@@ -9,6 +9,7 @@ import {
 import { getGradeColor } from "@/lib/attendance";
 import { computePeerGroup, formatBirthdayMD } from "@/lib/profile";
 import { chipClassFor } from "@/lib/dropdownColors";
+import { MultiSelectDropdown, type MultiSelectOption } from "@/components/MultiSelectDropdown";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
@@ -53,12 +54,18 @@ export default function RosterPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [filterGender, setFilterGender] = useState("");
   const [filterBirthYear, setFilterBirthYear] = useState("");
-  const [filterGroup, setFilterGroup] = useState("");
-  const [filterGrade, setFilterGrade] = useState("");
-  const [filterTraining, setFilterTraining] = useState("");
-  const [filterBaptism, setFilterBaptism] = useState("");
+  const [filterGender, setFilterGender] = useState<string[]>([]);
+  const [filterGroup, setFilterGroup] = useState<string[]>([]);
+  const [filterLeader, setFilterLeader] = useState<string[]>([]);
+  const [filterGrade, setFilterGrade] = useState<string[]>([]);
+  const [filterTraining, setFilterTraining] = useState<string[]>([]);
+  const [filterBaptism, setFilterBaptism] = useState<string[]>([]);
+
+  const handleGroupChange = (next: string[]) => {
+    setFilterGroup(next);
+    setFilterLeader([]);
+  };
 
   type SortKey = "name" | "englishName" | "gender" | "birthYear" | "birthday" | "groupName" | "teamName" | "training" | "ministry" | "baptismStatus" | "salvationAssurance" | "rate" | "grade";
   type SortDir = "none" | "asc" | "desc";
@@ -66,16 +73,17 @@ export default function RosterPage() {
   const [sortDir, setSortDir] = useState<SortDir>("none");
 
   const { data: members, isLoading, error } = useQuery({
-    queryKey: ["roster", search, filterGender, filterBirthYear, filterGroup, filterGrade, filterTraining, filterBaptism],
+    queryKey: ["roster", search, filterBirthYear, filterGender.join(","), filterGroup.join(","), filterLeader.join(","), filterGrade.join(","), filterTraining.join(","), filterBaptism.join(",")],
     queryFn: async (): Promise<RosterMember[]> => {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
-      if (filterGender) params.set("gender", filterGender);
       if (filterBirthYear) params.set("birthYear", filterBirthYear);
-      if (filterGroup) params.set("groupName", filterGroup);
-      if (filterGrade) params.set("grade", filterGrade);
-      if (filterTraining) params.set("training", filterTraining);
-      if (filterBaptism) params.set("baptismStatus", filterBaptism);
+      if (filterGender.length) params.set("gender", filterGender.join(","));
+      if (filterGroup.length) params.set("groupName", filterGroup.join(","));
+      if (filterLeader.length) params.set("teamName", filterLeader.join(","));
+      if (filterGrade.length) params.set("grade", filterGrade.join(","));
+      if (filterTraining.length) params.set("training", filterTraining.join(","));
+      if (filterBaptism.length) params.set("baptismStatus", filterBaptism.join(","));
       const res = await fetch(`/api/roster?${params}`);
       if (!res.ok) throw new Error("Failed");
       return (await res.json()).members;
@@ -134,6 +142,24 @@ export default function RosterPage() {
     },
     staleTime: 30_000,
   });
+
+  const leaderOptions = useMemo<MultiSelectOption[]>(() => {
+    if (!allTeams.length) return [];
+    const pickedGroups = filterGroup.filter((g) => g !== "-");
+    const pool = pickedGroups.length
+      ? allTeams.filter((t) => pickedGroups.includes(t.group.name))
+      : allTeams;
+    const seen = new Set<string>();
+    const opts: MultiSelectOption[] = [];
+    for (const t of pool) {
+      if (!seen.has(t.name)) {
+        seen.add(t.name);
+        opts.push({ value: t.name, label: t.name });
+      }
+    }
+    opts.push({ value: "-", label: "미배정" });
+    return opts;
+  }, [allTeams, filterGroup]);
 
   const assignMutation = useMutation({
     mutationFn: async ({ id, teamName }: { id: string; teamName: string }) => {
@@ -245,37 +271,64 @@ export default function RosterPage() {
           <Search className="h-4 w-4 text-gray-400" />
           <input type="text" placeholder="이름 검색" value={search} onChange={(e) => setSearch(e.target.value)} className="text-sm border-0 focus:outline-none flex-1" />
         </div>
-        <select value={filterGender} onChange={(e) => setFilterGender(e.target.value)} className="text-xs border border-gray-300 rounded-lg px-2 py-1.5">
-          <option value="">성별</option>
-          <option value="남">남</option>
-          <option value="여">여</option>
-        </select>
+        <MultiSelectDropdown
+          label="성별"
+          options={[{ value: "남", label: "남" }, { value: "여", label: "여" }]}
+          selected={filterGender}
+          onChange={setFilterGender}
+        />
         <input type="text" placeholder="또래" value={filterBirthYear} onChange={(e) => setFilterBirthYear(e.target.value)} className="text-xs border border-gray-300 rounded-lg px-2 py-1.5 w-16" />
-        <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} className="text-xs border border-gray-300 rounded-lg px-2 py-1.5">
-          <option value="">공동체</option>
-          <option value="사랑">사랑</option>
-          <option value="소망">소망</option>
-          <option value="믿음">믿음</option>
-          <option value="-">미배정</option>
-        </select>
-        <select value={filterTraining} onChange={(e) => setFilterTraining(e.target.value)} className="text-xs border border-gray-300 rounded-lg px-2 py-1.5">
-          <option value="">훈련과정</option>
-          {trainingOptions.map((o) => (
-            <option key={o.id} value={o.value}>{o.value}</option>
-          ))}
-        </select>
-        <select value={filterBaptism} onChange={(e) => setFilterBaptism(e.target.value)} className="text-xs border border-gray-300 rounded-lg px-2 py-1.5">
-          <option value="">세례 여부</option>
-          {baptismOptions.map((o) => (
-            <option key={o.id} value={o.value}>{o.value}</option>
-          ))}
-        </select>
-        <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="text-xs border border-gray-300 rounded-lg px-2 py-1.5">
-          <option value="">등급</option>
-          <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="F">F</option><option value="-">-</option>
-        </select>
-        {(search || filterGender || filterBirthYear || filterGroup || filterGrade || filterTraining || filterBaptism) && (
-          <button onClick={() => { setSearch(""); setFilterGender(""); setFilterBirthYear(""); setFilterGroup(""); setFilterGrade(""); setFilterTraining(""); setFilterBaptism(""); }} className="text-xs text-gray-500 hover:text-gray-700">초기화</button>
+        <MultiSelectDropdown
+          label="공동체"
+          options={[
+            { value: "사랑", label: "사랑" },
+            { value: "소망", label: "소망" },
+            { value: "믿음", label: "믿음" },
+            { value: "-", label: "미배정" },
+          ]}
+          selected={filterGroup}
+          onChange={handleGroupChange}
+        />
+        <MultiSelectDropdown
+          label="순장"
+          options={leaderOptions}
+          selected={filterLeader}
+          onChange={setFilterLeader}
+        />
+        <MultiSelectDropdown
+          label="훈련과정"
+          options={trainingOptions.map((o) => ({ value: o.value, label: o.value }))}
+          selected={filterTraining}
+          onChange={setFilterTraining}
+        />
+        <MultiSelectDropdown
+          label="세례 여부"
+          options={baptismOptions.map((o) => ({ value: o.value, label: o.value }))}
+          selected={filterBaptism}
+          onChange={setFilterBaptism}
+        />
+        <MultiSelectDropdown
+          label="등급"
+          options={["A", "B", "C", "D", "F", "-"].map((v) => ({ value: v, label: v }))}
+          selected={filterGrade}
+          onChange={setFilterGrade}
+        />
+        {(search || filterBirthYear || filterGender.length > 0 || filterGroup.length > 0 || filterLeader.length > 0 || filterGrade.length > 0 || filterTraining.length > 0 || filterBaptism.length > 0) && (
+          <button
+            onClick={() => {
+              setSearch("");
+              setFilterBirthYear("");
+              setFilterGender([]);
+              setFilterGroup([]);
+              setFilterLeader([]);
+              setFilterGrade([]);
+              setFilterTraining([]);
+              setFilterBaptism([]);
+            }}
+            className="text-xs text-gray-500 hover:text-gray-700"
+          >
+            초기화
+          </button>
         )}
       </div>
 

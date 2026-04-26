@@ -44,6 +44,7 @@ async function main() {
   await addCol("RosterMember", "personStatus",             "TEXT NOT NULL DEFAULT ''", rm);
   await addCol("RosterMember", "statusReason",             "TEXT NOT NULL DEFAULT ''", rm);
   await addCol("RosterMember", "assignee",                 "TEXT NOT NULL DEFAULT ''", rm);
+  await addCol("RosterMember", "registrationDate",         "TEXT NOT NULL DEFAULT ''", rm);
 
   // ── DropdownOption ────────────────────────────────────────────────────────
   const doTables = await client.execute(

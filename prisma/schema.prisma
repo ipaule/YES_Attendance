@@ -117,6 +117,7 @@ model RosterMember {
   salvationAssurance       String   @default("")
   training                 String   @default("")
   memberNumber             String   @default("")
+  registrationDate         String   @default("")
   prayerRequest            String   @default("")
   peerGroup                String   @default("")
   photo                    String   @default("")

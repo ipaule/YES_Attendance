@@ -25,6 +25,7 @@ export interface RosterProfileData {
   salvationAssurance: string;
   training: string;
   memberNumber: string;
+  registrationDate: string;
   prayerRequest: string;
   photo: string;
   baptismStatus: string;
@@ -55,6 +56,7 @@ const EMPTY: RosterProfileData = {
   salvationAssurance: "",
   training: "",
   memberNumber: "",
+  registrationDate: "",
   prayerRequest: "",
   photo: "",
   baptismStatus: "",
@@ -301,6 +303,14 @@ export function RosterProfileForm({ initial, mode, onSave, onCancel, saving, sav
             type="text"
             value={data.memberNumber}
             onChange={(e) => update("memberNumber", e.target.value)}
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+          />
+        </Field>
+        <Field label="등록 날짜">
+          <input
+            type="date"
+            value={data.registrationDate}
+            onChange={(e) => update("registrationDate", e.target.value)}
             className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
           />
         </Field>

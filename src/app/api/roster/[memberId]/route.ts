@@ -67,6 +67,7 @@ export async function PATCH(
     "salvationAssurance",
     "training",
     "memberNumber",
+    "registrationDate",
     "prayerRequest",
     "peerGroup",
     "recentAttendanceOverride",

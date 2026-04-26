@@ -41,7 +41,24 @@
       "Bash(git checkout *)",
       "Bash(vercel whoami *)",
       "Bash(npx vercel *)",
-      "Bash(curl -s https://yesattendance.vercel.app/api/health)"
+      "Bash(curl -s https://yesattendance.vercel.app/api/health)",
+      "Bash(sqlite3 prisma/dev.db \"PRAGMA table_info\\(RosterMember\\);\")",
+      "Bash(kill 5503)",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT DISTINCT gender FROM RosterMember;\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT name, englishName, gender, memberNumber, phone, address, email FROM RosterMember LIMIT 8;\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT name FROM RosterMember WHERE name GLOB '*[0-9]*' OR name LIKE '%\\(%\\)%';\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \".headers on\" \"SELECT name, englishName, gender, memberNumber, phone, address, email FROM RosterMember WHERE memberNumber IS NOT NULL OR phone IS NOT NULL OR address IS NOT NULL OR email IS NOT NULL LIMIT 8;\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \".schema RosterMember\")",
+      "Bash(TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= npx tsx prisma/import-new-roster.ts)",
+      "Bash(TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= npx tsx prisma/import-new-roster.ts --apply --resolutions=data/multi-match-resolution.tsv)",
+      "Bash(sqlite3 prisma/dev.db \"SELECT name, groupName, teamName FROM RosterMember WHERE name IN \\('원하은2','강예지4','이수아3','원하은','강예지','이수아'\\) ORDER BY name;\")",
+      "Bash(sqlite3 prisma/dev.db \"SELECT name, groupName, teamName FROM RosterMember WHERE name IN \\('원하은','강예지4','이수아3'\\) ORDER BY name;\")",
+      "Bash(sqlite3 prisma/dev.db \"SELECT id, name, groupName, teamName FROM RosterMember WHERE groupName = '샬롬' ORDER BY teamName, name;\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT id, name, role FROM User WHERE role = 'LEADER' AND name IN \\(SELECT name FROM RosterMember WHERE groupName = '샬롬'\\) ORDER BY name;\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \".schema User\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT m.id, m.name, t.name AS teamName FROM Member m JOIN Team t ON m.teamId = t.id JOIN \\\\\"Group\\\\\" g ON t.groupId = g.id WHERE g.name = '샬롬' AND m.name = t.name;\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT COUNT\\(*\\) FROM Member;\")",
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT id FROM Member WHERE id = 'cmo9t5dbi001jxtut34wrf42d';\")"
     ],
     "additionalDirectories": [
       "/tmp"

@@ -138,9 +138,16 @@ export async function uploadPhoto(memberId: string, file: File): Promise<string>
   } catch (fetchErr) {
     throw new Error(`[fetch] ${errMsg(fetchErr)}`);
   }
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || "업로드 실패");
-  return json.url as string;
+  const text = await res.text();
+  let json: { url?: string; error?: string } = {};
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(`[server ${res.status}] ${text.slice(0, 200) || "빈 응답"}`);
+  }
+  if (!res.ok) throw new Error(json.error || `업로드 실패 (${res.status})`);
+  if (!json.url) throw new Error(`[server ${res.status}] url 누락`);
+  return json.url;
 }
 
 export const PHOTO_ACCEPT = "image/*";

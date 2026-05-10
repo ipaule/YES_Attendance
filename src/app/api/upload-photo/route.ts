@@ -37,11 +37,18 @@ export async function POST(request: NextRequest) {
   }
 
   const pathname = `roster-photos/${memberId}-${Date.now()}.jpg`;
-  const blob = await put(pathname, body, {
-    access: "public",
-    contentType: "image/jpeg",
-    token,
-  });
-
-  return NextResponse.json({ url: blob.url });
+  try {
+    const blob = await put(pathname, body, {
+      access: "public",
+      contentType: "image/jpeg",
+      token,
+    });
+    return NextResponse.json({ url: blob.url });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return NextResponse.json(
+      { error: `Vercel Blob 업로드 실패: ${message}` },
+      { status: 502 },
+    );
+  }
 }

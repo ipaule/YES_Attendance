@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Save, X, ArrowLeft, Camera, ImageIcon, Trash2 } from "lucide-react";
+import { Save, X, ArrowLeft, Upload, Trash2 } from "lucide-react";
 import { ColoredDropdown } from "./ColoredDropdown";
 import { computeAge, computePeerGroup, validateProfilePatch, PHONE_RE, formatPhoneInput } from "@/lib/profile";
 import { uploadPhoto, PHOTO_ACCEPT } from "@/lib/photoUpload";
@@ -396,26 +396,24 @@ interface PhotoBoxProps {
 }
 
 function PhotoBox({ url, memberId, onUploaded, onCleared }: PhotoBoxProps) {
-  const galleryInputRef = useRef<HTMLInputElement | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
-  const [uploading, setUploading] = useState<"camera" | "gallery" | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const src = url || "/default-profile.jpg";
 
-  const handleFile = async (file: File | null, source: "camera" | "gallery") => {
+  const handleFile = async (file: File | null) => {
     if (!file) return;
     setError(null);
-    setUploading(source);
+    setUploading(true);
     try {
       const uploaded = await uploadPhoto(memberId || "new", file);
       onUploaded(uploaded);
     } catch (e) {
       setError(e instanceof Error ? e.message : "업로드 실패");
     } finally {
-      setUploading(null);
-      if (galleryInputRef.current) galleryInputRef.current.value = "";
-      if (cameraInputRef.current) cameraInputRef.current.value = "";
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
   };
 
@@ -430,44 +428,27 @@ function PhotoBox({ url, memberId, onUploaded, onCleared }: PhotoBoxProps) {
         />
       </div>
       <input
-        ref={cameraInputRef}
+        ref={inputRef}
         type="file"
         accept={PHOTO_ACCEPT}
-        capture="environment"
-        onChange={(e) => handleFile(e.target.files?.[0] || null, "camera")}
-        className="hidden"
-      />
-      <input
-        ref={galleryInputRef}
-        type="file"
-        accept={PHOTO_ACCEPT}
-        onChange={(e) => handleFile(e.target.files?.[0] || null, "gallery")}
+        onChange={(e) => handleFile(e.target.files?.[0] || null)}
         className="hidden"
       />
       <div className="flex items-center gap-1">
         <button
           type="button"
-          onClick={() => cameraInputRef.current?.click()}
-          disabled={uploading !== null}
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
           className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
         >
-          <Camera className="h-3 w-3" />
-          {uploading === "camera" ? "업로드 중..." : "사진 찍기"}
-        </button>
-        <button
-          type="button"
-          onClick={() => galleryInputRef.current?.click()}
-          disabled={uploading !== null}
-          className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
-        >
-          <ImageIcon className="h-3 w-3" />
-          {uploading === "gallery" ? "업로드 중..." : "갤러리"}
+          <Upload className="h-3 w-3" />
+          {uploading ? "업로드 중..." : "사진 업로드"}
         </button>
         {url && (
           <button
             type="button"
             onClick={onCleared}
-            disabled={uploading !== null}
+            disabled={uploading}
             className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 disabled:opacity-50 ml-auto"
           >
             <Trash2 className="h-3 w-3" />

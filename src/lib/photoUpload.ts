@@ -25,64 +25,119 @@ async function heicToJpeg(file: File): Promise<File> {
   });
 }
 
-async function loadImage(src: Blob): Promise<HTMLImageElement> {
+interface DecodedImage {
+  width: number;
+  height: number;
+  drawCropped: (
+    ctx: CanvasRenderingContext2D,
+    sx: number,
+    sy: number,
+    side: number,
+    size: number,
+  ) => void;
+}
+
+async function decodeViaImg(src: Blob): Promise<DecodedImage> {
   const url = URL.createObjectURL(src);
   try {
-    return await new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("이미지를 불러올 수 없습니다."));
-      img.src = url;
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("img element failed to load"));
+      el.src = url;
     });
+    return {
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+      drawCropped: (ctx, sx, sy, side, size) =>
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size),
+    };
   } finally {
-    // Revoke after onload fires; callers keep the HTMLImageElement reference.
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 }
 
+async function decodeImage(src: Blob): Promise<DecodedImage> {
+  // createImageBitmap is more reliable than <img> on iOS for HEIC and unusual
+  // blob types, and avoids the URL.createObjectURL path that some WebKit
+  // versions reject. Fall through to <img> if the bitmap path can't decode.
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(src);
+      return {
+        width: bitmap.width,
+        height: bitmap.height,
+        drawCropped: (ctx, sx, sy, side, size) => {
+          ctx.drawImage(bitmap, sx, sy, side, side, 0, 0, size, size);
+          bitmap.close();
+        },
+      };
+    } catch {
+      // fall through
+    }
+  }
+  return decodeViaImg(src);
+}
+
 async function resizeAndCompress(src: Blob): Promise<Blob> {
-  const img = await loadImage(src);
-  const side = Math.min(img.naturalWidth, img.naturalHeight);
-  const sx = (img.naturalWidth - side) / 2;
-  const sy = (img.naturalHeight - side) / 2;
+  const decoded = await decodeImage(src);
+  const side = Math.min(decoded.width, decoded.height);
+  const sx = (decoded.width - side) / 2;
+  const sy = (decoded.height - side) / 2;
   const size = Math.min(MAX_DIM, side);
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("canvas 컨텍스트를 생성할 수 없습니다.");
-  ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+  decoded.drawCropped(ctx, sx, sy, side, size);
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("인코딩 실패"))),
+      (blob) => (blob ? resolve(blob) : reject(new Error("canvas.toBlob returned null"))),
       "image/jpeg",
       JPEG_QUALITY,
     );
   });
 }
 
+function errMsg(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
 export async function uploadPhoto(memberId: string, file: File): Promise<string> {
-  // Try the browser's native decoder first — iOS Safari/Chrome decode HEIC
-  // natively, and iOS sometimes hands us a JPEG with a .heic extension that
-  // would make heic2any throw. Only fall back to heic2any when native fails.
+  // Diagnostic suffix appended when something throws so the red error message
+  // surfaced to the user identifies the file and the failing stage.
+  const fileTag = `${file.type || "no-type"}/${file.size}b`;
+
   let blob: Blob;
   try {
     blob = await resizeAndCompress(file);
-  } catch {
+  } catch (nativeErr) {
     if (!isHeic(file)) {
-      throw new Error("이미지를 불러올 수 없습니다. 다른 사진을 선택해주세요.");
+      throw new Error(`[decode ${fileTag}] ${errMsg(nativeErr)}`);
     }
-    const converted = await heicToJpeg(file);
-    blob = await resizeAndCompress(converted);
+    try {
+      const converted = await heicToJpeg(file);
+      blob = await resizeAndCompress(converted);
+    } catch (heicErr) {
+      throw new Error(
+        `[heic ${fileTag}] ${errMsg(heicErr)} | native: ${errMsg(nativeErr)}`,
+      );
+    }
   }
   if (blob.size > MAX_UPLOAD_BYTES) {
     throw new Error("압축 후에도 2MB를 초과합니다.");
   }
-  const res = await fetch(`/api/upload-photo?memberId=${encodeURIComponent(memberId)}`, {
-    method: "POST",
-    headers: { "Content-Type": "image/jpeg" },
-    body: blob,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`/api/upload-photo?memberId=${encodeURIComponent(memberId)}`, {
+      method: "POST",
+      headers: { "Content-Type": "image/jpeg" },
+      body: blob,
+    });
+  } catch (fetchErr) {
+    throw new Error(`[fetch] ${errMsg(fetchErr)}`);
+  }
   const json = await res.json();
   if (!res.ok) throw new Error(json.error || "업로드 실패");
   return json.url as string;

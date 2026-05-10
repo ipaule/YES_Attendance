@@ -16,8 +16,7 @@ function isHeic(file: File): boolean {
   );
 }
 
-async function convertHeicIfNeeded(file: File): Promise<File | Blob> {
-  if (!isHeic(file)) return file;
+async function heicToJpeg(file: File): Promise<File> {
   const heic2any = (await import("heic2any")).default;
   const out = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
   const blob = Array.isArray(out) ? out[0] : (out as Blob);
@@ -63,8 +62,19 @@ async function resizeAndCompress(src: Blob): Promise<Blob> {
 }
 
 export async function uploadPhoto(memberId: string, file: File): Promise<string> {
-  const converted = await convertHeicIfNeeded(file);
-  const blob = await resizeAndCompress(converted);
+  // Try the browser's native decoder first — iOS Safari/Chrome decode HEIC
+  // natively, and iOS sometimes hands us a JPEG with a .heic extension that
+  // would make heic2any throw. Only fall back to heic2any when native fails.
+  let blob: Blob;
+  try {
+    blob = await resizeAndCompress(file);
+  } catch {
+    if (!isHeic(file)) {
+      throw new Error("이미지를 불러올 수 없습니다. 다른 사진을 선택해주세요.");
+    }
+    const converted = await heicToJpeg(file);
+    blob = await resizeAndCompress(converted);
+  }
   if (blob.size > MAX_UPLOAD_BYTES) {
     throw new Error("압축 후에도 2MB를 초과합니다.");
   }
@@ -78,4 +88,4 @@ export async function uploadPhoto(memberId: string, file: File): Promise<string>
   return json.url as string;
 }
 
-export const PHOTO_ACCEPT = "image/png,image/jpeg,image/heic,image/heif,.heic,.heif";
+export const PHOTO_ACCEPT = "image/*";

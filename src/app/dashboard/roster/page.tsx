@@ -352,7 +352,7 @@ export default function RosterPage() {
                   <th className="w-7 px-1 py-2" />
                   <th className="w-8 px-1 py-2 text-center font-medium text-gray-400">#</th>
                   <SortTh label="이름" k="name" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} className="sticky left-0 z-20 bg-gray-50" />
-                  <SortTh label="영문" k="englishName" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
+                  <SortTh label="영문" k="englishName" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} className="hidden" />
                   <SortTh label="성별" k="gender" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
                   <SortTh label="또래" k="birthYear" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
                   <SortTh label="생일" k="birthday" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
@@ -380,15 +380,15 @@ export default function RosterPage() {
                           {m.name || "-"}
                         </button>
                       </td>
-                      <td className="px-2 py-1 text-xs text-gray-600 whitespace-nowrap">{m.englishName || "-"}</td>
-                      <td className="px-2 py-1 text-center">
+                      <td className="hidden px-2 py-1 text-xs text-gray-600 whitespace-nowrap">{m.englishName || "-"}</td>
+                      <td className="px-2 py-1 text-center whitespace-nowrap">
                         <span className={`text-xs font-medium ${m.gender === "남" ? "text-blue-600" : m.gender === "여" ? "text-red-600" : "text-gray-400"}`}>
                           {m.gender || "-"}
                         </span>
                       </td>
-                      <td className="px-2 py-1 text-center text-xs text-gray-600">{computePeerGroup(m.birthday, m.birthYear)}</td>
+                      <td className="px-2 py-1 text-center text-xs text-gray-600 whitespace-nowrap">{computePeerGroup(m.birthday, m.birthYear)}</td>
                       <td className="px-2 py-1 text-center text-xs text-gray-600 whitespace-nowrap">{formatBirthdayMD(m.birthday)}</td>
-                      <td className="px-2 py-1 text-center">
+                      <td className="px-2 py-1 text-center whitespace-nowrap">
                         <ColoredDropdown
                           category="community"
                           value={m.groupName}
@@ -396,7 +396,7 @@ export default function RosterPage() {
                           placeholder="—"
                         />
                       </td>
-                      <td className="px-2 py-1 text-center">
+                      <td className="px-2 py-1 text-center whitespace-nowrap">
                         <select
                           value={m.teamName}
                           disabled={!m.groupName}
@@ -421,7 +421,7 @@ export default function RosterPage() {
                           )}
                         </select>
                       </td>
-                      <td className="px-2 py-1 text-center">
+                      <td className="px-2 py-1 text-center whitespace-nowrap">
                         <ColoredDropdown
                           category="training"
                           value={m.training}
@@ -430,7 +430,7 @@ export default function RosterPage() {
                         />
                       </td>
                       <td className="px-2 py-1 text-xs text-gray-600 whitespace-nowrap">{m.ministry || "-"}</td>
-                      <td className="px-2 py-1 text-center">
+                      <td className="px-2 py-1 text-center whitespace-nowrap">
                         <ColoredDropdown
                           category="baptism_status"
                           value={m.baptismStatus}
@@ -438,7 +438,7 @@ export default function RosterPage() {
                           placeholder="—"
                         />
                       </td>
-                      <td className="px-2 py-1 text-center">
+                      <td className="px-2 py-1 text-center whitespace-nowrap">
                         <ColoredDropdown
                           category="salvation_assurance"
                           value={m.salvationAssurance}
@@ -446,8 +446,8 @@ export default function RosterPage() {
                           placeholder="—"
                         />
                       </td>
-                      <td className="px-2 py-1 text-center text-xs font-medium text-gray-700">{m.rate >= 0 ? `${m.rate}%` : "-"}</td>
-                      <td className="px-2 py-1 text-center">
+                      <td className="px-2 py-1 text-center text-xs font-medium text-gray-700 whitespace-nowrap">{m.rate >= 0 ? `${m.rate}%` : "-"}</td>
+                      <td className="px-2 py-1 text-center whitespace-nowrap">
                         {m.grade !== "-" ? (
                           <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${getGradeColor(m.grade)}`}>{m.grade}</span>
                         ) : <span className="text-xs text-gray-400">-</span>}

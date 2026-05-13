@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Save, X, ArrowLeft } from "lucide-react";
 import { ColoredDropdown } from "./ColoredDropdown";
+import { PhotoBox } from "./PhotoBox";
 import { chipClassFor } from "@/lib/dropdownColors";
-import { PHONE_RE, formatPhoneInput } from "@/lib/profile";
+import { computeAge, computePeerGroup, PHONE_RE, formatPhoneInput } from "@/lib/profile";
 
 export interface ShalomProfileData {
   id?: string;
@@ -13,10 +15,23 @@ export interface ShalomProfileData {
   englishName: string;
   gender: string;
   birthYear: string;
+  birthday: string;
   phone: string;
+  email: string;
+  address: string;
   visitDate: string;
   inviter: string;
   leader: string;
+  groupName: string;
+  teamName: string;
+  ministry: string;
+  memberNumber: string;
+  registrationDate: string;
+  salvationAssurance: string;
+  training: string;
+  baptismStatus: string;
+  photo: string;
+  prayerRequest: string;
   note: string;
   status: string;
   movedToRosterAt?: string | null;
@@ -36,10 +51,23 @@ const EMPTY: ShalomProfileData = {
   englishName: "",
   gender: "",
   birthYear: "",
+  birthday: "",
   phone: "",
+  email: "",
+  address: "",
   visitDate: "",
   inviter: "",
   leader: "",
+  groupName: "",
+  teamName: "",
+  ministry: "",
+  memberNumber: "",
+  registrationDate: "",
+  salvationAssurance: "",
+  training: "",
+  baptismStatus: "",
+  photo: "",
+  prayerRequest: "",
   note: "",
   status: "방문",
   movedToRosterAt: null,
@@ -108,6 +136,21 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
     router.back();
   };
 
+  const peerGroup = computePeerGroup(data.birthday, data.birthYear);
+  const age = computeAge(data.birthday, data.birthYear);
+
+  const { data: groupTeams = [] } = useQuery({
+    queryKey: ["teams-by-group-name", data.groupName],
+    queryFn: async (): Promise<{ id: string; name: string }[]> => {
+      const res = await fetch(`/api/teams?groupName=${encodeURIComponent(data.groupName)}`);
+      if (!res.ok) return [];
+      const json = await res.json();
+      return json.teams.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }));
+    },
+    enabled: !!data.groupName,
+    staleTime: 30_000,
+  });
+
   const moved = !!data.movedToRosterAt;
   const movedLabel = moved && data.movedToRosterAt
     ? new Date(data.movedToRosterAt).toISOString().slice(0, 10)
@@ -122,6 +165,7 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
 
   return (
     <div className="space-y-4 pb-20 lg:pb-4 max-w-4xl">
+      {/* Header bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={handleBack} className="text-gray-400 hover:text-gray-600">
@@ -161,11 +205,14 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
         </div>
       )}
 
-      {/* Header card */}
+      {/* Header card: photo + name + identity */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex gap-5">
-        <div className="w-[150px] h-[150px] flex-shrink-0 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs">
-          사진 업로드
-        </div>
+        <PhotoBox
+          url={data.photo}
+          memberId={data.id}
+          onUploaded={(url) => update("photo", url)}
+          onCleared={() => update("photo", "")}
+        />
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="이름 (한글)">
             <input
@@ -190,9 +237,18 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
               onChange={(v) => update("gender", v)}
               allowAdd
               allowManage
+              placeholder="선택"
             />
           </Field>
-          <Field label="또래">
+          <Field label="생년월일">
+            <input
+              type="date"
+              value={data.birthday}
+              onChange={(e) => update("birthday", e.target.value)}
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+            />
+          </Field>
+          <Field label="또래 (숫자)">
             <input
               type="text"
               value={data.birthYear}
@@ -201,6 +257,9 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
               className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
             />
           </Field>
+          <div className="col-span-full text-xs text-gray-400">
+            또래 {peerGroup === "—" ? "—" : `${peerGroup}년생`} · 나이 {age == null ? "—" : `${age}세`}
+          </div>
         </div>
       </div>
 
@@ -222,7 +281,7 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
             className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
           />
         </Field>
-        <Field label="순장">
+        <Field label="순장 (메모)">
           <input
             type="text"
             value={data.leader}
@@ -245,6 +304,109 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
             }`}
           />
         </Field>
+        <Field label="이메일">
+          <input
+            type="email"
+            value={data.email}
+            onChange={(e) => update("email", e.target.value)}
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+          />
+        </Field>
+        <Field label="주소">
+          <textarea
+            value={data.address}
+            onChange={(e) => update("address", e.target.value)}
+            rows={2}
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+          />
+        </Field>
+      </Section>
+
+      {/* 소속 */}
+      <Section title="소속">
+        <Field label="공동체">
+          <ColoredDropdown
+            category="community"
+            value={data.groupName}
+            onChange={(v) => {
+              update("groupName", v);
+              update("teamName", "");
+            }}
+            allowAdd
+            allowManage
+          />
+        </Field>
+        <Field label="순장">
+          <select
+            value={data.teamName}
+            onChange={(e) => update("teamName", e.target.value)}
+            disabled={!data.groupName}
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300 disabled:bg-gray-50 disabled:text-gray-400"
+          >
+            <option value="">{data.groupName ? "" : "공동체를 먼저 선택하세요"}</option>
+            {groupTeams.map((t) => (
+              <option key={t.id} value={t.name}>{t.name}</option>
+            ))}
+            {data.teamName && !groupTeams.some((t) => t.name === data.teamName) && (
+              <option value={data.teamName}>{data.teamName}</option>
+            )}
+          </select>
+        </Field>
+        <Field label="사역">
+          <input
+            type="text"
+            value={data.ministry}
+            onChange={(e) => update("ministry", e.target.value)}
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+          />
+        </Field>
+        <Field label="교인번호">
+          <input
+            type="text"
+            value={data.memberNumber}
+            onChange={(e) => update("memberNumber", e.target.value)}
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+          />
+        </Field>
+        <Field label="등록 날짜">
+          <input
+            type="date"
+            value={data.registrationDate}
+            onChange={(e) => update("registrationDate", e.target.value)}
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+          />
+        </Field>
+      </Section>
+
+      {/* 신앙 */}
+      <Section title="신앙">
+        <Field label="구원확신">
+          <ColoredDropdown
+            category="salvation_assurance"
+            value={data.salvationAssurance}
+            onChange={(v) => update("salvationAssurance", v)}
+            allowAdd
+            allowManage
+          />
+        </Field>
+        <Field label="훈련과정">
+          <ColoredDropdown
+            category="training"
+            value={data.training}
+            onChange={(v) => update("training", v)}
+            allowAdd
+            allowManage
+          />
+        </Field>
+        <Field label="세례 여부">
+          <ColoredDropdown
+            category="baptism_status"
+            value={data.baptismStatus}
+            onChange={(v) => update("baptismStatus", v)}
+            allowAdd
+            allowManage
+          />
+        </Field>
       </Section>
 
       {/* 상태 */}
@@ -261,8 +423,16 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
         </select>
       </div>
 
-      {/* Note */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+      {/* 기도제목 + 비고 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-4">
+        <Field label="기도제목">
+          <textarea
+            value={data.prayerRequest}
+            onChange={(e) => update("prayerRequest", e.target.value)}
+            rows={3}
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+          />
+        </Field>
         <Field label="비고">
           <textarea
             value={data.note}

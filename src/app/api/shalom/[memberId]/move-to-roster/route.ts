@@ -28,10 +28,8 @@ export async function POST(
     return NextResponse.json({ error: "이미 같은 이름이 로스터에 존재합니다." }, { status: 409 });
   }
 
-  // Synthesize note with historical context.
-  const header = shalom.leader
-    ? `[샬롬 졸업 - ${shalom.leader}순${shalom.visitDate ? ` · 방문일: ${shalom.visitDate}` : ""}${shalom.inviter ? ` · 인도자: ${shalom.inviter}` : ""}]`
-    : `[샬롬 졸업${shalom.visitDate ? ` · 방문일: ${shalom.visitDate}` : ""}${shalom.inviter ? ` · 인도자: ${shalom.inviter}` : ""}]`;
+  // Synthesize note with visit context (순장 now transfers as a structured field).
+  const header = `[샬롬 졸업${shalom.visitDate ? ` · 방문일: ${shalom.visitDate}` : ""}${shalom.inviter ? ` · 인도자: ${shalom.inviter}` : ""}]`;
   const noteCombined = shalom.note ? `${header}\n${shalom.note}` : header;
 
   await prisma.$executeRawUnsafe('UPDATE RosterMember SET "order" = "order" + 1');
@@ -47,10 +45,21 @@ export async function POST(
         englishName: shalom.englishName,
         gender: shalom.gender,
         birthYear: shalom.birthYear,
+        birthday: shalom.birthday ?? "",
         phone: shalom.phone,
+        email: shalom.email ?? "",
+        address: shalom.address ?? "",
+        groupName: shalom.groupName ?? "",
+        teamName: shalom.teamName ?? "",
+        ministry: shalom.ministry ?? "",
+        memberNumber: shalom.memberNumber ?? "",
+        registrationDate: shalom.registrationDate ?? "",
+        salvationAssurance: shalom.salvationAssurance ?? "",
+        training: shalom.training ?? "",
+        baptismStatus: shalom.baptismStatus ?? "",
+        photo: shalom.photo ?? "",
+        prayerRequest: shalom.prayerRequest ?? "",
         note: noteCombined,
-        teamName: "",
-        groupName: "",
         order: 0,
       },
     }),

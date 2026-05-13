@@ -1,0 +1,14 @@
+-- AlterTable: add roster-parity fields to ShalomMember (all additive, default "")
+ALTER TABLE "ShalomMember" ADD COLUMN "birthday"           TEXT NOT NULL DEFAULT '';
+ALTER TABLE "ShalomMember" ADD COLUMN "email"              TEXT NOT NULL DEFAULT '';
+ALTER TABLE "ShalomMember" ADD COLUMN "address"            TEXT NOT NULL DEFAULT '';
+ALTER TABLE "ShalomMember" ADD COLUMN "groupName"          TEXT NOT NULL DEFAULT '';
+ALTER TABLE "ShalomMember" ADD COLUMN "teamName"           TEXT NOT NULL DEFAULT '';
+ALTER TABLE "ShalomMember" ADD COLUMN "ministry"           TEXT NOT NULL DEFAULT '';
+ALTER TABLE "ShalomMember" ADD COLUMN "memberNumber"       TEXT NOT NULL DEFAULT '';
+ALTER TABLE "ShalomMember" ADD COLUMN "registrationDate"   TEXT NOT NULL DEFAULT '';
+ALTER TABLE "ShalomMember" ADD COLUMN "salvationAssurance" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "ShalomMember" ADD COLUMN "training"           TEXT NOT NULL DEFAULT '';
+ALTER TABLE "ShalomMember" ADD COLUMN "baptismStatus"      TEXT NOT NULL DEFAULT '';
+ALTER TABLE "ShalomMember" ADD COLUMN "photo"              TEXT NOT NULL DEFAULT '';
+ALTER TABLE "ShalomMember" ADD COLUMN "prayerRequest"      TEXT NOT NULL DEFAULT '';

@@ -10,6 +10,7 @@ import { getGradeColor } from "@/lib/attendance";
 import { computePeerGroup, formatBirthdayMD } from "@/lib/profile";
 import { chipClassFor } from "@/lib/dropdownColors";
 import { MultiSelectDropdown, type MultiSelectOption } from "@/components/MultiSelectDropdown";
+import { ColoredDropdown } from "@/components/ColoredDropdown";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
@@ -110,27 +111,6 @@ export default function RosterPage() {
     staleTime: 30_000,
   });
 
-  const { data: salvationOptions = [] } = useQuery({
-    queryKey: ["dropdown-options", "salvation_assurance"],
-    queryFn: async () => {
-      const res = await fetch("/api/dropdown-options?category=salvation_assurance");
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).options as { id: string; value: string; color: string }[];
-    },
-    staleTime: 30_000,
-  });
-
-  const baptismColor = useMemo(() => {
-    const m: Record<string, string> = {};
-    for (const o of baptismOptions) m[o.value] = o.color;
-    return m;
-  }, [baptismOptions]);
-  const salvationColor = useMemo(() => {
-    const m: Record<string, string> = {};
-    for (const o of salvationOptions) m[o.value] = o.color;
-    return m;
-  }, [salvationOptions]);
-
   // All teams across all groups — used for the inline 순장 picker, filtered
   // per-row by the member's groupName.
   const { data: allTeams = [] } = useQuery({
@@ -170,6 +150,36 @@ export default function RosterPage() {
       });
       if (!res.ok) throw new Error("Failed");
       return res.json();
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["roster"] });
+      queryClient.invalidateQueries({ queryKey: ["unregistered"] });
+    },
+  });
+
+  const fieldMutation = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<RosterMember> }) => {
+      const res = await fetch(`/api/roster/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onMutate: async ({ id, patch }) => {
+      await queryClient.cancelQueries({ queryKey: ["roster"] });
+      const snapshots = queryClient.getQueriesData<RosterMember[]>({ queryKey: ["roster"] });
+      for (const [qk, data] of snapshots) {
+        if (!data) continue;
+        queryClient.setQueryData(qk, data.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+      }
+      return { snapshots };
+    },
+    onError: (_err, _vars, ctx) => {
+      for (const [qk, data] of ctx?.snapshots ?? []) {
+        queryClient.setQueryData(qk, data);
+      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["roster"] });
@@ -379,11 +389,12 @@ export default function RosterPage() {
                       <td className="px-2 py-1 text-center text-xs text-gray-600">{computePeerGroup(m.birthday, m.birthYear)}</td>
                       <td className="px-2 py-1 text-center text-xs text-gray-600 whitespace-nowrap">{formatBirthdayMD(m.birthday)}</td>
                       <td className="px-2 py-1 text-center">
-                        {m.groupName ? (
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${chipClassFor(communityColor(m.groupName))}`}>
-                            {m.groupName}
-                          </span>
-                        ) : <span className="text-xs text-gray-400">-</span>}
+                        <ColoredDropdown
+                          category="community"
+                          value={m.groupName}
+                          onChange={(v) => fieldMutation.mutate({ id: m.id, patch: { groupName: v, teamName: "" } })}
+                          placeholder="—"
+                        />
                       </td>
                       <td className="px-2 py-1 text-center">
                         <select
@@ -411,26 +422,29 @@ export default function RosterPage() {
                         </select>
                       </td>
                       <td className="px-2 py-1 text-center">
-                        {m.training ? (
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${chipClassFor("teal")}`}>
-                            {m.training}
-                          </span>
-                        ) : <span className="text-xs text-gray-400">-</span>}
+                        <ColoredDropdown
+                          category="training"
+                          value={m.training}
+                          onChange={(v) => fieldMutation.mutate({ id: m.id, patch: { training: v } })}
+                          placeholder="—"
+                        />
                       </td>
                       <td className="px-2 py-1 text-xs text-gray-600 whitespace-nowrap">{m.ministry || "-"}</td>
                       <td className="px-2 py-1 text-center">
-                        {m.baptismStatus ? (
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${chipClassFor(baptismColor[m.baptismStatus])}`}>
-                            {m.baptismStatus}
-                          </span>
-                        ) : <span className="text-xs text-gray-400">-</span>}
+                        <ColoredDropdown
+                          category="baptism_status"
+                          value={m.baptismStatus}
+                          onChange={(v) => fieldMutation.mutate({ id: m.id, patch: { baptismStatus: v } })}
+                          placeholder="—"
+                        />
                       </td>
                       <td className="px-2 py-1 text-center">
-                        {m.salvationAssurance ? (
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${chipClassFor(salvationColor[m.salvationAssurance])}`}>
-                            {m.salvationAssurance}
-                          </span>
-                        ) : <span className="text-xs text-gray-400">-</span>}
+                        <ColoredDropdown
+                          category="salvation_assurance"
+                          value={m.salvationAssurance}
+                          onChange={(v) => fieldMutation.mutate({ id: m.id, patch: { salvationAssurance: v } })}
+                          placeholder="—"
+                        />
                       </td>
                       <td className="px-2 py-1 text-center text-xs font-medium text-gray-700">{m.rate >= 0 ? `${m.rate}%` : "-"}</td>
                       <td className="px-2 py-1 text-center">
@@ -470,14 +484,6 @@ export default function RosterPage() {
       </DndContext>
     </div>
   );
-}
-
-function communityColor(name: string): string {
-  if (name === "믿음") return "green";
-  if (name === "소망") return "blue";
-  if (name === "사랑") return "pink";
-  if (name === "샬롬") return "purple";
-  return "gray";
 }
 
 interface SortThProps<K extends string> {

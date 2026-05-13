@@ -84,20 +84,33 @@ model TermHistory {
 }
 
 model ShalomMember {
-  id              String    @id @default(cuid())
-  name            String
-  englishName     String    @default("")
-  gender          String    @default("")
-  birthYear       String    @default("")
-  phone           String    @default("")
-  visitDate       String    @default("")
-  inviter         String    @default("")
-  order           Int       @default(0)
-  leader          String    @default("")
-  note            String    @default("")
-  status          String    @default("방문") // 방문, 등록, 졸업
-  movedToRosterAt DateTime?
-  createdAt       DateTime  @default(now())
+  id                 String    @id @default(cuid())
+  name               String
+  englishName        String    @default("")
+  gender             String    @default("")
+  birthYear          String    @default("")
+  birthday           String    @default("")
+  phone              String    @default("")
+  email              String    @default("")
+  address            String    @default("")
+  visitDate          String    @default("")
+  inviter            String    @default("")
+  order              Int       @default(0)
+  leader             String    @default("")
+  groupName          String    @default("")
+  teamName           String    @default("")
+  ministry           String    @default("")
+  memberNumber       String    @default("")
+  registrationDate   String    @default("")
+  salvationAssurance String    @default("")
+  training           String    @default("")
+  baptismStatus      String    @default("")
+  photo              String    @default("")
+  prayerRequest      String    @default("")
+  note               String    @default("")
+  status             String    @default("방문") // 방문, 등록, 졸업
+  movedToRosterAt    DateTime?
+  createdAt          DateTime  @default(now())
 }
 
 model RosterMember {

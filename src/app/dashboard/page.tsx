@@ -3,7 +3,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { ClipboardList, BarChart3, FolderOpen, Settings, Megaphone, TrendingUp, History } from "lucide-react";
+import { ClipboardList, BarChart3, FolderOpen, Megaphone, TrendingUp, History, UserX, CalendarDays } from "lucide-react";
 import type { Group } from "@/types";
 
 export default function DashboardPage() {
@@ -50,14 +50,18 @@ export default function DashboardPage() {
 
   if (user.role === "PASTOR" && groups) {
     const shalom = groups.find(g => g.name === "샬롬");
-    const others = groups.filter(g => g.name !== "샬롬");
+    const groupOrder = ["믿음", "소망", "사랑"];
+    const others = groups
+      .filter(g => g.name !== "샬롬")
+      .sort((a, b) => groupOrder.indexOf(a.name) - groupOrder.indexOf(b.name));
 
     sections.push({
       title: "전체 관리",
       items: [
         mk("합산 그래프", "/dashboard/graphs/combined", BarChart3, "emerald"),
         mk("재적 리스트", "/dashboard/roster", ClipboardList, "purple"),
-        mk("리더쉽 관리", "/dashboard/admin", Settings, "gray"),
+        mk("미등록자 관리", "/dashboard/unregistered", UserX, "amber"),
+        mk("한 주의 준비", "/dashboard/weekly-prep", CalendarDays, "indigo"),
       ],
     });
     sections.push({

@@ -9,7 +9,9 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
-    "encrypt:backfill": "tsx --env-file=.env.local scripts/encrypt-existing-data.ts"
+    "encrypt:backfill": "tsx --env-file=.env.local scripts/encrypt-existing-data.ts",
+    "db:seed-dummy-attendance": "tsx prisma/seed-dummy-attendance.ts",
+    "db:seed-shalom-visit-dates": "tsx prisma/seed-shalom-visit-dates.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

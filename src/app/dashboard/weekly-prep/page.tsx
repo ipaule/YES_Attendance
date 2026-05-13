@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Printer, Copy, Check } from "lucide-react";
 import { CareNotesPrintable } from "@/components/CareNotesPrintable";
@@ -35,7 +35,6 @@ interface CareNoteTeam {
 
 export default function WeeklyPrepPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const [careTeams, setCareTeams] = useState<CareNoteTeam[] | null>(null);
   const [printing, setPrinting] = useState(false);
   const [printTeamId, setPrintTeamId] = useState<string | null>(null);
@@ -62,14 +61,9 @@ export default function WeeklyPrepPage() {
   const handlePrint = async (teamId: string | null) => {
     setPrinting(true);
     try {
-      const data = await queryClient.fetchQuery<{ teams: CareNoteTeam[] }>({
-        queryKey: ["weekly-prep-care-notes"],
-        queryFn: async () => {
-          const res = await fetch("/api/weekly-prep/care-notes");
-          if (!res.ok) throw new Error("Failed to load care notes");
-          return res.json();
-        },
-      });
+      const res = await fetch("/api/weekly-prep/care-notes");
+      if (!res.ok) throw new Error("Failed to load care notes");
+      const data: { teams: CareNoteTeam[] } = await res.json();
       setCareTeams(data.teams);
       setPrintTeamId(teamId);
       // Wait for layout + image loads, then trigger print.

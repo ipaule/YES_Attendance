@@ -63,10 +63,62 @@ export async function GET() {
 
   // Fetch RosterMember lookup for photo/phone/birthday enrichment
   const rosterRows = await prisma.rosterMember.findMany({
-    select: { name: true, photo: true, phone: true, birthday: true, gender: true },
+    select: { name: true, photo: true, phone: true, birthday: true, gender: true, birthYear: true },
   });
-  const rosterByName = new Map<string, (typeof rosterRows)[number]>();
-  for (const r of rosterRows) rosterByName.set(r.name, r);
+
+  // Roster names may have a trailing digit suffix (e.g. "김민수1") to disambiguate duplicates,
+  // while Member.name does not. We build both an exact map and a normalized bucket map.
+  function normalizeRosterName(name: string): string {
+    return name
+      .trim()
+      .replace(/\s+/g, " ")
+      .replace(/\s*\d+\s*$/, "");
+  }
+
+  type RosterRow = (typeof rosterRows)[number];
+  const rosterByExact = new Map<string, RosterRow>();
+  const rosterByNormalized = new Map<string, RosterRow[]>();
+  for (const r of rosterRows) {
+    rosterByExact.set(r.name, r);
+    const key = normalizeRosterName(r.name);
+    const bucket = rosterByNormalized.get(key);
+    if (bucket) bucket.push(r);
+    else rosterByNormalized.set(key, [r]);
+  }
+
+  function findRosterFor(
+    member: { name: string; birthYear?: string; gender?: string },
+    teamName: string
+  ): RosterRow | null {
+    const exact = rosterByExact.get(member.name);
+    if (exact) return exact;
+
+    const bucket = rosterByNormalized.get(normalizeRosterName(member.name));
+    if (!bucket || bucket.length === 0) {
+      console.warn(`[care-notes] No roster match for "${member.name}" in team "${teamName}"`);
+      return null;
+    }
+    if (bucket.length === 1) return bucket[0];
+
+    // Disambiguate by birthYear, then by gender
+    if (member.birthYear) {
+      const byYear = bucket.filter((r) => r.birthYear === member.birthYear);
+      if (byYear.length === 1) return byYear[0];
+      if (byYear.length > 1) {
+        if (member.gender) {
+          const byYearGender = byYear.filter((r) => r.gender === member.gender);
+          if (byYearGender.length >= 1) return byYearGender[0];
+        }
+        return byYear[0];
+      }
+    }
+    if (member.gender) {
+      const byGender = bucket.filter((r) => r.gender === member.gender);
+      if (byGender.length >= 1) return byGender[0];
+    }
+    console.warn(`[care-notes] Ambiguous roster match for "${member.name}" in team "${teamName}" — using first`);
+    return bucket[0];
+  }
 
   // Sort teams so the output is stable: by group order, then by team name
   const groupOrder = new Map<string, number>();
@@ -77,7 +129,7 @@ export async function GET() {
   for (const team of teams) {
     const leaderName = team.leader?.username || "";
     const enriched: CareNoteRow[] = team.members.map((m) => {
-      const r = rosterByName.get(m.name);
+      const r = findRosterFor({ name: m.name, birthYear: m.birthYear, gender: m.gender }, team.name);
       return {
         name: m.name,
         gender: m.gender || r?.gender || "",
@@ -95,7 +147,7 @@ export async function GET() {
     }
     // Fall back: leader from roster-only record when not a Member
     if (!leaderRow && leaderName) {
-      const r = rosterByName.get(leaderName);
+      const r = findRosterFor({ name: leaderName }, team.name);
       leaderRow = {
         name: leaderName,
         gender: r?.gender || "",

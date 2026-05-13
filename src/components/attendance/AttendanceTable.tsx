@@ -100,7 +100,41 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
       if (!res.ok) throw new Error("Failed to update attendance");
       return res.json();
     },
-    onSuccess: () => {
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: ["team", team.id] });
+      const previous = queryClient.getQueryData<TeamWithData>(["team", team.id]);
+      if (previous) {
+        queryClient.setQueryData<TeamWithData>(["team", team.id], {
+          ...previous,
+          members: previous.members.map((m) => {
+            if (m.id !== vars.memberId) return m;
+            const others = m.attendances.filter(
+              (a) => a.attendanceDateId !== vars.attendanceDateId
+            );
+            if (!vars.status) return { ...m, attendances: others };
+            const existing = m.attendances.find(
+              (a) => a.attendanceDateId === vars.attendanceDateId
+            );
+            const next: AttendanceRecord = {
+              id: existing?.id ?? `optimistic-${vars.memberId}-${vars.attendanceDateId}`,
+              memberId: vars.memberId,
+              attendanceDateId: vars.attendanceDateId,
+              status: vars.status as AttendanceStatus,
+              awrReason:
+                vars.status === "AWR" || vars.status === "ABSENT"
+                  ? vars.awrReason ?? null
+                  : null,
+            };
+            return { ...m, attendances: [...others, next] };
+          }),
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(["team", team.id], ctx.previous);
+      }
       queryClient.invalidateQueries({ queryKey: ["team", team.id] });
     },
   });

@@ -439,7 +439,7 @@ export default function ShalomListPage() {
                   <th className="w-7 px-1 py-2" />
                   <th className="w-8 px-1 py-2"><input type="checkbox" checked={members?.length ? selected.size === members.length : false} onChange={toggleSelectAll} className="rounded" /></th>
                   <th className="w-8 px-1 py-2 text-center font-medium text-gray-400">#</th>
-                  <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[80px] text-center" onClick={() => toggleSort("name")}><div className="flex items-center justify-center gap-0.5">이름{sortIcon("name")}</div></th>
+                  <th className="sticky left-0 z-20 bg-gray-50 px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[80px] text-center" onClick={() => toggleSort("name")}><div className="flex items-center justify-center gap-0.5">이름{sortIcon("name")}</div></th>
                   <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[44px] text-center" onClick={() => toggleSort("gender")}><div className="flex items-center justify-center gap-0.5">성별{sortIcon("gender")}</div></th>
                   <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[44px] text-center" onClick={() => toggleSort("birthYear")}><div className="flex items-center justify-center gap-0.5">또래{sortIcon("birthYear")}</div></th>
                   <th className="px-1 py-2 font-medium text-gray-600 whitespace-nowrap w-[120px] text-center">전화번호</th>
@@ -463,7 +463,7 @@ export default function ShalomListPage() {
                           <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} className="rounded" />
                         </td>
                         <td className="px-2 py-1 text-center text-xs text-gray-400">{idx + 1}</td>
-                        <td className="px-2 py-1">
+                        <td className="sticky left-0 z-20 bg-white px-2 py-1">
                           <button
                             onClick={() => router.push(`/dashboard/shalom/${m.id}`)}
                             className="text-sm text-gray-800 hover:text-indigo-600 hover:underline"

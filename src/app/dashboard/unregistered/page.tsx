@@ -207,7 +207,7 @@ export default function UnregisteredPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <Th>#</Th>
-                <SortTh label="이름" k="name" onClick={toggleSort} icon={sortIcon} />
+                <SortTh label="이름" k="name" onClick={toggleSort} icon={sortIcon} className="sticky left-0 z-20 bg-gray-50" />
                 <SortTh label="영문" k="englishName" onClick={toggleSort} icon={sortIcon} />
                 <SortTh label="성별" k="gender" onClick={toggleSort} icon={sortIcon} />
                 <SortTh label="생년월일" k="birthday" onClick={toggleSort} icon={sortIcon} />
@@ -225,7 +225,7 @@ export default function UnregisteredPage() {
               {filtered.map((m, idx) => (
                 <tr key={m.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-2 py-1 text-center text-xs text-gray-400">{idx + 1}</td>
-                  <td className="px-2 py-1">
+                  <td className="sticky left-0 z-20 bg-white px-2 py-1">
                     <button
                       onClick={() => router.push(`/dashboard/roster/${m.id}`)}
                       className="text-sm text-indigo-600 hover:underline"
@@ -326,15 +326,17 @@ function SortTh<K extends string>({
   k,
   onClick,
   icon,
+  className,
 }: {
   label: string;
   k: K;
   onClick: (k: K) => void;
   icon: (k: K) => React.ReactNode;
+  className?: string;
 }) {
   return (
     <th
-      className="px-2 py-2 text-xs font-medium text-gray-600 text-center whitespace-nowrap cursor-pointer select-none hover:text-indigo-600"
+      className={`px-2 py-2 text-xs font-medium text-gray-600 text-center whitespace-nowrap cursor-pointer select-none hover:text-indigo-600${className ? ` ${className}` : ""}`}
       onClick={() => onClick(k)}
     >
       <span className="inline-flex items-center gap-0.5">

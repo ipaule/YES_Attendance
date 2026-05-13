@@ -341,7 +341,7 @@ export default function RosterPage() {
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="w-7 px-1 py-2" />
                   <th className="w-8 px-1 py-2 text-center font-medium text-gray-400">#</th>
-                  <SortTh label="이름" k="name" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
+                  <SortTh label="이름" k="name" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} className="sticky left-0 z-20 bg-gray-50" />
                   <SortTh label="영문" k="englishName" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
                   <SortTh label="성별" k="gender" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
                   <SortTh label="또래" k="birthYear" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
@@ -362,7 +362,7 @@ export default function RosterPage() {
                   {sortedMembers.map((m, idx) => (
                     <SortableRow key={m.id} id={m.id}>
                       <td className="px-2 py-1 text-center text-xs text-gray-400">{idx + 1}</td>
-                      <td className="px-2 py-1 whitespace-nowrap">
+                      <td className="sticky left-0 z-20 bg-white px-2 py-1 whitespace-nowrap">
                         <button
                           onClick={() => router.push(`/dashboard/roster/${m.id}`)}
                           className="text-sm text-gray-800 hover:text-indigo-600 hover:underline"
@@ -487,12 +487,13 @@ interface SortThProps<K extends string> {
   sortDir: "none" | "asc" | "desc";
   toggleSort: (k: K) => void;
   sortIcon: (k: K) => React.ReactNode;
+  className?: string;
 }
 
-function SortTh<K extends string>({ label, k, toggleSort, sortIcon }: SortThProps<K>) {
+function SortTh<K extends string>({ label, k, toggleSort, sortIcon, className }: SortThProps<K>) {
   return (
     <th
-      className="px-2 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap text-center"
+      className={`px-2 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap text-center${className ? ` ${className}` : ""}`}
       onClick={() => toggleSort(k)}
     >
       <div className="flex items-center justify-center gap-0.5">

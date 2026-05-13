@@ -411,21 +411,21 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="bg-gray-50 px-1 py-2 w-6" />
-              <th className="sticky left-0 z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-400 w-8 min-w-[32px]">#</th>
+              <th className="bg-gray-50 px-1 py-2 text-center font-medium text-gray-400 w-8 min-w-[32px]">#</th>
               <th
-                className="sticky left-8 z-10 bg-gray-50 px-2 py-2 text-left font-medium text-gray-600 w-16 min-w-[64px] cursor-pointer hover:text-indigo-600 select-none"
+                className="sticky left-0 z-20 bg-gray-50 px-2 py-2 text-left font-medium text-gray-600 w-16 min-w-[64px] cursor-pointer hover:text-indigo-600 select-none"
                 onClick={() => toggleSort("name")}
               >
                 이름{sortIcon("name")}
               </th>
               <th
-                className="sticky left-24 z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-10 min-w-[40px] whitespace-nowrap cursor-pointer hover:text-indigo-600 select-none"
+                className="bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-10 min-w-[40px] whitespace-nowrap cursor-pointer hover:text-indigo-600 select-none"
                 onClick={() => toggleSort("gender")}
               >
                 성별{sortIcon("gender")}
               </th>
               <th
-                className="sticky left-[136px] z-10 bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-14 min-w-[56px] cursor-pointer hover:text-indigo-600 select-none"
+                className="bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-14 min-w-[56px] cursor-pointer hover:text-indigo-600 select-none"
                 onClick={() => toggleSort("birthYear")}
               >
                 또래{sortIcon("birthYear")}
@@ -484,17 +484,17 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
               const grade = calculateGrade(rate);
               return (
                 <SortableTableRow key={member.id} id={member.id}>
-                  <td className="sticky left-0 z-10 bg-white px-1 py-1 text-center text-xs text-gray-400 w-8">{idx + 1}</td>
+                  <td className="bg-white px-1 py-1 text-center text-xs text-gray-400 w-8">{idx + 1}</td>
                   {/* Name */}
-                  <td className="sticky left-8 z-10 bg-white px-2 py-1 w-16">
+                  <td className="sticky left-0 z-20 bg-white px-2 py-1 w-16">
                     <span className="text-left text-sm truncate block w-full">{member.name}</span>
                   </td>
                   {/* Gender */}
-                  <td className="sticky left-24 z-10 bg-white px-1 py-1 text-center w-10">
+                  <td className="bg-white px-1 py-1 text-center w-10">
                     <span className={`text-xs font-medium ${member.gender === "남" ? "text-blue-600" : member.gender === "여" ? "text-red-600" : "text-gray-500"}`}>{member.gender || "-"}</span>
                   </td>
                   {/* Birth Year */}
-                  <td className="sticky left-[136px] z-10 bg-white px-1 py-1 text-center w-14">
+                  <td className="bg-white px-1 py-1 text-center w-14">
                     <span className="text-xs text-gray-500">{member.birthYear}</span>
                   </td>
                   {/* Attendance cells */}

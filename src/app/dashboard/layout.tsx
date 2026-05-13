@@ -51,7 +51,7 @@ export default function DashboardLayout({
       )}
 
       {/* Main content */}
-      <div className="flex-1 lg:pl-64">
+      <div className="flex-1 lg:pl-64 min-w-0">
         {/* Mobile header */}
         <div className="sticky top-0 z-30 flex items-center gap-3 bg-white border-b border-gray-200 px-4 py-3 lg:hidden">
           <button

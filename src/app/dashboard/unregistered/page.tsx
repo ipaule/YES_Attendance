@@ -208,7 +208,7 @@ export default function UnregisteredPage() {
               <tr className="bg-gray-50 border-b border-gray-200">
                 <Th>#</Th>
                 <SortTh label="이름" k="name" onClick={toggleSort} icon={sortIcon} className="sticky left-0 z-20 bg-gray-50" />
-                <SortTh label="영문" k="englishName" onClick={toggleSort} icon={sortIcon} />
+                <SortTh label="영문" k="englishName" onClick={toggleSort} icon={sortIcon} className="hidden" />
                 <SortTh label="성별" k="gender" onClick={toggleSort} icon={sortIcon} />
                 <SortTh label="생년월일" k="birthday" onClick={toggleSort} icon={sortIcon} />
                 <SortTh label="공동체" k="groupName" onClick={toggleSort} icon={sortIcon} />
@@ -233,22 +233,22 @@ export default function UnregisteredPage() {
                       {m.name || "—"}
                     </button>
                   </td>
-                  <td className="px-2 py-1 text-xs text-gray-600">{m.englishName || "—"}</td>
-                  <td className="px-2 py-1 text-center">
+                  <td className="hidden px-2 py-1 text-xs text-gray-600">{m.englishName || "—"}</td>
+                  <td className="px-2 py-1 text-center whitespace-nowrap">
                     <span className={`text-xs font-medium ${m.gender === "남" ? "text-blue-600" : m.gender === "여" ? "text-red-600" : "text-gray-400"}`}>
                       {m.gender || "—"}
                     </span>
                   </td>
-                  <td className="px-2 py-1 text-xs text-gray-600">{m.birthday || "—"}</td>
-                  <td className="px-2 py-1">
+                  <td className="px-2 py-1 text-xs text-gray-600 whitespace-nowrap">{m.birthday || "—"}</td>
+                  <td className="px-2 py-1 whitespace-nowrap">
                     <ColoredDropdown
                       category="community"
                       value={m.groupName}
                       onChange={(v) => updateMutation.mutate({ id: m.id, data: { groupName: v } })}
                     />
                   </td>
-                  <td className="px-2 py-1 text-xs text-gray-600">{m.phone || "—"}</td>
-                  <td className="px-2 py-1">
+                  <td className="px-2 py-1 text-xs text-gray-600 whitespace-nowrap">{m.phone || "—"}</td>
+                  <td className="px-2 py-1 whitespace-nowrap">
                     <ColoredDropdown
                       category="recent_attendance"
                       value={m.recentAttendanceOverride || m.recentAttendance}
@@ -261,14 +261,14 @@ export default function UnregisteredPage() {
                       placeholder={m.recentAttendance}
                     />
                   </td>
-                  <td className="px-2 py-1">
+                  <td className="px-2 py-1 whitespace-nowrap">
                     <ColoredDropdown
                       category="contact_status"
                       value={m.contactStatus}
                       onChange={(v) => updateMutation.mutate({ id: m.id, data: { contactStatus: v } })}
                     />
                   </td>
-                  <td className="px-2 py-1">
+                  <td className="px-2 py-1 whitespace-nowrap">
                     <ColoredDropdown
                       category="person_status"
                       value={m.personStatus}
@@ -287,7 +287,7 @@ export default function UnregisteredPage() {
                       className="w-full text-xs border border-transparent hover:border-gray-200 focus:border-indigo-300 rounded px-1 py-0.5 focus:outline-none"
                     />
                   </td>
-                  <td className="px-2 py-1">
+                  <td className="px-2 py-1 whitespace-nowrap">
                     <ColoredDropdown
                       category="assignee"
                       value={m.assignee}

@@ -22,8 +22,21 @@ async function main() {
 
   // ── ShalomMember ──────────────────────────────────────────────────────────
   const sm = await getColumns("ShalomMember");
-  await addCol("ShalomMember", "englishName",    "TEXT NOT NULL DEFAULT ''", sm);
-  await addCol("ShalomMember", "movedToRosterAt","DATETIME",                 sm);
+  await addCol("ShalomMember", "englishName",        "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "birthday",           "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "email",              "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "address",            "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "groupName",          "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "teamName",           "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "ministry",           "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "memberNumber",       "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "registrationDate",   "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "salvationAssurance", "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "training",           "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "baptismStatus",      "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "photo",              "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "prayerRequest",      "TEXT NOT NULL DEFAULT ''", sm);
+  await addCol("ShalomMember", "movedToRosterAt",    "DATETIME",                 sm);
 
   // ── RosterMember ──────────────────────────────────────────────────────────
   const rm = await getColumns("RosterMember");

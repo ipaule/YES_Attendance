@@ -62,6 +62,8 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
   const { user } = useAuth();
   const canManageMembers = user?.role === "PASTOR";
   const canManageDates = user?.role === "PASTOR" || user?.role === "EXECUTIVE";
+  const canLockOrDeleteDates =
+    user?.role === "PASTOR" || user?.role === "EXECUTIVE" || user?.role === "LEADER";
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMember, setNewMember] = useState({
     name: "",
@@ -435,7 +437,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                 >
                   <div className="flex flex-col items-center gap-0.5">
                     <span className="text-xs">{date.label}</span>
-                    {canManageDates && (
+                    {canLockOrDeleteDates && (
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => toggleLockMutation.mutate({ dateId: date.id, locked: !date.locked })}

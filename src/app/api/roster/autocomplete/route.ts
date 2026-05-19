@@ -12,28 +12,27 @@ export async function GET(request: NextRequest) {
 
   if (!q) return NextResponse.json({ suggestions: [] });
 
-  // Get roster members matching the group and query
+  // Get all roster members matching the query regardless of group
   const rosterMembers = await prisma.rosterMember.findMany({
-    where: {
-      ...(groupName ? { groupName } : {}),
-      name: { contains: q },
-    },
+    where: { name: { contains: q } },
     select: { id: true, name: true, gender: true, birthYear: true, groupName: true },
   });
 
-  // Get names already assigned to a team (in Member table)
-  const targetGroups = await prisma.group.findMany({
-    where: { name: { in: ["사랑", "소망", "믿음"] } },
-    select: { id: true },
-  });
+  // Exclude anyone already on any team
   const assignedMembers = await prisma.member.findMany({
-    where: { team: { groupId: { in: targetGroups.map((g) => g.id) } } },
     select: { name: true },
   });
   const assignedNames = new Set(assignedMembers.map((m) => m.name));
 
-  // Exclude already assigned
-  const suggestions = rosterMembers.filter((m) => !assignedNames.has(m.name));
+  // Filter and sort: same group first, then by name
+  const suggestions = rosterMembers
+    .filter((m) => !assignedNames.has(m.name))
+    .sort((a, b) => {
+      const aMatch = a.groupName === groupName ? 0 : 1;
+      const bMatch = b.groupName === groupName ? 0 : 1;
+      if (aMatch !== bMatch) return aMatch - bMatch;
+      return a.name.localeCompare(b.name);
+    });
 
   return NextResponse.json({ suggestions });
 }

@@ -70,7 +70,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
     gender: "남",
     birthYear: "",
   });
-  const [suggestions, setSuggestions] = useState<{ id: string; name: string; gender: string; birthYear: string }[]>([]);
+  const [suggestions, setSuggestions] = useState<{ id: string; name: string; gender: string; birthYear: string; groupName: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [newDate, setNewDate] = useState("");
@@ -405,6 +405,11 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 flex justify-between border-b border-gray-50"
                   >
                     <span className="font-medium">{s.name}</span>
+                    {s.groupName !== team.group?.name && (
+                      <span className="text-[10px] text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">
+                        {s.groupName || "미배정"}
+                      </span>
+                    )}
                     <span className="text-xs text-gray-400">{s.gender || ""} {s.birthYear}</span>
                   </button>
                 ))}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { normalizeRosterName } from "@/lib/roster-names";
 
 export async function PATCH(
   request: NextRequest,
@@ -69,8 +70,17 @@ export async function DELETE(
     }
   }
 
-  // Clear teamName on roster if applicable
-  const rosterMatch = await prisma.rosterMember.findFirst({ where: { name: member.name } });
+  // Clear teamName on roster if applicable.
+  // Member.name may have no suffix while the RosterMember carries one (e.g. "김민수" vs "김민수1").
+  // Try exact match first; fall back to finding a suffixed roster row in the same team.
+  let rosterMatch = await prisma.rosterMember.findFirst({ where: { name: member.name } });
+  if (!rosterMatch) {
+    const teamName = member.team.name;
+    if (teamName) {
+      const candidates = await prisma.rosterMember.findMany({ where: { teamName } });
+      rosterMatch = candidates.find((r) => normalizeRosterName(r.name) === member.name) ?? null;
+    }
+  }
   if (rosterMatch) {
     await prisma.rosterMember.update({ where: { id: rosterMatch.id }, data: { teamName: "" } });
   }

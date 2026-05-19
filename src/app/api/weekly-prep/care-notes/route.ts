@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { getUpcomingWeek, formatMDSlash } from "@/lib/weekRange";
+import { normalizeRosterName } from "@/lib/roster-names";
 
 const TARGET_GROUP_NAMES = ["믿음", "소망", "사랑", "샬롬"];
 
@@ -68,13 +69,6 @@ export async function GET() {
 
   // Roster names may have a trailing digit suffix (e.g. "김민수1") to disambiguate duplicates,
   // while Member.name does not. We build both an exact map and a normalized bucket map.
-  function normalizeRosterName(name: string): string {
-    return name
-      .trim()
-      .replace(/\s+/g, " ")
-      .replace(/\s*\d+\s*$/, "");
-  }
-
   type RosterRow = (typeof rosterRows)[number];
   const rosterByExact = new Map<string, RosterRow>();
   const rosterByNormalized = new Map<string, RosterRow[]>();

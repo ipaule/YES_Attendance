@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { validateProfilePatch } from "@/lib/profile";
 import { buildRecentAttendanceMap } from "@/lib/recentAttendance";
+import { normalizeRosterName } from "@/lib/roster-names";
 
 export async function GET(
   _request: NextRequest,
@@ -113,10 +114,16 @@ export async function PATCH(
   if (data.birthYear !== undefined && data.birthYear !== oldMember.birthYear) updates.birthYear = data.birthYear;
 
   if (Object.keys(updates).length > 0) {
-    await prisma.member.updateMany({
+    const exactUpdate = await prisma.member.updateMany({
       where: { name: oldMember.name },
       data: updates,
     });
+    if (exactUpdate.count === 0) {
+      const stripped = normalizeRosterName(oldMember.name);
+      if (stripped !== oldMember.name) {
+        await prisma.member.updateMany({ where: { name: stripped }, data: updates });
+      }
+    }
   }
 
   // Team-assignment sync: when the roster's teamName/groupName changes,
@@ -141,9 +148,15 @@ export async function PATCH(
           select: { id: true },
         });
         if (oldTeam) {
-          await prisma.member.deleteMany({
+          const exactDel = await prisma.member.deleteMany({
             where: { name: member.name, teamId: oldTeam.id },
           });
+          if (exactDel.count === 0) {
+            const stripped = normalizeRosterName(member.name);
+            if (stripped !== member.name) {
+              await prisma.member.deleteMany({ where: { name: stripped, teamId: oldTeam.id } });
+            }
+          }
         }
       }
     }
@@ -165,6 +178,15 @@ export async function PATCH(
             select: { id: true },
           });
           if (!already) {
+            const stripped = normalizeRosterName(member.name);
+            let nameToStore = stripped;
+            if (stripped !== member.name) {
+              const collision = await prisma.member.findFirst({
+                where: { teamId: newTeam.id, name: stripped },
+                select: { id: true },
+              });
+              if (collision) nameToStore = member.name;
+            }
             const maxOrder = await prisma.member.findFirst({
               where: { teamId: newTeam.id },
               orderBy: { order: "desc" },
@@ -172,7 +194,7 @@ export async function PATCH(
             });
             await prisma.member.create({
               data: {
-                name: member.name,
+                name: nameToStore,
                 gender: member.gender,
                 birthYear: member.birthYear,
                 teamId: newTeam.id,
@@ -204,8 +226,15 @@ export async function DELETE(
     return NextResponse.json({ error: "해당 인원을 찾을 수 없습니다." }, { status: 404 });
   }
 
-  // Delete all attendance Member records for this person before removing the roster entry
-  await prisma.member.deleteMany({ where: { name: roster.name } });
+  // Delete all attendance Member records for this person before removing the roster entry.
+  // Try exact name first; fall back to suffix-stripped name for legacy rows.
+  const exactDel = await prisma.member.deleteMany({ where: { name: roster.name } });
+  if (exactDel.count === 0) {
+    const stripped = normalizeRosterName(roster.name);
+    if (stripped !== roster.name) {
+      await prisma.member.deleteMany({ where: { name: stripped } });
+    }
+  }
 
   await prisma.rosterMember.delete({ where: { id: memberId } });
 

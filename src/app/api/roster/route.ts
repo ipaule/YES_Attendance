@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { calculateAttendanceRate, calculateGrade } from "@/lib/attendance";
 import { validateProfilePatch, normalizeBirthYear } from "@/lib/profile";
+import { normalizeRosterName } from "@/lib/roster-names";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -186,6 +187,15 @@ export async function POST(request: NextRequest) {
           select: { id: true },
         });
         if (!already) {
+          const stripped = normalizeRosterName(data.name);
+          let nameToStore = stripped;
+          if (stripped !== data.name) {
+            const collision = await prisma.member.findFirst({
+              where: { teamId: team.id, name: stripped },
+              select: { id: true },
+            });
+            if (collision) nameToStore = data.name;
+          }
           const maxOrder = await prisma.member.findFirst({
             where: { teamId: team.id },
             orderBy: { order: "desc" },
@@ -193,7 +203,7 @@ export async function POST(request: NextRequest) {
           });
           await prisma.member.create({
             data: {
-              name: data.name,
+              name: nameToStore,
               gender: data.gender,
               birthYear: data.birthYear || "",
               teamId: team.id,

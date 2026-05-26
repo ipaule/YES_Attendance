@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { calculateAttendanceRate, calculateGrade } from "@/lib/attendance";
-import { validateProfilePatch, normalizeBirthYear } from "@/lib/profile";
+import { validateProfilePatch, computePeerGroup } from "@/lib/profile";
 import { normalizeRosterName } from "@/lib/roster-names";
 
 export async function GET(request: NextRequest) {
@@ -96,14 +96,14 @@ export async function GET(request: NextRequest) {
   // Compute rate + grade for each roster member and apply filters
   const result = members
     .map((m) => {
-      const statuses = attendanceMap[m.name] || [];
+      const statuses = attendanceMap[m.name] ?? attendanceMap[normalizeRosterName(m.name)] ?? [];
       const rate = statuses.length > 0 ? calculateAttendanceRate(statuses) : -1;
       const grade = rate >= 0 ? calculateGrade(rate) : "-";
       return { ...m, rate: rate >= 0 ? Math.round(rate) : -1, grade };
     })
     .filter((m) => {
       if (search && !m.name.includes(search)) return false;
-      if (filterBirthYear && normalizeBirthYear(m.birthYear) !== normalizeBirthYear(filterBirthYear)) return false;
+      if (filterBirthYear && computePeerGroup(m.birthday, m.birthYear) !== computePeerGroup("", filterBirthYear)) return false;
       if (!inFilter(filterGenders, m.gender)) return false;
       if (!inFilter(filterGroups, m.groupName)) return false;
       if (!inFilter(filterTeams, m.teamName)) return false;

@@ -22,7 +22,10 @@ export async function GET(
 
   const map = await buildRecentAttendanceMap();
   const recentAttendance =
-    member.recentAttendanceOverride || map[member.name] || "미확인";
+    member.recentAttendanceOverride ||
+    map[member.name] ||
+    map[normalizeRosterName(member.name)] ||
+    "미확인";
 
   return NextResponse.json({ member: { ...member, recentAttendance } });
 }

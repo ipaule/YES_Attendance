@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { normalizeRosterName } from "@/lib/roster-names";
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -35,10 +36,15 @@ export async function POST(request: NextRequest) {
     include: { attendances: true, team: { include: { group: { select: { name: true } } } } },
   });
 
-  // Update RosterMember groupName and teamName if found
-  const rosterMatch = await prisma.rosterMember.findFirst({
-    where: { name },
-  });
+  // Update RosterMember groupName and teamName if found.
+  // Exact match first; fall back to roster rows whose suffix-stripped name matches.
+  let rosterMatch = await prisma.rosterMember.findFirst({ where: { name } });
+  if (!rosterMatch) {
+    const candidates = await prisma.rosterMember.findMany({
+      where: { name: { startsWith: name } },
+    });
+    rosterMatch = candidates.find((r) => normalizeRosterName(r.name) === name) ?? null;
+  }
   if (rosterMatch) {
     await prisma.rosterMember.update({
       where: { id: rosterMatch.id },

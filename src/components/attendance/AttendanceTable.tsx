@@ -42,7 +42,7 @@ function SortableTableRow({ id, children, editRowId }: { id: string; children: R
     opacity: isDragging ? 0.5 : 1,
   };
   return (
-    <tr ref={setNodeRef} style={style} className="border-b border-gray-100 hover:bg-gray-50" {...attributes} data-edit-row={editRowId || undefined}>
+    <tr ref={setNodeRef} style={style} className="group border-b border-gray-100 hover:bg-gray-50" {...attributes} data-edit-row={editRowId || undefined}>
       <td className="px-1 py-1 text-center w-6">
         <button {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
           <GripVertical className="h-3.5 w-3.5" />
@@ -501,18 +501,18 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                 </th>
               ))}
               <th
-                className="px-2 py-2 text-center font-medium text-gray-600 min-w-[50px] cursor-pointer hover:text-indigo-600 select-none"
+                className="sticky right-[76px] z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[56px] cursor-pointer hover:text-indigo-600 select-none"
                 onClick={() => toggleSort("rate")}
               >
                 출석률{sortIcon("rate")}
               </th>
               <th
-                className="px-2 py-2 text-center font-medium text-gray-600 min-w-[36px] cursor-pointer hover:text-indigo-600 select-none"
+                className="sticky right-8 z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[44px] cursor-pointer hover:text-indigo-600 select-none"
                 onClick={() => toggleSort("grade")}
               >
                 등급{sortIcon("grade")}
               </th>
-              <th className="px-1 py-2 w-8" />
+              <th className="sticky right-0 z-20 bg-gray-50 px-1 py-2 w-8" />
             </tr>
           </thead>
           <SortableContext items={sortedMembers.map((m) => m.id)} strategy={verticalListSortingStrategy}>
@@ -525,7 +525,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                 <SortableTableRow key={member.id} id={member.id}>
                   <td className="bg-white px-1 py-1 text-center text-xs text-gray-400 w-8">{idx + 1}</td>
                   {/* Name */}
-                  <td className="sticky left-0 z-20 bg-white px-2 py-1 w-16">
+                  <td className="sticky left-0 z-20 bg-white group-hover:bg-gray-50 px-2 py-1 w-16">
                     <span className="text-left text-sm truncate block w-full">{member.name}</span>
                   </td>
                   {/* Gender */}
@@ -562,13 +562,13 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     );
                   })}
                   {/* Rate */}
-                  <td className="px-2 py-1 text-center">
+                  <td className="sticky right-[76px] z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[56px]">
                     <span className="text-xs font-medium text-gray-700">
                       {rate.toFixed(0)}%
                     </span>
                   </td>
                   {/* Grade */}
-                  <td className="px-2 py-1 text-center">
+                  <td className="sticky right-8 z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[44px]">
                     <span
                       className={`inline-block text-xs font-bold px-1.5 py-0.5 rounded ${getGradeColor(grade)}`}
                     >
@@ -576,7 +576,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     </span>
                   </td>
                   {/* Delete (pastor/exec only) */}
-                  <td className="px-1 py-1">
+                  <td className="sticky right-0 z-20 bg-white group-hover:bg-gray-50 px-1 py-1 w-8">
                     {canManageMembers && (
                       <button
                         onClick={() => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { normalizeRosterName } from "@/lib/roster-names";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
 
   // Filter and sort: same group first, then by name
   const suggestions = rosterMembers
-    .filter((m) => !assignedNames.has(m.name))
+    .filter((m) => !assignedNames.has(m.name) && !assignedNames.has(normalizeRosterName(m.name)))
     .sort((a, b) => {
       const aMatch = a.groupName === groupName ? 0 : 1;
       const bMatch = b.groupName === groupName ? 0 : 1;

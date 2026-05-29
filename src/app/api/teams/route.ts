@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         members: { select: { id: true, name: true }, orderBy: { order: "asc" } },
         _count: { select: { members: true } },
       },
-      orderBy: [{ updatedAt: "desc" }],
+      orderBy: [{ name: "asc" }],
     });
   } else if (session.role === "EXECUTIVE") {
     teams = await prisma.team.findMany({
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         members: { select: { id: true, name: true }, orderBy: { order: "asc" } },
         _count: { select: { members: true } },
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: { name: "asc" },
     });
   } else {
     teams = await prisma.team.findMany({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, ArrowUpDown, GripVertical, Lock, Unlock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -59,6 +60,7 @@ interface AttendanceTableProps {
 
 export function AttendanceTable({ team }: AttendanceTableProps) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { user } = useAuth();
   const canManageMembers = user?.role === "PASTOR";
   const canManageDates = user?.role === "PASTOR" || user?.role === "EXECUTIVE";
@@ -501,13 +503,13 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                 </th>
               ))}
               <th
-                className="sticky right-[76px] z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[56px] cursor-pointer hover:text-indigo-600 select-none"
+                className="sticky right-[88px] z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[72px] cursor-pointer hover:text-indigo-600 select-none whitespace-nowrap"
                 onClick={() => toggleSort("rate")}
               >
                 출석률{sortIcon("rate")}
               </th>
               <th
-                className="sticky right-8 z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[44px] cursor-pointer hover:text-indigo-600 select-none"
+                className="sticky right-8 z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[56px] cursor-pointer hover:text-indigo-600 select-none whitespace-nowrap"
                 onClick={() => toggleSort("grade")}
               >
                 등급{sortIcon("grade")}
@@ -526,7 +528,17 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                   <td className="bg-white px-1 py-1 text-center text-xs text-gray-400 w-8">{idx + 1}</td>
                   {/* Name */}
                   <td className="sticky left-0 z-20 bg-white group-hover:bg-gray-50 px-2 py-1 w-16">
-                    <span className="text-left text-sm truncate block w-full">{member.name}</span>
+                    {canManageMembers ? (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/dashboard/roster/member/${member.id}`)}
+                        className="text-left text-sm truncate block w-full hover:text-indigo-600 hover:underline cursor-pointer"
+                      >
+                        {member.name}
+                      </button>
+                    ) : (
+                      <span className="text-left text-sm truncate block w-full">{member.name}</span>
+                    )}
                   </td>
                   {/* Gender */}
                   <td className="bg-white px-1 py-1 text-center w-10">
@@ -562,13 +574,13 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     );
                   })}
                   {/* Rate */}
-                  <td className="sticky right-[76px] z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[56px]">
+                  <td className="sticky right-[88px] z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[72px]">
                     <span className="text-xs font-medium text-gray-700">
                       {rate.toFixed(0)}%
                     </span>
                   </td>
                   {/* Grade */}
-                  <td className="sticky right-8 z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[44px]">
+                  <td className="sticky right-8 z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[56px]">
                     <span
                       className={`inline-block text-xs font-bold px-1.5 py-0.5 rounded ${getGradeColor(grade)}`}
                     >

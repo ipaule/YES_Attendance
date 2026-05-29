@@ -220,10 +220,10 @@ export default function TermDetailPage() {
                           <span className="text-xs">{date.label}</span>
                         </th>
                       ))}
-                      <th className="px-2 py-2 text-center font-medium text-gray-600 min-w-[50px]">
+                      <th className="px-2 py-2 text-center font-medium text-gray-600 w-[72px] whitespace-nowrap">
                         출석률
                       </th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-600 min-w-[36px]">
+                      <th className="px-2 py-2 text-center font-medium text-gray-600 w-[56px] whitespace-nowrap">
                         등급
                       </th>
                     </tr>

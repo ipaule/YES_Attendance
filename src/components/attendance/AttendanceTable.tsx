@@ -375,7 +375,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     const isShalom = team.group?.name === "샬롬";
                     const url = isShalom
                       ? `/api/shalom/autocomplete?q=${encodeURIComponent(val)}`
-                      : `/api/roster/autocomplete?groupName=${team.group?.name || ""}&q=${encodeURIComponent(val)}`;
+                      : `/api/roster/autocomplete?groupName=${encodeURIComponent(team.group?.name || "")}&teamName=${encodeURIComponent(team.name)}&teamId=${encodeURIComponent(team.id)}&q=${encodeURIComponent(val)}`;
                     const res = await fetch(url);
                     if (res.ok) {
                       const data = await res.json();

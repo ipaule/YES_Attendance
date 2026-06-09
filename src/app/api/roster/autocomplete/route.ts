@@ -9,29 +9,39 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const groupName = searchParams.get("groupName") || "";
+  const teamName = searchParams.get("teamName") || "";
+  const teamId = searchParams.get("teamId") || "";
   const q = searchParams.get("q") || "";
 
   if (!q) return NextResponse.json({ suggestions: [] });
 
-  // Get all roster members matching the query regardless of group
+  // Get roster members that are either unassigned or belong to the target team
   const rosterMembers = await prisma.rosterMember.findMany({
-    where: { name: { contains: q } },
+    where: {
+      name: { contains: q },
+      OR: [
+        { teamName: "" },
+        ...(teamName && groupName
+          ? [{ teamName, groupName }]
+          : []),
+      ],
+    },
     select: { id: true, name: true, gender: true, birthYear: true, groupName: true },
   });
 
-  // Exclude anyone already on any team
-  const assignedMembers = await prisma.member.findMany({
-    select: { name: true },
-  });
-  const assignedNames = new Set(assignedMembers.map((m) => m.name));
+  // Exclude anyone already on THIS team's sheet (scoped to current team, not global)
+  const teamMembers = teamId
+    ? await prisma.member.findMany({ where: { teamId }, select: { name: true } })
+    : [];
+  const onThisTeam = new Set(teamMembers.map((m) => m.name));
 
-  // Filter and sort: same group first, then by name
+  // Filter and sort: corresponding-team people first, then unassigned, then by name
   const suggestions = rosterMembers
-    .filter((m) => !assignedNames.has(m.name) && !assignedNames.has(normalizeRosterName(m.name)))
+    .filter((m) => !onThisTeam.has(m.name) && !onThisTeam.has(normalizeRosterName(m.name)))
     .sort((a, b) => {
-      const aMatch = a.groupName === groupName ? 0 : 1;
-      const bMatch = b.groupName === groupName ? 0 : 1;
-      if (aMatch !== bMatch) return aMatch - bMatch;
+      const aRank = a.groupName === groupName ? 0 : 1;
+      const bRank = b.groupName === groupName ? 0 : 1;
+      if (aRank !== bRank) return aRank - bRank;
       return a.name.localeCompare(b.name);
     });
 

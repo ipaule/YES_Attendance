@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useLayoutEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, ArrowUpDown, GripVertical, Lock, Unlock } from "lucide-react";
@@ -76,6 +76,15 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [newDate, setNewDate] = useState("");
+  const [isNavPending, startNavTransition] = useTransition();
+  const [navigatingMemberId, setNavigatingMemberId] = useState<string | null>(null);
+
+  const handleNavigateToMember = (memberId: string) => {
+    setNavigatingMemberId(memberId);
+    startNavTransition(() => {
+      router.push(`/dashboard/roster/member/${memberId}`);
+    });
+  };
 
   type SortKey = "name" | "gender" | "birthYear" | "rate" | "grade";
   type SortDir = "none" | "asc" | "desc";
@@ -291,6 +300,23 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
     });
   }, [team.members, team.dates, sortKey, sortDir]);
 
+  // sortedMembers gets a new array reference on every attendance-cell tap
+  // (the optimistic update replaces team.members), even though the actual
+  // ordered id list is unchanged. Adjusting this state during render (React's
+  // documented pattern for deriving state from changed inputs) keeps
+  // SortableContext's `items` prop referentially stable across those taps,
+  // so dnd-kit doesn't recompute sortable transforms for every row on tap.
+  const [stableMemberIds, setStableMemberIds] = useState<string[]>(() =>
+    sortedMembers.map((m) => m.id)
+  );
+  const nextMemberIds = sortedMembers.map((m) => m.id);
+  const memberIdsChanged =
+    nextMemberIds.length !== stableMemberIds.length ||
+    nextMemberIds.some((id, i) => id !== stableMemberIds[i]);
+  if (memberIdsChanged) {
+    setStableMemberIds(nextMemberIds);
+  }
+
   const toggleSort = (key: SortKey) => {
     if (sortKey !== key) {
       setSortKey(key);
@@ -306,6 +332,43 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
   const sortIcon = (key: SortKey) => (
     <ArrowUpDown className={`h-3 w-3 inline-block ml-0.5 ${sortKey === key && sortDir !== "none" ? "text-indigo-600" : "text-gray-400"}`} />
   );
+
+  // Default the horizontal scroll to the most recent past-or-today date column
+  // instead of the chronologically-first one, since PASTOR users mark
+  // attendance for recent dates, not the team's oldest date.
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const nameThRef = useRef<HTMLTableCellElement>(null);
+  const dateThRefs = useRef<Map<string, HTMLTableCellElement>>(new Map());
+  const hasAutoScrolledRef = useRef(false);
+
+  const targetDateId = useMemo(() => {
+    const toDayTime = (d: string | Date) => {
+      const dt = new Date(d);
+      return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+    };
+    const todayTime = toDayTime(new Date());
+    let bestId: string | null = null;
+    let bestTime = -Infinity;
+    for (const d of team.dates) {
+      const t = toDayTime(d.date);
+      if (t <= todayTime && t > bestTime) {
+        bestTime = t;
+        bestId = d.id;
+      }
+    }
+    return bestId;
+  }, [team.dates]);
+
+  useLayoutEffect(() => {
+    if (hasAutoScrolledRef.current || !targetDateId) return;
+    const container = scrollContainerRef.current;
+    const nameTh = nameThRef.current;
+    const targetTh = dateThRefs.current.get(targetDateId);
+    if (!container || !nameTh || !targetTh) return;
+    const delta = targetTh.getBoundingClientRect().left - nameTh.getBoundingClientRect().right;
+    container.scrollLeft = container.scrollLeft + delta;
+    hasAutoScrolledRef.current = true;
+  }, [targetDateId]);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -447,13 +510,14 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
 
       {/* Table */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" ref={scrollContainerRef}>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="bg-gray-50 px-1 py-2 w-6" />
               <th className="bg-gray-50 px-1 py-2 text-center font-medium text-gray-400 w-8 min-w-[32px]">#</th>
               <th
+                ref={nameThRef}
                 className="sticky left-0 z-20 bg-gray-50 px-2 py-2 text-left font-medium text-gray-600 w-16 min-w-[64px] cursor-pointer hover:text-indigo-600 select-none"
                 onClick={() => toggleSort("name")}
               >
@@ -474,15 +538,19 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
               {team.dates.map((date) => (
                 <th
                   key={date.id}
+                  ref={(el) => {
+                    if (el) dateThRefs.current.set(date.id, el);
+                    else dateThRefs.current.delete(date.id);
+                  }}
                   className="px-1 py-2 text-center font-medium text-gray-600 min-w-[56px]"
                 >
                   <div className="flex flex-col items-center gap-0.5">
                     <span className="text-xs">{date.label}</span>
                     {canLockOrDeleteDates && (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center">
                         <button
                           onClick={() => toggleLockMutation.mutate({ dateId: date.id, locked: !date.locked })}
-                          className={`transition-colors flex-shrink-0 ${date.locked ? "text-red-400 hover:text-red-600" : "text-gray-300 hover:text-gray-500"}`}
+                          className={`flex items-center justify-center w-11 h-11 transition-colors flex-shrink-0 ${date.locked ? "text-red-400 hover:text-red-600" : "text-gray-300 hover:text-gray-500"}`}
                           title={date.locked ? "잠금 해제" : "잠금"}
                         >
                           {date.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
@@ -493,7 +561,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                               deleteDateMutation.mutate(date.id);
                             }
                           }}
-                          className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                          className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -503,21 +571,21 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                 </th>
               ))}
               <th
-                className="sticky right-[88px] z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[72px] cursor-pointer hover:text-indigo-600 select-none whitespace-nowrap"
+                className="sticky right-[100px] z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[72px] cursor-pointer hover:text-indigo-600 select-none whitespace-nowrap"
                 onClick={() => toggleSort("rate")}
               >
                 출석률{sortIcon("rate")}
               </th>
               <th
-                className="sticky right-8 z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[56px] cursor-pointer hover:text-indigo-600 select-none whitespace-nowrap"
+                className="sticky right-11 z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[56px] cursor-pointer hover:text-indigo-600 select-none whitespace-nowrap"
                 onClick={() => toggleSort("grade")}
               >
                 등급{sortIcon("grade")}
               </th>
-              <th className="sticky right-0 z-20 bg-gray-50 px-1 py-2 w-8" />
+              <th className="sticky right-0 z-20 bg-gray-50 px-1 py-2 w-11" />
             </tr>
           </thead>
-          <SortableContext items={sortedMembers.map((m) => m.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={stableMemberIds} strategy={verticalListSortingStrategy}>
           <tbody>
             {sortedMembers.map((member, idx) => {
               const statuses = getMemberStatuses(member, team.dates);
@@ -531,8 +599,13 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     {canManageMembers ? (
                       <button
                         type="button"
-                        onClick={() => router.push(`/dashboard/roster/member/${member.id}`)}
-                        className="text-left text-sm truncate block w-full hover:text-indigo-600 hover:underline cursor-pointer"
+                        onClick={() => handleNavigateToMember(member.id)}
+                        disabled={isNavPending && navigatingMemberId === member.id}
+                        className={`text-left text-sm truncate block w-full hover:text-indigo-600 hover:underline cursor-pointer transition-opacity ${
+                          isNavPending && navigatingMemberId === member.id
+                            ? "opacity-50 cursor-wait"
+                            : ""
+                        }`}
                       >
                         {member.name}
                       </button>
@@ -574,13 +647,13 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     );
                   })}
                   {/* Rate */}
-                  <td className="sticky right-[88px] z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[72px]">
+                  <td className="sticky right-[100px] z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[72px]">
                     <span className="text-xs font-medium text-gray-700">
                       {rate.toFixed(0)}%
                     </span>
                   </td>
                   {/* Grade */}
-                  <td className="sticky right-8 z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[56px]">
+                  <td className="sticky right-11 z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[56px]">
                     <span
                       className={`inline-block text-xs font-bold px-1.5 py-0.5 rounded ${getGradeColor(grade)}`}
                     >
@@ -588,7 +661,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                     </span>
                   </td>
                   {/* Delete (pastor/exec only) */}
-                  <td className="sticky right-0 z-20 bg-white group-hover:bg-gray-50 px-1 py-1 w-8">
+                  <td className="sticky right-0 z-20 bg-white group-hover:bg-gray-50 px-1 py-1 w-11">
                     {canManageMembers && (
                       <button
                         onClick={() => {
@@ -596,7 +669,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                             deleteMemberMutation.mutate(member.id);
                           }
                         }}
-                        className="text-gray-300 hover:text-red-500 transition-colors"
+                        className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-500 transition-colors"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>

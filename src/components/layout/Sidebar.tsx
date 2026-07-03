@@ -21,6 +21,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchJson } from "@/lib/http";
 import type { User, Group } from "@/types";
 
 interface SidebarProps {
@@ -60,9 +61,7 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
   const { data: groups } = useQuery({
     queryKey: ["groups"],
     queryFn: async (): Promise<Group[]> => {
-      const res = await fetch("/api/groups");
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
+      const data = await fetchJson<{ groups: Group[] }>("/api/groups");
       return data.groups;
     },
     enabled: user.role === "PASTOR",

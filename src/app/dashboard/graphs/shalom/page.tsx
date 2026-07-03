@@ -14,6 +14,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { fetchJson } from "@/lib/http";
 
 function getDefaults() {
   const now = new Date();
@@ -34,14 +35,12 @@ export default function ShalomGraphPage() {
       const params = new URLSearchParams();
       if (startDate) params.set("startDate", startDate);
       if (endDate) params.set("endDate", endDate);
-      const res = await fetch(`/api/shalom/graph?${params}`);
-      if (!res.ok) throw new Error("Failed");
-      return res.json() as Promise<{
+      return fetchJson<{
         statusCounts: { 방문: number; 등록: number; 졸업: number };
         gradeCounts: { A: number; B: number; C: number; "D이하": number };
         totalGraduates: number;
         matchedGraduates: number;
-      }>;
+      }>(`/api/shalom/graph?${params}`);
     },
   });
 

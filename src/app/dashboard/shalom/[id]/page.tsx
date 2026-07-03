@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ShalomProfileForm, type ShalomProfileData } from "@/components/ShalomProfileForm";
+import { fetchJson } from "@/lib/http";
 
 export default function ShalomDetailPage() {
   const params = useParams();
@@ -15,12 +16,8 @@ export default function ShalomDetailPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["shalom-detail", id],
     queryFn: async () => {
-      const res = await fetch(`/api/shalom/${id}`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Failed");
-      }
-      return (await res.json()).member as ShalomProfileData;
+      const data = await fetchJson<{ member: ShalomProfileData }>(`/api/shalom/${id}`);
+      return data.member;
     },
   });
 
@@ -46,7 +43,7 @@ export default function ShalomDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 pb-20 lg:pb-4">
         <div className="h-8 w-48 bg-gray-100 rounded animate-pulse" />
         <div className="h-40 bg-gray-100 rounded-xl animate-pulse" />
       </div>
@@ -55,7 +52,7 @@ export default function ShalomDetailPage() {
 
   if (error || !data) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-12 pb-20 lg:pb-4">
         <p className="text-gray-500">대상을 찾을 수 없습니다.</p>
         <button onClick={() => router.back()} className="mt-4 text-sm text-indigo-600 hover:text-indigo-800">
           뒤로

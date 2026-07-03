@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AttendanceChart } from "@/components/graphs/AttendanceChart";
+import { fetchJson } from "@/lib/http";
 
 type GraphMode = "count" | "percentage";
 type Preset = "term" | "6m" | "1y" | "all" | "custom";
@@ -14,6 +15,11 @@ interface RosterStats {
   assigned: number;
   attendanceByDate: Record<string, number>;
   closestSunday: string;
+}
+
+interface GraphResponse {
+  chartData: Record<string, string | number>[];
+  series: string[];
 }
 
 function getPresetDates(preset: Preset): { start: string; end: string } {
@@ -60,18 +66,14 @@ export default function CombinedGraphPage() {
       const params = new URLSearchParams({ scope: "combined", mode });
       if (startDate) params.set("startDate", startDate);
       if (endDate) params.set("endDate", endDate);
-      const res = await fetch(`/api/graphs?${params}`);
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return fetchJson<GraphResponse>(`/api/graphs?${params}`);
     },
   });
 
   const { data: stats } = useQuery({
     queryKey: ["roster-stats"],
     queryFn: async (): Promise<RosterStats> => {
-      const res = await fetch("/api/roster/stats");
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return fetchJson<RosterStats>("/api/roster/stats");
     },
   });
 

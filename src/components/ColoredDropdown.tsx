@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import { chipClassFor } from "@/lib/dropdownColors";
+import { fetchJson } from "@/lib/http";
 
 export interface DropdownOption {
   id: string;
@@ -48,9 +49,10 @@ export function ColoredDropdown({
   const { data: options = [] } = useQuery({
     queryKey: ["dropdown-options", category],
     queryFn: async (): Promise<DropdownOption[]> => {
-      const res = await fetch(`/api/dropdown-options?category=${encodeURIComponent(category)}`);
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).options;
+      const data = await fetchJson<{ options: DropdownOption[] }>(
+        `/api/dropdown-options?category=${encodeURIComponent(category)}`
+      );
+      return data.options;
     },
     staleTime: 30_000,
   });

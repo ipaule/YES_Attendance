@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { fetchJson } from "@/lib/http";
 
 interface ShalomRecord {
   name: string;
@@ -24,9 +25,9 @@ export default function ShalomHistoryDetailPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["shalom-history", historyId],
     queryFn: async () => {
-      const res = await fetch(`/api/shalom/history/${historyId}`);
-      if (!res.ok) throw new Error("Failed");
-      return res.json() as Promise<{ id: string; name: string; createdAt: string; data: ShalomRecord[] }>;
+      return fetchJson<{ id: string; name: string; createdAt: string; data: ShalomRecord[] }>(
+        `/api/shalom/history/${historyId}`
+      );
     },
   });
 

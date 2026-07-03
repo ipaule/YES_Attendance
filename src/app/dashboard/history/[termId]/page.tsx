@@ -9,6 +9,7 @@ import {
   calculateGrade,
   getGradeColor,
 } from "@/lib/attendance";
+import { fetchJson } from "@/lib/http";
 
 interface TermData {
   id: string;
@@ -46,9 +47,7 @@ export default function TermDetailPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["term", termId],
     queryFn: async (): Promise<TermData> => {
-      const res = await fetch(`/api/terms/${termId}`);
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return fetchJson<TermData>(`/api/terms/${termId}`);
     },
   });
 

@@ -6,6 +6,13 @@ import { useState } from "react";
 import { Plus, Users, Pencil, Trash2, Check, X, ArrowLeft, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AttendanceChart } from "@/components/graphs/AttendanceChart";
+import { fetchJson } from "@/lib/http";
+
+interface GroupGraphResponse {
+  chartData: Record<string, string | number>[];
+  series: string[];
+  groupName: string;
+}
 
 interface TeamSummary {
   id: string;
@@ -31,9 +38,7 @@ export default function GroupPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["teams", groupId],
     queryFn: async (): Promise<TeamSummary[]> => {
-      const res = await fetch(`/api/teams?groupId=${groupId}`);
-      if (!res.ok) throw new Error("Failed to fetch teams");
-      const data = await res.json();
+      const data = await fetchJson<{ teams: TeamSummary[] }>(`/api/teams?groupId=${groupId}`);
       return data.teams;
     },
   });
@@ -41,10 +46,10 @@ export default function GroupPage() {
   const { data: availableLeaders } = useQuery({
     queryKey: ["available-leaders", groupId],
     queryFn: async () => {
-      const res = await fetch(`/api/users?scope=available-leaders&groupId=${groupId}`);
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      return data.users as { id: string; username: string }[];
+      const data = await fetchJson<{ users: { id: string; username: string }[] }>(
+        `/api/users?scope=available-leaders&groupId=${groupId}`
+      );
+      return data.users;
     },
     enabled: showAddTeam,
   });
@@ -104,9 +109,9 @@ export default function GroupPage() {
   const { data: graphData } = useQuery({
     queryKey: ["graph", "group", groupId, graphMode],
     queryFn: async () => {
-      const res = await fetch(`/api/graphs?scope=group&id=${groupId}&mode=${graphMode}`);
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return fetchJson<GroupGraphResponse>(
+        `/api/graphs?scope=group&id=${groupId}&mode=${graphMode}`
+      );
     },
     enabled: !isShalom && !!data,
   });
@@ -227,13 +232,13 @@ export default function GroupPage() {
               ) : (
                 <>
                   <span className="font-semibold text-gray-800">{team.name}</span>
-                  <div className="flex items-center gap-1" data-action>
+                  <div className="flex items-center" data-action>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         router.push(`/dashboard/graphs/team/${team.id}`);
                       }}
-                      className="text-gray-300 hover:text-emerald-500 transition-colors"
+                      className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-emerald-500 transition-colors"
                       title="출석 그래프"
                     >
                       <BarChart3 className="h-3.5 w-3.5" />
@@ -246,7 +251,7 @@ export default function GroupPage() {
                             setEditingTeam(team.id);
                             setEditName(team.name);
                           }}
-                          className="text-gray-300 hover:text-indigo-500 transition-colors"
+                          className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-indigo-500 transition-colors"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
@@ -257,7 +262,7 @@ export default function GroupPage() {
                               deleteTeamMutation.mutate(team.id);
                             }
                           }}
-                          className="text-gray-300 hover:text-red-500 transition-colors"
+                          className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-500 transition-colors"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>

@@ -16,6 +16,7 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { fetchJson } from "@/lib/http";
 
 interface RosterMember {
   id: string;
@@ -85,18 +86,18 @@ export default function RosterPage() {
       if (filterGrade.length) params.set("grade", filterGrade.join(","));
       if (filterTraining.length) params.set("training", filterTraining.join(","));
       if (filterBaptism.length) params.set("baptismStatus", filterBaptism.join(","));
-      const res = await fetch(`/api/roster?${params}`);
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).members;
+      const data = await fetchJson<{ members: RosterMember[] }>(`/api/roster?${params}`);
+      return data.members;
     },
   });
 
   const { data: trainingOptions = [] } = useQuery({
     queryKey: ["dropdown-options", "training"],
     queryFn: async () => {
-      const res = await fetch("/api/dropdown-options?category=training");
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).options as { id: string; value: string }[];
+      const data = await fetchJson<{ options: { id: string; value: string }[] }>(
+        "/api/dropdown-options?category=training"
+      );
+      return data.options;
     },
     staleTime: 30_000,
   });
@@ -104,9 +105,10 @@ export default function RosterPage() {
   const { data: baptismOptions = [] } = useQuery({
     queryKey: ["dropdown-options", "baptism_status"],
     queryFn: async () => {
-      const res = await fetch("/api/dropdown-options?category=baptism_status");
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).options as { id: string; value: string; color: string }[];
+      const data = await fetchJson<{ options: { id: string; value: string; color: string }[] }>(
+        "/api/dropdown-options?category=baptism_status"
+      );
+      return data.options;
     },
     staleTime: 30_000,
   });
@@ -116,9 +118,10 @@ export default function RosterPage() {
   const { data: allTeams = [] } = useQuery({
     queryKey: ["teams-all"],
     queryFn: async (): Promise<{ id: string; name: string; group: { name: string } }[]> => {
-      const res = await fetch("/api/teams");
-      if (!res.ok) return [];
-      return (await res.json()).teams;
+      const data = await fetchJson<{ teams: { id: string; name: string; group: { name: string } }[] }>(
+        "/api/teams"
+      );
+      return data.teams;
     },
     staleTime: 30_000,
   });

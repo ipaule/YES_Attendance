@@ -8,6 +8,7 @@ import { ColoredDropdown } from "./ColoredDropdown";
 import { PhotoBox } from "./PhotoBox";
 import { chipClassFor } from "@/lib/dropdownColors";
 import { computeAge, computePeerGroup, PHONE_RE, formatPhoneInput } from "@/lib/profile";
+import { fetchJson } from "@/lib/http";
 
 export interface ShalomProfileData {
   id?: string;
@@ -142,10 +143,10 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
   const { data: groupTeams = [] } = useQuery({
     queryKey: ["teams-by-group-name", data.groupName],
     queryFn: async (): Promise<{ id: string; name: string }[]> => {
-      const res = await fetch(`/api/teams?groupName=${encodeURIComponent(data.groupName)}`);
-      if (!res.ok) return [];
-      const json = await res.json();
-      return json.teams.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }));
+      const json = await fetchJson<{ teams: { id: string; name: string }[] }>(
+        `/api/teams?groupName=${encodeURIComponent(data.groupName)}`
+      );
+      return json.teams.map((t) => ({ id: t.id, name: t.name }));
     },
     enabled: !!data.groupName,
     staleTime: 30_000,

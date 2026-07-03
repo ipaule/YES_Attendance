@@ -22,6 +22,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ArrowLeft, Plus, Trash2, ArrowUpDown, Save, GripVertical, Search, MoveRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { normalizeBirthYear } from "@/lib/profile";
+import { fetchJson } from "@/lib/http";
 
 interface ShalomMember {
   id: string;
@@ -85,18 +86,16 @@ export default function ShalomListPage() {
   const { data: members } = useQuery({
     queryKey: ["shalom-members"],
     queryFn: async (): Promise<ShalomMember[]> => {
-      const res = await fetch("/api/shalom");
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).members;
+      const data = await fetchJson<{ members: ShalomMember[] }>("/api/shalom");
+      return data.members;
     },
   });
 
   const { data: histories } = useQuery({
     queryKey: ["shalom-histories"],
     queryFn: async (): Promise<HistorySummary[]> => {
-      const res = await fetch("/api/shalom/history");
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).histories;
+      const data = await fetchJson<{ histories: HistorySummary[] }>("/api/shalom/history");
+      return data.histories;
     },
     enabled: showFlush,
   });

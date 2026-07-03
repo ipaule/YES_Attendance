@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AttendanceTable } from "@/components/attendance/AttendanceTable";
+import { fetchJson } from "@/lib/http";
 import type { TeamWithData } from "@/types";
 
 export default function TeamPage() {
@@ -14,9 +15,7 @@ export default function TeamPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["team", teamId],
     queryFn: async (): Promise<TeamWithData> => {
-      const res = await fetch(`/api/teams/${teamId}`);
-      if (!res.ok) throw new Error("Failed to fetch team");
-      const data = await res.json();
+      const data = await fetchJson<{ team: TeamWithData }>(`/api/teams/${teamId}`);
       return data.team;
     },
   });
@@ -24,7 +23,7 @@ export default function TeamPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
-        <p className="text-gray-500">로딩 중...</p>
+        <p className="text-gray-500 animate-pulse">로딩 중...</p>
       </div>
     );
   }

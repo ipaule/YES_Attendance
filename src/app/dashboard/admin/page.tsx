@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Trash2, ArrowUpDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { chipClassFor } from "@/lib/dropdownColors";
+import { fetchJson } from "@/lib/http";
 import type { Role } from "@/types";
 
 interface UserRecord {
@@ -32,9 +33,7 @@ export default function AdminPage() {
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: async (): Promise<UserRecord[]> => {
-      const res = await fetch("/api/users");
-      if (!res.ok) throw new Error("Failed to fetch users");
-      const data = await res.json();
+      const data = await fetchJson<{ users: UserRecord[] }>("/api/users");
       return data.users;
     },
     enabled: user?.role === "PASTOR",
@@ -43,9 +42,7 @@ export default function AdminPage() {
   const { data: groups } = useQuery({
     queryKey: ["groups"],
     queryFn: async () => {
-      const res = await fetch("/api/groups");
-      if (!res.ok) throw new Error("Failed to fetch groups");
-      const data = await res.json();
+      const data = await fetchJson<{ groups: unknown }>("/api/groups");
       return data.groups;
     },
   });
@@ -53,9 +50,10 @@ export default function AdminPage() {
   const { data: communityOptions = [] } = useQuery({
     queryKey: ["dropdown-options", "community"],
     queryFn: async (): Promise<{ value: string; color: string }[]> => {
-      const res = await fetch("/api/dropdown-options?category=community");
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).options;
+      const data = await fetchJson<{ options: { value: string; color: string }[] }>(
+        "/api/dropdown-options?category=community"
+      );
+      return data.options;
     },
     staleTime: 30_000,
   });

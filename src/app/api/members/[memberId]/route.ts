@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { normalizeRosterName } from "@/lib/roster-names";
+import { resolveRosterMember } from "@/lib/roster-match";
 
 export async function PATCH(
   request: NextRequest,
@@ -53,7 +53,13 @@ export async function DELETE(
 
   const member = await prisma.member.findUnique({
     where: { id: memberId },
-    select: { teamId: true, name: true, team: { include: { group: { select: { name: true } } } } },
+    select: {
+      teamId: true,
+      name: true,
+      gender: true,
+      birthYear: true,
+      team: { include: { group: { select: { name: true } } } },
+    },
   });
 
   if (!member) {
@@ -70,18 +76,16 @@ export async function DELETE(
     }
   }
 
-  // Clear teamName on roster if applicable.
-  // Member.name may have no suffix while the RosterMember carries one (e.g. "김민수" vs "김민수1").
-  // Try exact match first; fall back to finding a suffixed roster row in the same team.
-  let rosterMatch = await prisma.rosterMember.findFirst({ where: { name: member.name } });
-  if (!rosterMatch) {
-    const teamName = member.team.name;
-    if (teamName) {
-      const candidates = await prisma.rosterMember.findMany({ where: { teamName } });
-      rosterMatch = candidates.find((r) => normalizeRosterName(r.name) === member.name) ?? null;
-    }
-  }
-  if (rosterMatch) {
+  // Clear teamName on roster if applicable. Ambiguous matches are left alone —
+  // guessing which roster row to unlink risks detaching the wrong person.
+  const rosterMatch = await resolveRosterMember({
+    name: member.name,
+    teamName: member.team.name,
+    groupName: member.team.group.name,
+    gender: member.gender,
+    birthYear: member.birthYear,
+  });
+  if (rosterMatch && !("ambiguous" in rosterMatch)) {
     await prisma.rosterMember.update({ where: { id: rosterMatch.id }, data: { teamName: "" } });
   }
 

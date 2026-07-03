@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Trash2, FolderOpen, Pencil, Check, X } from "lucide-react";
+import { fetchJson } from "@/lib/http";
 
 interface HistorySummary {
   id: string;
@@ -20,9 +21,8 @@ export default function ShalomHistoryPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["shalom-histories"],
     queryFn: async (): Promise<HistorySummary[]> => {
-      const res = await fetch("/api/shalom/history");
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).histories;
+      const data = await fetchJson<{ histories: HistorySummary[] }>("/api/shalom/history");
+      return data.histories;
     },
   });
 

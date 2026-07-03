@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Trash2, FolderOpen, Pencil, Check, X, RotateCcw, CalendarPlus } from "lucide-react";
+import { fetchJson } from "@/lib/http";
 
 interface TermSummary {
   id: string;
@@ -32,9 +33,7 @@ export default function HistoryPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["terms"],
     queryFn: async (): Promise<TermSummary[]> => {
-      const res = await fetch("/api/terms");
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
+      const data = await fetchJson<{ terms: TermSummary[] }>("/api/terms");
       return data.terms;
     },
   });

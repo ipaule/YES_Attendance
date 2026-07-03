@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { RosterProfileForm, type RosterProfileData } from "@/components/RosterProfileForm";
+import { fetchJson } from "@/lib/http";
 
 export default function RosterDetailPage() {
   const params = useParams();
@@ -15,12 +16,10 @@ export default function RosterDetailPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["roster-detail", id],
     queryFn: async () => {
-      const res = await fetch(`/api/roster/${id}`);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Failed");
-      }
-      return (await res.json()).member as RosterProfileData & { id: string };
+      const data = await fetchJson<{ member: RosterProfileData & { id: string } }>(
+        `/api/roster/${id}`
+      );
+      return data.member;
     },
   });
 
@@ -48,7 +47,7 @@ export default function RosterDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 pb-20 lg:pb-4">
         <div className="h-8 w-48 bg-gray-100 rounded animate-pulse" />
         <div className="h-40 bg-gray-100 rounded-xl animate-pulse" />
         <div className="h-32 bg-gray-100 rounded-xl animate-pulse" />
@@ -58,7 +57,7 @@ export default function RosterDetailPage() {
 
   if (error || !data) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-12 pb-20 lg:pb-4">
         <p className="text-gray-500">해당 인원을 찾을 수 없습니다.</p>
         <button
           onClick={() => router.back()}

@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { ClipboardList, BarChart3, FolderOpen, Megaphone, TrendingUp, History, UserX, CalendarDays } from "lucide-react";
+import { fetchJson } from "@/lib/http";
 import type { Group } from "@/types";
 
 export default function DashboardPage() {
@@ -12,9 +13,8 @@ export default function DashboardPage() {
   const { data: groups } = useQuery({
     queryKey: ["groups"],
     queryFn: async (): Promise<Group[]> => {
-      const res = await fetch("/api/groups");
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).groups;
+      const data = await fetchJson<{ groups: Group[] }>("/api/groups");
+      return data.groups;
     },
     enabled: user?.role === "PASTOR",
   });

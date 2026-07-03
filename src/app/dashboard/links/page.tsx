@@ -10,6 +10,7 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { fetchJson } from "@/lib/http";
 
 interface LinkItem {
   id: string;
@@ -69,9 +70,8 @@ export default function LinksPage() {
   const { data: links } = useQuery({
     queryKey: ["links"],
     queryFn: async (): Promise<LinkItem[]> => {
-      const res = await fetch("/api/links");
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).links;
+      const data = await fetchJson<{ links: LinkItem[] }>("/api/links");
+      return data.links;
     },
   });
 

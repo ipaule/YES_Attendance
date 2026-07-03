@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Search, Trash2, ArrowUpDown } from "lucide-react";
 import { ColoredDropdown } from "@/components/ColoredDropdown";
+import { fetchJson } from "@/lib/http";
 
 interface UnregisteredMember {
   id: string;
@@ -70,9 +71,8 @@ export default function UnregisteredPage() {
   const { data: members = [], isLoading, error } = useQuery({
     queryKey: ["unregistered"],
     queryFn: async (): Promise<UnregisteredMember[]> => {
-      const res = await fetch("/api/unregistered");
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).members;
+      const data = await fetchJson<{ members: UnregisteredMember[] }>("/api/unregistered");
+      return data.members;
     },
   });
 
@@ -367,9 +367,10 @@ function FilterDropdown({
   const { data: options = [] } = useQuery({
     queryKey: ["dropdown-options", category],
     queryFn: async () => {
-      const res = await fetch(`/api/dropdown-options?category=${category}`);
-      if (!res.ok) throw new Error("Failed");
-      return (await res.json()).options as { id: string; value: string }[];
+      const data = await fetchJson<{ options: { id: string; value: string }[] }>(
+        `/api/dropdown-options?category=${category}`
+      );
+      return data.options;
     },
     staleTime: 30_000,
   });

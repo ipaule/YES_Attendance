@@ -5,8 +5,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AttendanceChart } from "@/components/graphs/AttendanceChart";
+import { fetchJson } from "@/lib/http";
 
 type GraphMode = "count" | "percentage";
+
+interface GraphResponse {
+  chartData: Record<string, string | number>[];
+  series: string[];
+  groupName: string;
+}
 
 export default function GroupGraphPage() {
   const params = useParams();
@@ -17,9 +24,7 @@ export default function GroupGraphPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["graph", "group", groupId, mode],
     queryFn: async () => {
-      const res = await fetch(`/api/graphs?scope=group&id=${groupId}&mode=${mode}`);
-      if (!res.ok) throw new Error("Failed to fetch graph data");
-      return res.json();
+      return fetchJson<GraphResponse>(`/api/graphs?scope=group&id=${groupId}&mode=${mode}`);
     },
   });
 

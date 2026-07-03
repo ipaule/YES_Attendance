@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import type { AttendanceStatus } from "@/types";
 
 type CellStatus = AttendanceStatus | "";
@@ -12,7 +12,7 @@ interface AttendanceCellProps {
   locked?: boolean;
 }
 
-export function AttendanceCell({
+function AttendanceCellImpl({
   status,
   awrReason,
   onChange,
@@ -132,3 +132,17 @@ export function AttendanceCell({
     </div>
   );
 }
+
+// `onChange` is intentionally excluded from the comparison: it's a closure
+// captured per-cell over a stable (memberId, dateId) pair, so its identity
+// changing across renders doesn't affect what this cell should render.
+// Only status/awrReason/locked determine the visual output, and skipping
+// re-renders when those are unchanged is what keeps a single tap from
+// re-rendering every cell in the table.
+export const AttendanceCell = memo(AttendanceCellImpl, (prev, next) => {
+  return (
+    prev.status === next.status &&
+    prev.awrReason === next.awrReason &&
+    prev.locked === next.locked
+  );
+});

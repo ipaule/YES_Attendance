@@ -14,8 +14,8 @@ export async function GET() {
   }
 
   const terms = await prisma.termHistory.findMany({
-    select: { id: true, name: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
+    select: { id: true, name: true, type: true, parentId: true, order: true, createdAt: true },
+    orderBy: [{ parentId: "asc" }, { order: "asc" }],
   });
 
   return NextResponse.json({ terms });

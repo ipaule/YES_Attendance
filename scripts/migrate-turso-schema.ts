@@ -82,6 +82,26 @@ async function main() {
   const lk = await getColumns("Link");
   await addCol("Link", "editedBy", "TEXT NOT NULL DEFAULT ''", lk);
 
+  // ── ShalomHistory (folder tree) ──────────────────────────────────────────
+  const sh = await getColumns("ShalomHistory");
+  await addCol("ShalomHistory", "type",     "TEXT NOT NULL DEFAULT 'RECORD'", sh);
+  await addCol("ShalomHistory", "parentId", "TEXT",                          sh);
+  if (!sh.has("order")) {
+    // "order" is a reserved SQL keyword — must be quoted in the ALTER TABLE itself,
+    // but the existence check above uses the bare (unquoted) pragma column name.
+    await client.execute(`ALTER TABLE ShalomHistory ADD COLUMN "order" INTEGER NOT NULL DEFAULT 0`);
+    console.log("  + ShalomHistory.order");
+  }
+
+  // ── TermHistory (folder tree) ────────────────────────────────────────────
+  const th = await getColumns("TermHistory");
+  await addCol("TermHistory", "type",     "TEXT NOT NULL DEFAULT 'RECORD'", th);
+  await addCol("TermHistory", "parentId", "TEXT",                          th);
+  if (!th.has("order")) {
+    await client.execute(`ALTER TABLE TermHistory ADD COLUMN "order" INTEGER NOT NULL DEFAULT 0`);
+    console.log("  + TermHistory.order");
+  }
+
   // ── Member ────────────────────────────────────────────────────────────────
   // No new columns detected — verified match.
 

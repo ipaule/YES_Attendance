@@ -1,29 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { canAccessShalom } from "@/lib/permissions";
-
-export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
-
-  const hasAccess = await canAccessShalom(session);
-  if (!hasAccess) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
-
-  const histories = await prisma.shalomHistory.findMany({
-    select: { id: true, name: true, type: true, parentId: true, order: true, createdAt: true },
-    orderBy: [{ parentId: "asc" }, { order: "asc" }],
-  });
-
-  return NextResponse.json({ histories });
-}
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
-
-  const hasAccess = await canAccessShalom(session);
-  if (!hasAccess) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  if (session.role !== "PASTOR") return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
 
   const { name, parentId } = await request.json();
 
@@ -32,19 +14,19 @@ export async function POST(request: NextRequest) {
   }
 
   if (parentId) {
-    const parent = await prisma.shalomHistory.findUnique({ where: { id: parentId } });
+    const parent = await prisma.termHistory.findUnique({ where: { id: parentId } });
     if (!parent) return NextResponse.json({ error: "상위 폴더를 찾을 수 없습니다." }, { status: 404 });
     if (parent.type !== "FOLDER") {
       return NextResponse.json({ error: "폴더 안에만 만들 수 있습니다." }, { status: 400 });
     }
   }
 
-  const maxOrder = await prisma.shalomHistory.aggregate({
+  const maxOrder = await prisma.termHistory.aggregate({
     where: { parentId: parentId ?? null },
     _max: { order: true },
   });
 
-  const folder = await prisma.shalomHistory.create({
+  const folder = await prisma.termHistory.create({
     data: {
       name: name.trim(),
       type: "FOLDER",

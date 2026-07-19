@@ -77,10 +77,15 @@ model GlobalDate {
 }
 
 model TermHistory {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   name      String
-  data      String   // JSON snapshot of all term data
-  createdAt DateTime @default(now())
+  type      String        @default("RECORD") // RECORD, FOLDER
+  data      String        // RECORD: JSON snapshot of all term data. FOLDER: "[]"
+  parentId  String?
+  parent    TermHistory?  @relation("TermHistoryTree", fields: [parentId], references: [id])
+  children  TermHistory[] @relation("TermHistoryTree")
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
 }
 
 model ShalomMember {
@@ -165,10 +170,15 @@ model Link {
 }
 
 model ShalomHistory {
-  id        String   @id @default(cuid())
+  id        String          @id @default(cuid())
   name      String
-  data      String   // JSON array of ShalomMember records
-  createdAt DateTime @default(now())
+  type      String          @default("RECORD") // RECORD, FOLDER
+  data      String          // RECORD: JSON array of ShalomMember records. FOLDER: "[]"
+  parentId  String?
+  parent    ShalomHistory?  @relation("HistoryTree", fields: [parentId], references: [id])
+  children  ShalomHistory[] @relation("HistoryTree")
+  order     Int             @default(0)
+  createdAt DateTime        @default(now())
 }
 
 model Attendance {

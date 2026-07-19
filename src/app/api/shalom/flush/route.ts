@@ -53,11 +53,17 @@ export async function POST(request: NextRequest) {
         data: { data: JSON.stringify(merged) },
       });
     } else {
-      // Create new history
+      // Create new history record at root level
+      const maxOrder = await prisma.shalomHistory.aggregate({
+        where: { parentId: null },
+        _max: { order: true },
+      });
       await prisma.shalomHistory.create({
         data: {
           name: historyName!.trim(),
           data: JSON.stringify(memberData),
+          parentId: null,
+          order: (maxOrder._max.order ?? -1) + 1,
         },
       });
     }

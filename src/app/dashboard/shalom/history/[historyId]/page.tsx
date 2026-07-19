@@ -22,17 +22,28 @@ export default function ShalomHistoryDetailPage() {
   const historyId = params.historyId as string;
   const router = useRouter();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["shalom-history", historyId],
     queryFn: async () => {
-      return fetchJson<{ id: string; name: string; createdAt: string; data: ShalomRecord[] }>(
+      return fetchJson<{ id: string; name: string; type: string; createdAt: string; data: ShalomRecord[] }>(
         `/api/shalom/history/${historyId}`
       );
     },
   });
 
   if (isLoading) return <div className="flex items-center justify-center min-h-[40vh]"><p className="text-gray-500">로딩 중...</p></div>;
-  if (!data) return <div className="flex items-center justify-center min-h-[40vh]"><p className="text-red-500">데이터를 불러올 수 없습니다.</p></div>;
+  if (isError || !data) return <div className="flex items-center justify-center min-h-[40vh]"><p className="text-red-500">데이터를 불러올 수 없습니다.</p></div>;
+  if (data.type === "FOLDER") {
+    return (
+      <div className="space-y-4 pb-20 lg:pb-4">
+        <div className="flex items-center gap-3">
+          <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-600"><ArrowLeft className="h-5 w-5" /></button>
+          <h1 className="text-xl font-bold text-gray-900">{data.name}</h1>
+        </div>
+        <div className="text-center py-12 text-gray-400"><p>이 항목은 폴더입니다. 샬롬 기록 목록에서 열어주세요.</p></div>
+      </div>
+    );
+  }
 
   const sorted = [...data.data].sort((a, b) => (b.visitDate || "").localeCompare(a.visitDate || ""));
 

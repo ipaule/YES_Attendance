@@ -59,6 +59,8 @@ interface HistoryTreeProps {
   onDelete?: (node: HistoryTreeNode) => void | Promise<void>;
   deleteConfirmText?: (node: HistoryTreeNode) => string;
   emptyMessage?: string;
+  /** When true, clicking a folder's name navigates to its detail page (like a record) instead of expanding it. The chevron still expands/collapses. */
+  folderNameOpensDetail?: boolean;
 }
 
 function SortableRow({ id, children }: { id: string; children: React.ReactNode }) {
@@ -102,6 +104,7 @@ interface TreeLevelProps {
   deleteConfirmText?: (node: HistoryTreeNode) => string;
   /** Node id currently being dragged over as a nest-target (for the Finder-style drop highlight). */
   dropTargetId: string | null;
+  folderNameOpensDetail?: boolean;
 }
 
 function TreeLevel(props: TreeLevelProps) {
@@ -110,6 +113,7 @@ function TreeLevel(props: TreeLevelProps) {
     editingId, setEditingId, editName, setEditName, onRename,
     creatingIn, setCreatingIn, newFolderName, setNewFolderName, onCreateFolder,
     onOpenMove, detailHref, canDelete, onDelete, deleteConfirmText, dropTargetId,
+    folderNameOpensDetail,
   } = props;
 
   const router = useRouter();
@@ -173,7 +177,11 @@ function TreeLevel(props: TreeLevelProps) {
                     ) : (
                       <>
                         <button
-                          onClick={() => node.type === "FOLDER" ? toggleExpanded(node.id) : router.push(detailHref(node))}
+                          onClick={() =>
+                            node.type === "FOLDER" && !folderNameOpensDetail
+                              ? toggleExpanded(node.id)
+                              : router.push(detailHref(node))
+                          }
                           className="flex items-center gap-2 flex-1 min-w-0 text-left"
                         >
                           {node.type === "FOLDER" ? (
@@ -256,7 +264,7 @@ function TreeLevel(props: TreeLevelProps) {
 }
 
 export const HistoryTree = forwardRef<HistoryTreeHandle, HistoryTreeProps>(function HistoryTree(
-  { nodes, onCreateFolder, onRename, onMove, onReorder, detailHref, canDelete, onDelete, deleteConfirmText, emptyMessage },
+  { nodes, onCreateFolder, onRename, onMove, onReorder, detailHref, canDelete, onDelete, deleteConfirmText, emptyMessage, folderNameOpensDetail },
   ref,
 ) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -438,6 +446,7 @@ export const HistoryTree = forwardRef<HistoryTreeHandle, HistoryTreeProps>(funct
             } : undefined}
             deleteConfirmText={deleteConfirmText}
             dropTargetId={dropTargetId}
+            folderNameOpensDetail={folderNameOpensDetail}
           />
         </DndContext>
       )}

@@ -18,12 +18,23 @@ export async function GET(
 
   if (!history) return NextResponse.json({ error: "기록을 찾을 수 없습니다." }, { status: 404 });
 
+  let data: unknown[];
+  if (history.type === "FOLDER") {
+    const children = await prisma.shalomHistory.findMany({
+      where: { parentId: historyId, type: "RECORD" },
+      orderBy: { order: "asc" },
+    });
+    data = children.flatMap((c) => JSON.parse(c.data) as unknown[]);
+  } else {
+    data = JSON.parse(history.data);
+  }
+
   return NextResponse.json({
     id: history.id,
     name: history.name,
     type: history.type,
     createdAt: history.createdAt,
-    data: JSON.parse(history.data),
+    data,
   });
 }
 

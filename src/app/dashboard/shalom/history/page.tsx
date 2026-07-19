@@ -109,6 +109,7 @@ export default function ShalomHistoryPage() {
         onMove={async (id, parentId) => { await moveMutation.mutateAsync({ id, parentId }); }}
         onReorder={(orderedIds) => reorderMutation.mutate(orderedIds)}
         detailHref={(node) => `/dashboard/shalom/history/${node.id}`}
+        folderNameOpensDetail
         canDelete={(node) => node.type === "FOLDER"}
         onDelete={async (node) => { await deleteMutation.mutateAsync(node.id); }}
         deleteConfirmText={(node) =>

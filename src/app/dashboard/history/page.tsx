@@ -280,10 +280,12 @@ export default function HistoryPage() {
         onMove={async (id, parentId) => { await moveMutation.mutateAsync({ id, parentId }); }}
         onReorder={(orderedIds) => reorderMutation.mutate(orderedIds)}
         detailHref={(node) => `/dashboard/history/${node.id}`}
-        canDelete={(node, childCount) => node.type === "RECORD" || childCount === 0}
+        canDelete={() => true}
         onDelete={async (node) => { await deleteMutation.mutateAsync(node.id); }}
         deleteConfirmText={(node) =>
-          `"${node.name}"${node.type === "FOLDER" ? " 폴더" : " 기록"}을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+          node.type === "FOLDER"
+            ? `"${node.name}" 폴더를 삭제하시겠습니까?\n안에 있던 항목들은 삭제되지 않고 상위 폴더로 이동됩니다.`
+            : `"${node.name}" 기록을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
         }
         emptyMessage="저장된 텀 기록이 없습니다."
       />

@@ -66,6 +66,17 @@ export default function ShalomHistoryPage() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["shalom-histories"] }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/shalom/history/${id}`, { method: "DELETE" });
+      const text = await res.text();
+      const body = text ? JSON.parse(text) : {};
+      if (!res.ok) throw new Error(body.error || "서버 오류가 발생했습니다.");
+      return body;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["shalom-histories"] }),
+  });
+
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-[40vh]"><p className="text-gray-500">로딩 중...</p></div>;
   }
@@ -98,7 +109,11 @@ export default function ShalomHistoryPage() {
         onMove={async (id, parentId) => { await moveMutation.mutateAsync({ id, parentId }); }}
         onReorder={(orderedIds) => reorderMutation.mutate(orderedIds)}
         detailHref={(node) => `/dashboard/shalom/history/${node.id}`}
-        canDelete={() => false}
+        canDelete={(node) => node.type === "FOLDER"}
+        onDelete={async (node) => { await deleteMutation.mutateAsync(node.id); }}
+        deleteConfirmText={(node) =>
+          `"${node.name}" 폴더를 삭제하시겠습니까?\n안에 있던 항목들은 삭제되지 않고 상위 폴더로 이동됩니다.`
+        }
       />
     </div>
   );

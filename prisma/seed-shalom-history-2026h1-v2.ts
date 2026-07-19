@@ -1,9 +1,14 @@
-// One-time setup: wipes all existing ShalomHistory rows (user-approved,
-// targeted — NOT a full DB clear) and seeds a single root-level record named
-// "2026 1월-6월" holding the H1-2026 graduated (졸업) Shalom members.
+// Reshape: "2026 1월-6월" was seeded last task as a single RECORD holding a
+// 40-member JSON blob. This turns it into a FOLDER named "2026 1월-6월"
+// containing 40 individual child RECORDs, one per graduated member — so each
+// person is its own item inside the folder, per the user's ask.
 //
-// Run locally:  npx tsx --env-file=.env.local prisma/seed-shalom-history-2026h1.ts
-// Run on Turso: npx tsx --env-file=.env.local prisma/run-turso.ts prisma/seed-shalom-history-2026h1.ts
+// Surgical — only deletes existing row(s) named exactly "2026 1월-6월"
+// (not a full ShalomHistory wipe; any folders/records the user made in the
+// meantime are untouched).
+//
+// Run locally:  npx tsx --env-file=.env.local prisma/seed-shalom-history-2026h1-v2.ts
+// Run on Turso: npx tsx --env-file=.env.local prisma/run-turso.ts prisma/seed-shalom-history-2026h1-v2.ts
 //
 // Raw client — writes the pre-encrypted `data` blob directly, bypassing the
 // @/lib/db $extends wrapper (which only auto-encrypts app-server writes).
@@ -23,6 +28,8 @@ interface GraduatedMember {
   note: string;
   status: string;
 }
+
+const FOLDER_NAME = "2026 1월-6월";
 
 // Gender re-derived from 자매(여)/형제(남) in the original roster paste.
 // birthYear = year portion of the cleaned birthdate. Phone already
@@ -84,21 +91,28 @@ const members: GraduatedMember[] = RAW.map(([name, gender, birthYear, phone, lea
 }));
 
 async function main() {
-  console.log("Deleting ALL ShalomHistory rows (user-approved, targeted deletion — not a full DB clear)...");
-  const { count } = await prisma.shalomHistory.deleteMany({});
-  console.log(`  deleted ${count} existing history record(s)/folder(s).`);
+  console.log(`Deleting existing row(s) named "${FOLDER_NAME}" (surgical — not a full wipe)...`);
+  const { count } = await prisma.shalomHistory.deleteMany({ where: { name: FOLDER_NAME } });
+  console.log(`  deleted ${count} row(s).`);
 
-  console.log(`Seeding "2026 1월-6월" with ${members.length} graduated members...`);
-  const record = await prisma.shalomHistory.create({
-    data: {
-      name: "2026 1월-6월",
-      type: "RECORD",
-      parentId: null,
-      order: 0,
-      data: encrypt(JSON.stringify(members)),
-    },
+  console.log(`Creating folder "${FOLDER_NAME}" with ${members.length} individual member items inside...`);
+  const folder = await prisma.shalomHistory.create({
+    data: { name: FOLDER_NAME, type: "FOLDER", data: "[]", parentId: null, order: 0 },
   });
-  console.log(`  created record ${record.id}.`);
+
+  for (let i = 0; i < members.length; i++) {
+    const m = members[i];
+    await prisma.shalomHistory.create({
+      data: {
+        name: m.name,
+        type: "RECORD",
+        parentId: folder.id,
+        order: i,
+        data: encrypt(JSON.stringify([m])),
+      },
+    });
+  }
+  console.log(`  created folder ${folder.id} + ${members.length} member records.`);
 
   console.log("Done.");
 }

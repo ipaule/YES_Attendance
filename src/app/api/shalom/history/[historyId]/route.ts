@@ -91,9 +91,36 @@ export async function PATCH(
   return NextResponse.json({ history });
 }
 
-export async function DELETE() {
-  return NextResponse.json(
-    { error: "기록은 삭제할 수 없습니다. 보관된 데이터는 이동만 가능합니다." },
-    { status: 403 }
-  );
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ historyId: string }> }
+) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+
+  const hasAccess = await canAccessShalom(session);
+  if (!hasAccess) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+
+  const { historyId } = await params;
+  const node = await prisma.shalomHistory.findUnique({ where: { id: historyId } });
+  if (!node) return NextResponse.json({ error: "기록을 찾을 수 없습니다." }, { status: 404 });
+
+  if (node.type === "RECORD") {
+    return NextResponse.json(
+      { error: "기록은 삭제할 수 없습니다. 보관된 데이터는 이동만 가능합니다." },
+      { status: 403 }
+    );
+  }
+
+  // FOLDER: delete the folder itself but preserve its contents — promote
+  // direct children up to the folder's own parent, never cascade-delete.
+  await prisma.$transaction([
+    prisma.shalomHistory.updateMany({
+      where: { parentId: historyId },
+      data: { parentId: node.parentId },
+    }),
+    prisma.shalomHistory.delete({ where: { id: historyId } }),
+  ]);
+
+  return NextResponse.json({ success: true });
 }

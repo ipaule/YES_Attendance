@@ -96,11 +96,12 @@ interface TreeLevelProps {
   setNewFolderName: (name: string) => void;
   onCreateFolder: (parentId: string | null) => void;
   onOpenMove: (node: HistoryTreeNode) => void;
-  onReorder: (orderedIds: string[]) => void;
   detailHref: (node: HistoryTreeNode) => string;
   canDelete?: (node: HistoryTreeNode, childCount: number) => boolean;
   onDelete?: (node: HistoryTreeNode) => void | Promise<void>;
   deleteConfirmText?: (node: HistoryTreeNode) => string;
+  /** Node id currently being dragged over as a nest-target (for the Finder-style drop highlight). */
+  dropTargetId: string | null;
 }
 
 function TreeLevel(props: TreeLevelProps) {
@@ -108,26 +109,12 @@ function TreeLevel(props: TreeLevelProps) {
     parentId, depth, byParent, expanded, toggleExpanded, expand,
     editingId, setEditingId, editName, setEditName, onRename,
     creatingIn, setCreatingIn, newFolderName, setNewFolderName, onCreateFolder,
-    onOpenMove, onReorder, detailHref, canDelete, onDelete, deleteConfirmText,
+    onOpenMove, detailHref, canDelete, onDelete, deleteConfirmText, dropTargetId,
   } = props;
 
   const router = useRouter();
   const items = byParent.get(parentId) ?? [];
   const isCreatingHere = creatingIn !== null && creatingIn.parentId === parentId;
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor),
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = items.findIndex((n) => n.id === active.id);
-    const newIndex = items.findIndex((n) => n.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    onReorder(arrayMove(items, oldIndex, newIndex).map((n) => n.id));
-  };
 
   const indent = { paddingLeft: depth * 22 };
 
@@ -137,20 +124,22 @@ function TreeLevel(props: TreeLevelProps) {
         <p style={indent} className="text-xs text-gray-400 py-1">비어 있음</p>
       )}
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={items.map((n) => n.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext items={items.map((n) => n.id)} strategy={verticalListSortingStrategy}>
           {items.map((node) => {
             const childCount = (byParent.get(node.id) ?? []).length;
             const deletable = node.type === "FOLDER"
               ? (canDelete ? canDelete(node, childCount) : childCount === 0)
               : (canDelete ? canDelete(node, childCount) : true);
+            const isDropTarget = dropTargetId === node.id;
 
             return (
               <Fragment key={node.id}>
                 <SortableRow id={node.id}>
                   <div
                     style={indent}
-                    className="flex items-center gap-2 flex-1 min-w-0 bg-white rounded-lg border border-gray-200 px-2 py-2 hover:border-indigo-300 transition-colors"
+                    className={`flex items-center gap-2 flex-1 min-w-0 bg-white rounded-lg border px-2 py-2 transition-colors ${
+                      isDropTarget ? "border-indigo-400 ring-2 ring-indigo-200" : "border-gray-200 hover:border-indigo-300"
+                    }`}
                   >
                     {node.type === "FOLDER" ? (
                       <button onClick={() => toggleExpanded(node.id)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
@@ -241,8 +230,7 @@ function TreeLevel(props: TreeLevelProps) {
               </Fragment>
             );
           })}
-        </SortableContext>
-      </DndContext>
+      </SortableContext>
 
       {isCreatingHere && (
         <div style={{ paddingLeft: (depth + 1) * 22 }} className="flex items-center gap-2 bg-white rounded-lg border border-indigo-300 px-2 py-2">
@@ -279,6 +267,7 @@ export const HistoryTree = forwardRef<HistoryTreeHandle, HistoryTreeProps>(funct
   const [movingNode, setMovingNode] = useState<HistoryTreeNode | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
   const attemptMove = async (id: string, parentId: string | null) => {
     try {
@@ -289,6 +278,11 @@ export const HistoryTree = forwardRef<HistoryTreeHandle, HistoryTreeProps>(funct
       setMoveError(e instanceof Error ? e.message : "이동에 실패했습니다.");
     }
   };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
 
   useImperativeHandle(ref, () => ({
     createRootFolder: () => { setCreatingIn({ parentId: null }); setNewFolderName(""); },
@@ -327,6 +321,73 @@ export const HistoryTree = forwardRef<HistoryTreeHandle, HistoryTreeProps>(funct
   };
   const expand = (id: string) => setExpanded((prev) => new Set(prev).add(id));
 
+  const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+
+  // Reorders active within its current siblings, positioned next to over.
+  const reorderWithinLevel = (activeId: string, overId: string, parentId: string | null) => {
+    const siblings = byParent.get(parentId) ?? [];
+    const oldIndex = siblings.findIndex((n) => n.id === activeId);
+    const newIndex = siblings.findIndex((n) => n.id === overId);
+    if (oldIndex === -1 || newIndex === -1) return;
+    onReorder(arrayMove(siblings, oldIndex, newIndex).map((n) => n.id));
+  };
+
+  // Finder-style: drop an item directly onto a folder to move it inside,
+  // landing at the end of that folder's existing children.
+  const attemptDropInto = async (activeId: string, folderId: string) => {
+    try {
+      await onMove(activeId, folderId);
+      const existingSiblingIds = (byParent.get(folderId) ?? [])
+        .map((n) => n.id)
+        .filter((id) => id !== activeId);
+      onReorder([...existingSiblingIds, activeId]);
+      expand(folderId);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "이동에 실패했습니다.");
+    }
+  };
+
+  const handleDragOver = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) {
+      setDropTargetId(null);
+      return;
+    }
+    const activeNode = byId.get(String(active.id));
+    const overNode = byId.get(String(over.id));
+    if (!activeNode || !overNode) { setDropTargetId(null); return; }
+
+    // A folder is a nest-target for anything dropped onto it, except a sibling
+    // folder at the same level (that stays a same-level reorder target).
+    const isNestTarget = overNode.type === "FOLDER" &&
+      !(activeNode.type === "FOLDER" && activeNode.parentId === overNode.parentId);
+    setDropTargetId(isNestTarget ? overNode.id : null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setDropTargetId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const activeNode = byId.get(String(active.id));
+    const overNode = byId.get(String(over.id));
+    if (!activeNode || !overNode) return;
+
+    const isNestTarget = overNode.type === "FOLDER" &&
+      !(activeNode.type === "FOLDER" && activeNode.parentId === overNode.parentId);
+
+    if (isNestTarget) {
+      if (overNode.id === activeNode.id) return;
+      attemptDropInto(activeNode.id, overNode.id);
+      return;
+    }
+
+    // Same-level reorder — ignore drops onto a different level's plain item
+    // (no unambiguous meaning; use the 이동 button for that).
+    if (activeNode.parentId !== overNode.parentId) return;
+    reorderWithinLevel(activeNode.id, overNode.id, activeNode.parentId);
+  };
+
   const isEmpty = nodes.length === 0;
 
   return (
@@ -341,36 +402,44 @@ export const HistoryTree = forwardRef<HistoryTreeHandle, HistoryTreeProps>(funct
       {isEmpty && creatingIn === null ? (
         <div className="text-center py-12 text-gray-400"><p>{emptyMessage ?? "저장된 기록이 없습니다."}</p></div>
       ) : (
-        <TreeLevel
-          parentId={null}
-          depth={0}
-          byParent={byParent}
-          expanded={expanded}
-          toggleExpanded={toggleExpanded}
-          expand={expand}
-          editingId={editingId}
-          setEditingId={setEditingId}
-          editName={editName}
-          setEditName={setEditName}
-          onRename={(id, name) => onRename(id, name)}
-          creatingIn={creatingIn}
-          setCreatingIn={setCreatingIn}
-          newFolderName={newFolderName}
-          setNewFolderName={setNewFolderName}
-          onCreateFolder={(parentId) => { onCreateFolder(newFolderName, parentId); setCreatingIn(null); setNewFolderName(""); }}
-          onOpenMove={(node) => { setMovingNode(node); setMoveError(null); }}
-          onReorder={onReorder}
-          detailHref={detailHref}
-          canDelete={canDelete}
-          onDelete={onDelete ? async (node) => {
-            try {
-              await onDelete(node);
-            } catch (e) {
-              setActionError(e instanceof Error ? e.message : "삭제에 실패했습니다.");
-            }
-          } : undefined}
-          deleteConfirmText={deleteConfirmText}
-        />
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setDropTargetId(null)}
+        >
+          <TreeLevel
+            parentId={null}
+            depth={0}
+            byParent={byParent}
+            expanded={expanded}
+            toggleExpanded={toggleExpanded}
+            expand={expand}
+            editingId={editingId}
+            setEditingId={setEditingId}
+            editName={editName}
+            setEditName={setEditName}
+            onRename={(id, name) => onRename(id, name)}
+            creatingIn={creatingIn}
+            setCreatingIn={setCreatingIn}
+            newFolderName={newFolderName}
+            setNewFolderName={setNewFolderName}
+            onCreateFolder={(parentId) => { onCreateFolder(newFolderName, parentId); setCreatingIn(null); setNewFolderName(""); }}
+            onOpenMove={(node) => { setMovingNode(node); setMoveError(null); }}
+            detailHref={detailHref}
+            canDelete={canDelete}
+            onDelete={onDelete ? async (node) => {
+              try {
+                await onDelete(node);
+              } catch (e) {
+                setActionError(e instanceof Error ? e.message : "삭제에 실패했습니다.");
+              }
+            } : undefined}
+            deleteConfirmText={deleteConfirmText}
+            dropTargetId={dropTargetId}
+          />
+        </DndContext>
       )}
 
       {movingNode && (

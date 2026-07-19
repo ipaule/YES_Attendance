@@ -120,16 +120,18 @@ export async function DELETE(
   if (!term) return NextResponse.json({ error: "기록을 찾을 수 없습니다." }, { status: 404 });
 
   if (term.type === "FOLDER") {
-    const childCount = await prisma.termHistory.count({ where: { parentId: termId } });
-    if (childCount > 0) {
-      return NextResponse.json(
-        { error: "폴더가 비어있지 않습니다. 하위 항목을 먼저 이동해주세요." },
-        { status: 400 }
-      );
-    }
+    // Delete the folder itself but preserve its contents — promote direct
+    // children up to the folder's own parent, never cascade-delete.
+    await prisma.$transaction([
+      prisma.termHistory.updateMany({
+        where: { parentId: termId },
+        data: { parentId: term.parentId },
+      }),
+      prisma.termHistory.delete({ where: { id: termId } }),
+    ]);
+  } else {
+    await prisma.termHistory.delete({ where: { id: termId } });
   }
-
-  await prisma.termHistory.delete({ where: { id: termId } });
 
   return NextResponse.json({ success: true });
 }

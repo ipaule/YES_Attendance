@@ -188,7 +188,7 @@ export function ColoredDropdown({
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && editValue) editMutation.mutate({ id: opt.id, value: editValue });
+                  if (e.key === "Enter" && !e.nativeEvent.isComposing && editValue) editMutation.mutate({ id: opt.id, value: editValue });
                   if (e.key === "Escape") setEditId(null);
                 }}
                 className="text-xs border border-gray-300 rounded px-1 py-0.5 flex-1 focus:outline-none focus:ring-1 focus:ring-indigo-300"
@@ -261,7 +261,7 @@ export function ColoredDropdown({
                 value={newValue}
                 onChange={(e) => setNewValue(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && newValue) addMutation.mutate(newValue);
+                  if (e.key === "Enter" && !e.nativeEvent.isComposing && newValue) addMutation.mutate(newValue);
                   if (e.key === "Escape") {
                     setShowAdd(false);
                     setNewValue("");

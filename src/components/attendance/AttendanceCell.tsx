@@ -107,7 +107,7 @@ function AttendanceCellImpl({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleReasonSubmit();
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) handleReasonSubmit();
               if (e.key === "Escape") handleReasonCancel();
             }}
             placeholder="사유 (선택)"

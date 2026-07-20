@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!historyId && !historyName?.trim()) {
-      return NextResponse.json({ error: "기록 이름을 입력해주세요." }, { status: 400 });
+      return NextResponse.json({ error: "폴더 이름을 입력해주세요." }, { status: 400 });
     }
 
     // Get selected members
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
     });
 
     const memberData = members.map((m) => ({
+      id: crypto.randomUUID(),
       name: m.name,
       gender: m.gender,
       birthYear: m.birthYear,
@@ -39,12 +40,12 @@ export async function POST(request: NextRequest) {
     }));
 
     if (historyId) {
-      // Append to existing history
+      // Append to an existing folder
       const existing = await prisma.shalomHistory.findUnique({
         where: { id: historyId },
       });
       if (!existing) {
-        return NextResponse.json({ error: "기록을 찾을 수 없습니다." }, { status: 404 });
+        return NextResponse.json({ error: "폴더를 찾을 수 없습니다." }, { status: 404 });
       }
       const existingData = JSON.parse(existing.data) as unknown[];
       const merged = [...existingData, ...memberData];
@@ -53,14 +54,14 @@ export async function POST(request: NextRequest) {
         data: { data: JSON.stringify(merged) },
       });
     } else {
-      // Create new history record at root level
+      // Create a new folder
       const maxOrder = await prisma.shalomHistory.aggregate({
-        where: { parentId: null },
         _max: { order: true },
       });
       await prisma.shalomHistory.create({
         data: {
           name: historyName!.trim(),
+          type: "FOLDER",
           data: JSON.stringify(memberData),
           parentId: null,
           order: (maxOrder._max.order ?? -1) + 1,

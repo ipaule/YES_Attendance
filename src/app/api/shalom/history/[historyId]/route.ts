@@ -3,6 +3,11 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { canAccessShalom } from "@/lib/permissions";
 
+interface PersonRecord {
+  id?: string;
+  [key: string]: unknown;
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ historyId: string }> }
@@ -14,27 +19,19 @@ export async function GET(
   if (!hasAccess) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
 
   const { historyId } = await params;
-  const history = await prisma.shalomHistory.findUnique({ where: { id: historyId } });
+  const folder = await prisma.shalomHistory.findUnique({ where: { id: historyId } });
 
-  if (!history) return NextResponse.json({ error: "기록을 찾을 수 없습니다." }, { status: 404 });
+  if (!folder) return NextResponse.json({ error: "폴더를 찾을 수 없습니다." }, { status: 404 });
 
-  let data: unknown[];
-  if (history.type === "FOLDER") {
-    const children = await prisma.shalomHistory.findMany({
-      where: { parentId: historyId, type: "RECORD" },
-      orderBy: { order: "asc" },
-    });
-    data = children.flatMap((c) => JSON.parse(c.data) as unknown[]);
-  } else {
-    data = JSON.parse(history.data);
-  }
+  const people = (JSON.parse(folder.data) as PersonRecord[]).map((p) =>
+    p.id ? p : { ...p, id: crypto.randomUUID() }
+  );
 
   return NextResponse.json({
-    id: history.id,
-    name: history.name,
-    type: history.type,
-    createdAt: history.createdAt,
-    data,
+    id: folder.id,
+    name: folder.name,
+    createdAt: folder.createdAt,
+    data: people,
   });
 }
 
@@ -50,56 +47,18 @@ export async function PATCH(
 
   const { historyId } = await params;
   const body = await request.json();
-  const data: { name?: string; parentId?: string | null } = {};
 
-  if (body.name !== undefined) {
-    if (!body.name.trim()) {
-      return NextResponse.json({ error: "이름을 입력해주세요." }, { status: 400 });
-    }
-    data.name = body.name.trim();
+  if (!body.name?.trim()) {
+    return NextResponse.json({ error: "이름을 입력해주세요." }, { status: 400 });
   }
 
-  if (body.parentId !== undefined) {
-    const newParentId: string | null = body.parentId;
-
-    if (newParentId === historyId) {
-      return NextResponse.json({ error: "폴더를 자기 자신 안으로 옮길 수 없습니다." }, { status: 400 });
-    }
-
-    if (newParentId) {
-      const newParent = await prisma.shalomHistory.findUnique({ where: { id: newParentId } });
-      if (!newParent) return NextResponse.json({ error: "상위 폴더를 찾을 수 없습니다." }, { status: 404 });
-      if (newParent.type !== "FOLDER") {
-        return NextResponse.json({ error: "폴더 안으로만 옮길 수 있습니다." }, { status: 400 });
-      }
-
-      // Cycle check: walk up from the destination — it must never reach historyId
-      let cursor: string | null = newParentId;
-      while (cursor) {
-        if (cursor === historyId) {
-          return NextResponse.json(
-            { error: "폴더를 자신의 하위 폴더 안으로 옮길 수 없습니다." },
-            { status: 400 }
-          );
-        }
-        const node: { parentId: string | null } | null = await prisma.shalomHistory.findUnique({
-          where: { id: cursor },
-          select: { parentId: true },
-        });
-        cursor = node?.parentId ?? null;
-      }
-    }
-
-    data.parentId = newParentId;
-  }
-
-  const history = await prisma.shalomHistory.update({
+  const folder = await prisma.shalomHistory.update({
     where: { id: historyId },
-    data,
-    select: { id: true, name: true, type: true, parentId: true, order: true, createdAt: true },
+    data: { name: body.name.trim() },
+    select: { id: true, name: true, order: true, createdAt: true },
   });
 
-  return NextResponse.json({ history });
+  return NextResponse.json({ folder });
 }
 
 export async function DELETE(
@@ -113,25 +72,18 @@ export async function DELETE(
   if (!hasAccess) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
 
   const { historyId } = await params;
-  const node = await prisma.shalomHistory.findUnique({ where: { id: historyId } });
-  if (!node) return NextResponse.json({ error: "기록을 찾을 수 없습니다." }, { status: 404 });
+  const folder = await prisma.shalomHistory.findUnique({ where: { id: historyId } });
+  if (!folder) return NextResponse.json({ error: "폴더를 찾을 수 없습니다." }, { status: 404 });
 
-  if (node.type === "RECORD") {
+  const people = JSON.parse(folder.data) as unknown[];
+  if (people.length > 0) {
     return NextResponse.json(
-      { error: "기록은 삭제할 수 없습니다. 보관된 데이터는 이동만 가능합니다." },
-      { status: 403 }
+      { error: "폴더에 사람이 남아 있어 삭제할 수 없습니다. 먼저 다른 폴더로 이동해주세요." },
+      { status: 400 }
     );
   }
 
-  // FOLDER: delete the folder itself but preserve its contents — promote
-  // direct children up to the folder's own parent, never cascade-delete.
-  await prisma.$transaction([
-    prisma.shalomHistory.updateMany({
-      where: { parentId: historyId },
-      data: { parentId: node.parentId },
-    }),
-    prisma.shalomHistory.delete({ where: { id: historyId } }),
-  ]);
+  await prisma.shalomHistory.delete({ where: { id: historyId } });
 
   return NextResponse.json({ success: true });
 }

@@ -207,7 +207,7 @@ export default function GroupPage() {
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && editName) {
+                      if (e.key === "Enter" && !e.nativeEvent.isComposing && editName) {
                         editTeamMutation.mutate({ teamId: team.id, name: editName });
                       }
                       if (e.key === "Escape") setEditingTeam(null);

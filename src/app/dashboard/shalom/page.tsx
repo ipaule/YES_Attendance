@@ -39,10 +39,10 @@ interface ShalomMember {
   movedToRosterAt: string | null;
 }
 
-interface HistorySummary {
+interface FolderSummary {
   id: string;
   name: string;
-  createdAt: string;
+  count: number;
 }
 
 type SortKey = "name" | "gender" | "birthYear" | "visitDate" | "inviter" | "leader" | "status";
@@ -91,11 +91,11 @@ export default function ShalomListPage() {
     },
   });
 
-  const { data: histories } = useQuery({
+  const { data: folders } = useQuery({
     queryKey: ["shalom-histories"],
-    queryFn: async (): Promise<HistorySummary[]> => {
-      const data = await fetchJson<{ histories: HistorySummary[] }>("/api/shalom/history");
-      return data.histories;
+    queryFn: async (): Promise<FolderSummary[]> => {
+      const data = await fetchJson<{ folders: FolderSummary[] }>("/api/shalom/history");
+      return data.folders;
     },
     enabled: showFlush,
   });
@@ -344,20 +344,20 @@ export default function ShalomListPage() {
       {showFlush && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4 space-y-4">
-            <h3 className="text-lg font-bold text-gray-800">기록 저장</h3>
-            <p className="text-sm text-gray-600">선택한 {selected.size}명을 기록에 저장하고 리스트에서 삭제합니다.</p>
+            <h3 className="text-lg font-bold text-gray-800">폴더에 저장</h3>
+            <p className="text-sm text-gray-600">선택한 {selected.size}명을 폴더에 저장하고 리스트에서 삭제합니다.</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setFlushMode("new")}
                 className={`flex-1 text-sm py-2 rounded-lg border ${flushMode === "new" ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-500"}`}
               >
-                새 기록 만들기
+                새 폴더 만들기
               </button>
               <button
                 onClick={() => setFlushMode("existing")}
                 className={`flex-1 text-sm py-2 rounded-lg border ${flushMode === "existing" ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-500"}`}
               >
-                기존 기록에 추가
+                기존 폴더에 추가
               </button>
             </div>
             {flushMode === "new" ? (
@@ -365,7 +365,7 @@ export default function ShalomListPage() {
                 type="text"
                 value={flushName}
                 onChange={(e) => setFlushName(e.target.value)}
-                placeholder="기록 이름 (예: 2026년 상반기)"
+                placeholder="폴더 이름 (예: 2026년 상반기)"
                 className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 autoFocus
               />
@@ -375,9 +375,9 @@ export default function ShalomListPage() {
                 onChange={(e) => setFlushHistoryId(e.target.value)}
                 className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="">기록 선택</option>
-                {histories?.map((h) => (
-                  <option key={h.id} value={h.id}>{h.name}</option>
+                <option value="">폴더 선택</option>
+                {folders?.map((f) => (
+                  <option key={f.id} value={f.id}>{f.name} ({f.count}명)</option>
                 ))}
               </select>
             )}

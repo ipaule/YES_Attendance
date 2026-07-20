@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, forwardRef, useImperativeHandle, useMemo, useState } from "react";
+import { Fragment, forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -59,8 +59,6 @@ interface HistoryTreeProps {
   onDelete?: (node: HistoryTreeNode) => void | Promise<void>;
   deleteConfirmText?: (node: HistoryTreeNode) => string;
   emptyMessage?: string;
-  /** When true, clicking a folder's name navigates to its detail page (like a record) instead of expanding it. The chevron still expands/collapses. */
-  folderNameOpensDetail?: boolean;
 }
 
 function SortableRow({ id, children }: { id: string; children: React.ReactNode }) {
@@ -104,7 +102,6 @@ interface TreeLevelProps {
   deleteConfirmText?: (node: HistoryTreeNode) => string;
   /** Node id currently being dragged over as a nest-target (for the Finder-style drop highlight). */
   dropTargetId: string | null;
-  folderNameOpensDetail?: boolean;
 }
 
 function TreeLevel(props: TreeLevelProps) {
@@ -113,7 +110,6 @@ function TreeLevel(props: TreeLevelProps) {
     editingId, setEditingId, editName, setEditName, onRename,
     creatingIn, setCreatingIn, newFolderName, setNewFolderName, onCreateFolder,
     onOpenMove, detailHref, canDelete, onDelete, deleteConfirmText, dropTargetId,
-    folderNameOpensDetail,
   } = props;
 
   const router = useRouter();
@@ -165,7 +161,7 @@ function TreeLevel(props: TreeLevelProps) {
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter" && editName.trim()) onRename(node.id, editName);
+                            if (e.key === "Enter" && !e.nativeEvent.isComposing && editName.trim()) onRename(node.id, editName);
                             if (e.key === "Escape") setEditingId(null);
                           }}
                           className="flex-1 min-w-0 text-sm border border-indigo-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -177,11 +173,7 @@ function TreeLevel(props: TreeLevelProps) {
                     ) : (
                       <>
                         <button
-                          onClick={() =>
-                            node.type === "FOLDER" && !folderNameOpensDetail
-                              ? toggleExpanded(node.id)
-                              : router.push(detailHref(node))
-                          }
+                          onClick={() => node.type === "FOLDER" ? toggleExpanded(node.id) : router.push(detailHref(node))}
                           className="flex items-center gap-2 flex-1 min-w-0 text-left"
                         >
                           {node.type === "FOLDER" ? (
@@ -248,7 +240,7 @@ function TreeLevel(props: TreeLevelProps) {
             value={newFolderName}
             onChange={(e) => setNewFolderName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && newFolderName.trim()) onCreateFolder(parentId);
+              if (e.key === "Enter" && !e.nativeEvent.isComposing && newFolderName.trim()) onCreateFolder(parentId);
               if (e.key === "Escape") setCreatingIn(null);
             }}
             placeholder="폴더 이름"
@@ -264,7 +256,7 @@ function TreeLevel(props: TreeLevelProps) {
 }
 
 export const HistoryTree = forwardRef<HistoryTreeHandle, HistoryTreeProps>(function HistoryTree(
-  { nodes, onCreateFolder, onRename, onMove, onReorder, detailHref, canDelete, onDelete, deleteConfirmText, emptyMessage, folderNameOpensDetail },
+  { nodes, onCreateFolder, onRename, onMove, onReorder, detailHref, canDelete, onDelete, deleteConfirmText, emptyMessage },
   ref,
 ) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -276,6 +268,8 @@ export const HistoryTree = forwardRef<HistoryTreeHandle, HistoryTreeProps>(funct
   const [moveError, setMoveError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const submittingRef = useRef(false);
+  useEffect(() => { submittingRef.current = false; }, [creatingIn, editingId]);
 
   const attemptMove = async (id: string, parentId: string | null) => {
     try {
@@ -428,12 +422,22 @@ export const HistoryTree = forwardRef<HistoryTreeHandle, HistoryTreeProps>(funct
             setEditingId={setEditingId}
             editName={editName}
             setEditName={setEditName}
-            onRename={(id, name) => onRename(id, name)}
+            onRename={(id, name) => {
+              if (submittingRef.current) return;
+              submittingRef.current = true;
+              onRename(id, name);
+            }}
             creatingIn={creatingIn}
             setCreatingIn={setCreatingIn}
             newFolderName={newFolderName}
             setNewFolderName={setNewFolderName}
-            onCreateFolder={(parentId) => { onCreateFolder(newFolderName, parentId); setCreatingIn(null); setNewFolderName(""); }}
+            onCreateFolder={(parentId) => {
+              if (submittingRef.current) return;
+              submittingRef.current = true;
+              onCreateFolder(newFolderName, parentId);
+              setCreatingIn(null);
+              setNewFolderName("");
+            }}
             onOpenMove={(node) => { setMovingNode(node); setMoveError(null); }}
             detailHref={detailHref}
             canDelete={canDelete}
@@ -446,7 +450,6 @@ export const HistoryTree = forwardRef<HistoryTreeHandle, HistoryTreeProps>(funct
             } : undefined}
             deleteConfirmText={deleteConfirmText}
             dropTargetId={dropTargetId}
-            folderNameOpensDetail={folderNameOpensDetail}
           />
         </DndContext>
       )}

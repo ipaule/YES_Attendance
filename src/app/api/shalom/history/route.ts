@@ -10,12 +10,20 @@ export async function GET() {
   const hasAccess = await canAccessShalom(session);
   if (!hasAccess) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
 
-  const histories = await prisma.shalomHistory.findMany({
-    select: { id: true, name: true, type: true, parentId: true, order: true, createdAt: true },
-    orderBy: [{ parentId: "asc" }, { order: "asc" }],
+  const folders = await prisma.shalomHistory.findMany({
+    select: { id: true, name: true, order: true, createdAt: true, data: true },
+    orderBy: { order: "asc" },
   });
 
-  return NextResponse.json({ histories });
+  return NextResponse.json({
+    folders: folders.map((f) => ({
+      id: f.id,
+      name: f.name,
+      order: f.order,
+      createdAt: f.createdAt,
+      count: (JSON.parse(f.data) as unknown[]).length,
+    })),
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -25,35 +33,24 @@ export async function POST(request: NextRequest) {
   const hasAccess = await canAccessShalom(session);
   if (!hasAccess) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
 
-  const { name, parentId } = await request.json();
+  const { name } = await request.json();
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "폴더 이름을 입력해주세요." }, { status: 400 });
   }
 
-  if (parentId) {
-    const parent = await prisma.shalomHistory.findUnique({ where: { id: parentId } });
-    if (!parent) return NextResponse.json({ error: "상위 폴더를 찾을 수 없습니다." }, { status: 404 });
-    if (parent.type !== "FOLDER") {
-      return NextResponse.json({ error: "폴더 안에만 만들 수 있습니다." }, { status: 400 });
-    }
-  }
-
-  const maxOrder = await prisma.shalomHistory.aggregate({
-    where: { parentId: parentId ?? null },
-    _max: { order: true },
-  });
+  const maxOrder = await prisma.shalomHistory.aggregate({ _max: { order: true } });
 
   const folder = await prisma.shalomHistory.create({
     data: {
       name: name.trim(),
       type: "FOLDER",
       data: "[]",
-      parentId: parentId ?? null,
+      parentId: null,
       order: (maxOrder._max.order ?? -1) + 1,
     },
-    select: { id: true, name: true, type: true, parentId: true, order: true, createdAt: true },
+    select: { id: true, name: true, order: true, createdAt: true },
   });
 
-  return NextResponse.json({ history: folder }, { status: 201 });
+  return NextResponse.json({ folder: { ...folder, count: 0 } }, { status: 201 });
 }

@@ -1,0 +1,2 @@
+- [Mobile UX audit findings (2026-07-03 + 2026-07-19)](project_mobile_ux_audit_2026-07.md) — full-app pass + Shalom-history feature pass, findings + reusable tooling/testing gotchas
+- [Login credentials & seed data](reference_login_credentials.md) — PASTOR login `AJ`/`3927`, seeded groups, dev.db notes

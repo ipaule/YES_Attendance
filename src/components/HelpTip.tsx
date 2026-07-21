@@ -8,6 +8,15 @@ interface Props {
   className?: string;
 }
 
+// Every explanation renders one sentence per line (split after ./!/?)
+export function sentenceLines(text: string): string {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
 /**
  * Small inline help affordance: tap-to-toggle (mobile) + hover-open (desktop) popover.
  * Closes on click-outside or Escape.
@@ -53,12 +62,12 @@ export function HelpTip({ text, className = "" }: Props) {
       </button>
       <span
         role="tooltip"
-        className={`absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-max max-w-[220px]
-          rounded-lg bg-gray-800 px-2.5 py-1.5 text-xs leading-snug text-white shadow-lg
-          transition-opacity
+        className={`absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-max max-w-[240px]
+          rounded-lg bg-gray-800 px-2.5 py-1.5 text-xs leading-snug text-white text-left shadow-lg
+          whitespace-pre-line transition-opacity
           ${open ? "opacity-100" : "opacity-0 pointer-events-none group-hover:opacity-100"}`}
       >
-        {text}
+        {sentenceLines(text)}
       </span>
     </span>
   );

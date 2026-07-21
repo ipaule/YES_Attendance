@@ -15,7 +15,13 @@ import {
   Cell,
 } from "recharts";
 import { fetchJson } from "@/lib/http";
-import { HelpTip } from "@/components/HelpTip";
+import { HelpTip, sentenceLines } from "@/components/HelpTip";
+
+const STATUS_DEFS: Record<string, string> = {
+  방문: "교회에 처음 방문한 인원.",
+  등록: "샬롬반을 등록한 인원.",
+  졸업: "샬롬 과정을 마친 인원.",
+};
 
 function getDefaults() {
   const now = new Date();
@@ -141,6 +147,17 @@ export default function ShalomGraphPage() {
                   <span className="w-3 h-3 rounded" style={{ backgroundColor: statusColors[i] }} />
                   {d.name}: <span className="font-semibold">{d.value}명</span>
                 </span>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-gray-100">
+              {statusData.map((d, i) => (
+                <div key={d.name} className="flex items-start gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full mt-1 shrink-0" style={{ backgroundColor: statusColors[i] }} />
+                  <div className="text-xs text-gray-500 whitespace-pre-line">
+                    <span className="font-medium text-gray-700">{d.name}</span>{"\n"}
+                    {sentenceLines(STATUS_DEFS[d.name])}
+                  </div>
+                </div>
               ))}
             </div>
           </div>

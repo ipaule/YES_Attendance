@@ -9,6 +9,7 @@ import { PhotoBox } from "./PhotoBox";
 import { chipClassFor } from "@/lib/dropdownColors";
 import { computeAge, computePeerGroup, PHONE_RE, formatPhoneInput } from "@/lib/profile";
 import { fetchJson } from "@/lib/http";
+import { HelpTip } from "./HelpTip";
 
 export interface ShalomProfileData {
   id?: string;
@@ -249,7 +250,7 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
               className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
             />
           </Field>
-          <Field label="또래 (숫자)">
+          <Field label="또래 (숫자)" hint="출생 연도(년생) 기준 또래 그룹. 두 자리 숫자로 입력하세요 (예: 97년생 → 97).">
             <input
               type="text"
               value={data.birthYear}
@@ -274,7 +275,7 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
             className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
           />
         </Field>
-        <Field label="인도자">
+        <Field label="인도자" hint="이 사람을 교회에 인도(초대)한 사람의 이름.">
           <input
             type="text"
             value={data.inviter}
@@ -282,7 +283,7 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
             className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
           />
         </Field>
-        <Field label="순장 (메모)">
+        <Field label="샬롬 순장" hint="샬롬 순장 이름">
           <input
             type="text"
             value={data.leader}
@@ -337,7 +338,7 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
             allowManage
           />
         </Field>
-        <Field label="순장">
+        <Field label="공동체 순장" hint="공동체 순장 이름">
           <select
             value={data.teamName}
             onChange={(e) => update("teamName", e.target.value)}
@@ -412,7 +413,10 @@ export function ShalomProfileForm({ initial, mode, onSave, onCancel, saving, sav
 
       {/* 상태 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">상태</h3>
+        <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+          상태
+          <HelpTip text="진행 단계: 방문 → 등록 → 졸업 순서로 변경합니다. 졸업 상태가 되어야 재적으로 이동할 수 있습니다. 방문: 교회에 처음 방문한 인원. 등록: 샬롬반을 등록한 인원. 졸업: 샬롬 과정을 마친 인원." />
+        </h3>
         <select
           value={data.status}
           onChange={(e) => update("status", e.target.value)}
@@ -456,10 +460,21 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <label className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+        {label}
+        {hint && <HelpTip text={hint} />}
+      </label>
       {children}
     </div>
   );

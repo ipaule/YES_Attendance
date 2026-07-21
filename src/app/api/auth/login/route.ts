@@ -18,9 +18,16 @@ export async function POST(request: NextRequest) {
       where: { username },
     });
 
-    if (!user || !compareSync(password, user.password)) {
+    if (!user) {
       return NextResponse.json(
-        { error: "이름 또는 비밀번호가 올바르지 않습니다." },
+        { error: "가입된 계정이 없습니다. 회원가입 후 이용해주세요." },
+        { status: 404 }
+      );
+    }
+
+    if (!compareSync(password, user.password)) {
+      return NextResponse.json(
+        { error: "비밀번호가 올바르지 않습니다." },
         { status: 401 }
       );
     }

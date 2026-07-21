@@ -58,7 +58,9 @@
       "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \".schema User\")",
       "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT m.id, m.name, t.name AS teamName FROM Member m JOIN Team t ON m.teamId = t.id JOIN \\\\\"Group\\\\\" g ON t.groupId = g.id WHERE g.name = '샬롬' AND m.name = t.name;\")",
       "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT COUNT\\(*\\) FROM Member;\")",
-      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT id FROM Member WHERE id = 'cmo9t5dbi001jxtut34wrf42d';\")"
+      "Bash(sqlite3 /Users/paul/Side_Project/YES_Attendance/prisma/dev.db \"SELECT id FROM Member WHERE id = 'cmo9t5dbi001jxtut34wrf42d';\")",
+      "Bash(gh api *)",
+      "WebFetch(domain:api.github.com)"
     ],
     "additionalDirectories": [
       "/tmp"

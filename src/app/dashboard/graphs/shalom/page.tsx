@@ -15,6 +15,7 @@ import {
   Cell,
 } from "recharts";
 import { fetchJson } from "@/lib/http";
+import { HelpTip } from "@/components/HelpTip";
 
 function getDefaults() {
   const now = new Date();
@@ -112,7 +113,10 @@ export default function ShalomGraphPage() {
         <>
           {/* Bar Graph 1: Status counts */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-1">방문/등록/졸업 현황</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-1.5">
+              방문/등록/졸업 현황
+              <HelpTip text="방문: 교회에 처음 방문한 인원. 등록: 샬롬반을 등록한 인원. 졸업: 샬롬 과정을 마친 인원. 각 단계는 누적 집계이며(등록·졸업자도 방문에 포함), 현재 활동 인원 + 저장된 기록을 합산합니다." />
+            </h3>
             <p className="text-sm text-gray-500 mb-4">
               {startDate || endDate
                 ? `${startDate || "처음"} ~ ${endDate || "현재"} 기간`
@@ -143,7 +147,10 @@ export default function ShalomGraphPage() {
 
           {/* Bar Graph 2: Graduate grade distribution */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-1">졸업생 출석 등급</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-1.5">
+              졸업생 출석 등급
+              <HelpTip text="졸업한 인원의 사랑·소망·믿음순 출석률을 A/B/C/D이하 등급으로 나눈 분포입니다. 순에서 이름이 매칭된 졸업생만 집계되며(matched), 순 기록이 없는 졸업생은 제외됩니다." />
+            </h3>
             <p className="text-sm text-gray-500 mb-4">
               졸업생 {data?.totalGraduates || 0}명 중 {data?.matchedGraduates || 0}명 매칭됨 (사랑·소망·믿음 현재 + 기록)
             </p>

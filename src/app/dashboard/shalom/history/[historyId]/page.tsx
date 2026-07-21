@@ -150,15 +150,15 @@ export default function ShalomHistoryDetailPage() {
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="w-8 px-1 py-2"><input type="checkbox" checked={sorted.length > 0 && selected.size === sorted.length} onChange={toggleSelectAll} className="rounded" /></th>
                 <th className="px-2 py-2 text-center font-medium text-gray-400 w-8">#</th>
-                <th className="px-2 py-2 text-left font-medium text-gray-600">이름</th>
-                <th className="px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap">성별</th>
-                <th className="px-2 py-2 text-center font-medium text-gray-600">또래</th>
-                <th className="px-2 py-2 text-center font-medium text-gray-600">전화번호</th>
-                <th className="px-2 py-2 text-center font-medium text-gray-600">방문 날짜</th>
-                <th className="px-2 py-2 text-center font-medium text-gray-600">인도자</th>
-                <th className="px-2 py-2 text-center font-medium text-gray-600">샬롬 순장</th>
-                <th className="px-2 py-2 text-center font-medium text-gray-600">비고</th>
-                <th className="px-2 py-2 text-center font-medium text-gray-600">상태</th>
+                <th className="px-2 py-2 text-left font-medium text-gray-600 whitespace-nowrap w-[80px]">이름</th>
+                <th className="px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap w-[44px]">성별</th>
+                <th className="px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap w-[44px]">또래</th>
+                <th className="px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap w-[120px]">전화번호</th>
+                <th className="px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap w-[95px]">방문 날짜</th>
+                <th className="px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap w-[80px]">인도자</th>
+                <th className="px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap w-[80px]">샬롬 순장</th>
+                <th className="px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap">비고</th>
+                <th className="px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap w-[50px]">상태</th>
               </tr>
             </thead>
             <tbody>
@@ -168,15 +168,15 @@ export default function ShalomHistoryDetailPage() {
                     <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} className="rounded" />
                   </td>
                   <td className="px-2 py-1.5 text-center text-xs text-gray-400">{i + 1}</td>
-                  <td className="px-2 py-1.5 text-sm">{m.name || "-"}</td>
-                  <td className={`px-2 py-1.5 text-center text-xs font-medium ${m.gender === "남" ? "text-blue-600" : m.gender === "여" ? "text-red-600" : "text-gray-500"}`}>{m.gender || "-"}</td>
-                  <td className="px-2 py-1.5 text-center text-xs text-gray-500">{m.birthYear || "-"}</td>
-                  <td className="px-2 py-1.5 text-center text-xs text-gray-500">{m.phone || "-"}</td>
-                  <td className="px-2 py-1.5 text-center text-xs text-gray-500">{m.visitDate || "-"}</td>
-                  <td className="px-2 py-1.5 text-center text-xs text-gray-500">{m.inviter || "-"}</td>
-                  <td className="px-2 py-1.5 text-center text-xs text-gray-500">{m.leader || "-"}</td>
-                  <td className="px-2 py-1.5 text-xs text-gray-500">{m.note || "-"}</td>
-                  <td className="px-2 py-1.5 text-center">
+                  <td className="px-2 py-1.5 text-sm whitespace-nowrap">{m.name || "-"}</td>
+                  <td className={`px-2 py-1.5 text-center text-xs font-medium whitespace-nowrap ${m.gender === "남" ? "text-blue-600" : m.gender === "여" ? "text-red-600" : "text-gray-500"}`}>{m.gender || "-"}</td>
+                  <td className="px-2 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap">{m.birthYear || "-"}</td>
+                  <td className="px-2 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap">{m.phone || "-"}</td>
+                  <td className="px-2 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap">{m.visitDate || "-"}</td>
+                  <td className="px-2 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap">{m.inviter || "-"}</td>
+                  <td className="px-2 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap">{m.leader || "-"}</td>
+                  <td className="px-2 py-1.5 text-xs text-gray-500 truncate max-w-[200px]">{m.note || "-"}</td>
+                  <td className="px-2 py-1.5 text-center whitespace-nowrap">
                     <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${statusColor(m.status)}`}>{m.status}</span>
                   </td>
                 </tr>

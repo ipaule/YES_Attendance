@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, ArrowUpDown, GripVertical, Lock, Unlock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAttendanceMutation } from "@/hooks/useAttendanceMutation";
 import {
   DndContext,
   closestCenter,
@@ -56,9 +57,10 @@ function SortableTableRow({ id, children, editRowId }: { id: string; children: R
 
 interface AttendanceTableProps {
   team: TeamWithData;
+  className?: string;
 }
 
-export function AttendanceTable({ team }: AttendanceTableProps) {
+export function AttendanceTable({ team, className }: AttendanceTableProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const { user } = useAuth();
@@ -91,64 +93,15 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("none");
 
-  const attendanceMutation = useMutation({
-    mutationFn: async ({
-      memberId,
-      attendanceDateId,
-      status,
-      awrReason,
-    }: {
-      memberId: string;
-      attendanceDateId: string;
-      status: AttendanceStatus | "";
-      awrReason?: string;
-    }) => {
-      const res = await fetch("/api/attendance", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId, attendanceDateId, status, awrReason }),
-      });
-      if (!res.ok) throw new Error("Failed to update attendance");
-      return res.json();
-    },
-    onMutate: async (vars) => {
-      await queryClient.cancelQueries({ queryKey: ["team", team.id] });
-      const previous = queryClient.getQueryData<TeamWithData>(["team", team.id]);
-      if (previous) {
-        queryClient.setQueryData<TeamWithData>(["team", team.id], {
-          ...previous,
-          members: previous.members.map((m) => {
-            if (m.id !== vars.memberId) return m;
-            const others = m.attendances.filter(
-              (a) => a.attendanceDateId !== vars.attendanceDateId
-            );
-            if (!vars.status) return { ...m, attendances: others };
-            const existing = m.attendances.find(
-              (a) => a.attendanceDateId === vars.attendanceDateId
-            );
-            const next: AttendanceRecord = {
-              id: existing?.id ?? `optimistic-${vars.memberId}-${vars.attendanceDateId}`,
-              memberId: vars.memberId,
-              attendanceDateId: vars.attendanceDateId,
-              status: vars.status as AttendanceStatus,
-              awrReason:
-                vars.status === "AWR" || vars.status === "ABSENT"
-                  ? vars.awrReason ?? null
-                  : null,
-            };
-            return { ...m, attendances: [...others, next] };
-          }),
-        });
-      }
-      return { previous };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.previous) {
-        queryClient.setQueryData(["team", team.id], ctx.previous);
-      }
-      queryClient.invalidateQueries({ queryKey: ["team", team.id] });
-    },
-  });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showError = (message: string) => {
+    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    setErrorMessage(message);
+    errorTimeoutRef.current = setTimeout(() => setErrorMessage(null), 4000);
+  };
+
+  const attendanceMutation = useAttendanceMutation(team.id);
 
   const addMemberMutation = useMutation({
     mutationFn: async (data: {
@@ -170,6 +123,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
       setShowAddMember(false);
       setNewMember({ name: "", gender: "남", birthYear: "" });
     },
+    onError: () => showError("저장 실패 — 다시 시도해주세요"),
   });
 
   const deleteMemberMutation = useMutation({
@@ -181,6 +135,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team", team.id] });
     },
+    onError: () => showError("저장 실패 — 다시 시도해주세요"),
   });
 
 
@@ -202,6 +157,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
       setShowDatePicker(false);
       setNewDate("");
     },
+    onError: (err) => showError(err instanceof Error ? err.message : "저장 실패 — 다시 시도해주세요"),
   });
 
   const deleteDateMutation = useMutation({
@@ -213,6 +169,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team", team.id] });
     },
+    onError: () => showError("저장 실패 — 다시 시도해주세요"),
   });
 
   const toggleLockMutation = useMutation({
@@ -228,6 +185,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team", team.id] });
     },
+    onError: () => showError("저장 실패 — 다시 시도해주세요"),
   });
 
   const reorderMutation = useMutation({
@@ -240,6 +198,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
+    onError: () => showError("저장 실패 — 다시 시도해주세요"),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["team", team.id] }),
   });
 
@@ -371,7 +330,7 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
   }, [targetDateId]);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${className || ""}`}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
         <h3 className="font-semibold text-gray-800">{team.name}</h3>
@@ -634,12 +593,15 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
                             awrReason={att?.awrReason || null}
                             locked={!!date.locked}
                             onChange={(status, awrReason) => {
-                              attendanceMutation.mutate({
-                                memberId: member.id,
-                                attendanceDateId: date.id,
-                                status,
-                                awrReason,
-                              });
+                              attendanceMutation.mutate(
+                                {
+                                  memberId: member.id,
+                                  attendanceDateId: date.id,
+                                  status,
+                                  awrReason,
+                                },
+                                { onError: () => showError("저장 실패 — 다시 시도해주세요") }
+                              );
                             }}
                           />
                         </div>
@@ -688,8 +650,21 @@ export function AttendanceTable({ team }: AttendanceTableProps) {
             <p className="text-sm mt-1">위의 &quot;순원 추가&quot; 버튼을 클릭하여 순원을 추가하세요.</p>
           </div>
         )}
+
+        {team.members.length > 0 && team.dates.length === 0 && (
+          <div className="text-center py-12 text-gray-400">
+            <p>아직 등록된 날짜가 없습니다.</p>
+            <p className="text-sm mt-1">위의 &quot;날짜 추가&quot; 버튼을 클릭하여 날짜를 추가하세요.</p>
+          </div>
+        )}
       </div>
       </DndContext>
+
+      {errorMessage && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 shadow-lg">
+          {errorMessage}
+        </div>
+      )}
     </div>
   );
 }

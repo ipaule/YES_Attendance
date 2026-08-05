@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AttendanceTable } from "@/components/attendance/AttendanceTable";
+import { TodayAttendanceList } from "@/components/attendance/TodayAttendanceList";
 import { fetchJson } from "@/lib/http";
 import type { TeamWithData } from "@/types";
 
@@ -50,7 +51,8 @@ export default function TeamPage() {
         </h1>
       </div>
 
-      <AttendanceTable team={data} />
+      <TodayAttendanceList team={data} className="lg:hidden" />
+      <AttendanceTable team={data} className="hidden lg:block" />
     </div>
   );
 }

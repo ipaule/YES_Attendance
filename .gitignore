@@ -49,4 +49,8 @@ next-env.d.ts
 
 # local data / PII exports (never commit)
 /data
-*.db.bak
+*.db.bak*
+
+# session/tool artifacts
+session-report.html
+.serena/

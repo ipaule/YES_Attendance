@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, memo } from "react";
+import { Pencil } from "lucide-react";
 import type { AttendanceStatus } from "@/types";
 
 type CellStatus = AttendanceStatus | "";
@@ -18,10 +19,10 @@ function AttendanceCellImpl({
   onChange,
   locked,
 }: AttendanceCellProps) {
-  const [showReasonInput, setShowReasonInput] = useState<"ABSENT" | "AWR" | null>(null);
+  const [showReasonInput, setShowReasonInput] = useState(false);
   const [reason, setReason] = useState(awrReason || "");
-  const [showTooltip, setShowTooltip] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (showReasonInput && inputRef.current) {
@@ -29,36 +30,44 @@ function AttendanceCellImpl({
     }
   }, [showReasonInput]);
 
+  useEffect(() => {
+    if (!showReasonInput) return;
+    const handler = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setShowReasonInput(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showReasonInput]);
+
   const handleClick = () => {
     if (locked) return;
-    // Cycle: blank → O → X(reason) → △(reason) → blank → O ...
+    // Cycle: blank → O → X → △ → blank → O ...
     if (status === "HERE") {
       onChange("ABSENT");
-      setReason("");
-      setTimeout(() => setShowReasonInput("ABSENT"), 50);
     } else if (status === "ABSENT") {
-      setShowReasonInput(null);
       onChange("AWR");
-      setReason("");
-      setTimeout(() => setShowReasonInput("AWR"), 50);
     } else if (status === "AWR") {
-      setShowReasonInput(null);
       onChange("");
     } else {
       onChange("HERE");
     }
   };
 
+  const handleReasonOpen = () => {
+    setReason(awrReason || "");
+    setShowReasonInput(true);
+  };
+
   const handleReasonSubmit = () => {
-    if (showReasonInput) {
-      onChange(showReasonInput, reason || undefined);
-      setShowReasonInput(null);
+    if (status === "ABSENT" || status === "AWR") {
+      onChange(status, reason || undefined);
+      setShowReasonInput(false);
     }
   };
 
   const handleReasonCancel = () => {
-    setShowReasonInput(null);
-    setReason("");
+    setShowReasonInput(false);
+    setReason(awrReason || "");
   };
 
   const getStatusIcon = () => {
@@ -74,58 +83,74 @@ function AttendanceCellImpl({
     }
   };
 
-  const hasReason = (status === "ABSENT" || status === "AWR") && awrReason;
+  const canHaveReason = status === "ABSENT" || status === "AWR";
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative flex items-center">
       <button
         onClick={handleClick}
-        onMouseEnter={() => hasReason && setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
-        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${locked ? "cursor-default opacity-60" : "hover:bg-gray-100 cursor-pointer"}`}
+        className={`w-11 h-11 flex items-center justify-center rounded-lg transition-colors ${locked ? "cursor-default opacity-60" : "hover:bg-gray-100 cursor-pointer"}`}
       >
         {getStatusIcon()}
       </button>
 
-      {/* Reason Tooltip (for both X and AWR) */}
-      {showTooltip && awrReason && (
-        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap shadow-lg">
-          {awrReason}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" />
-        </div>
+      {/* Reason affordance — tap to view/edit, since hover doesn't work on touch */}
+      {canHaveReason && (
+        <button
+          onClick={handleReasonOpen}
+          className="relative w-6 h-11 -ml-1 flex items-center justify-center text-gray-300 hover:text-gray-500"
+        >
+          <Pencil className="h-3 w-3" />
+          {awrReason && (
+            <span className="absolute top-2 right-0.5 w-1.5 h-1.5 rounded-full bg-indigo-500" />
+          )}
+        </button>
       )}
 
-      {/* Reason Input (for both X and AWR) */}
-      {showReasonInput && (
+      {/* Reason Input (for both X and AWR); read-only when the date is locked */}
+      {showReasonInput && canHaveReason && (
         <div className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-48">
           <p className="text-xs text-gray-500 mb-2">
-            {showReasonInput === "ABSENT" ? "결석" : "사유결석"} 사유 입력
+            {status === "ABSENT" ? "결석" : "사유결석"} 사유 {locked ? "보기" : "입력"}
           </p>
           <input
             ref={inputRef}
             type="text"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
+            disabled={locked}
             onKeyDown={(e) => {
+              if (locked) return;
               if (e.key === "Enter" && !e.nativeEvent.isComposing) handleReasonSubmit();
               if (e.key === "Escape") handleReasonCancel();
             }}
             placeholder="사유 (선택)"
-            className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
           />
           <div className="flex gap-1 mt-2">
-            <button
-              onClick={handleReasonSubmit}
-              className="flex-1 text-xs bg-indigo-600 text-white rounded px-2 py-1 hover:bg-indigo-700"
-            >
-              확인
-            </button>
-            <button
-              onClick={handleReasonCancel}
-              className="flex-1 text-xs bg-gray-100 text-gray-600 rounded px-2 py-1 hover:bg-gray-200"
-            >
-              취소
-            </button>
+            {locked ? (
+              <button
+                onClick={handleReasonCancel}
+                className="flex-1 min-h-[44px] text-xs bg-gray-100 text-gray-600 rounded px-2 py-1 hover:bg-gray-200"
+              >
+                닫기
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleReasonSubmit}
+                  className="flex-1 min-h-[44px] text-xs bg-indigo-600 text-white rounded px-2 py-1 hover:bg-indigo-700"
+                >
+                  확인
+                </button>
+                <button
+                  onClick={handleReasonCancel}
+                  className="flex-1 min-h-[44px] text-xs bg-gray-100 text-gray-600 rounded px-2 py-1 hover:bg-gray-200"
+                >
+                  취소
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

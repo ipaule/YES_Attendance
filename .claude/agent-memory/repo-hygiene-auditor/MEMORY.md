@@ -1,0 +1,3 @@
+- [Prisma one-off script pattern](project_prisma_script_pattern.md) — prisma/ scripts unreferenced by package.json are expected per-group import artifacts, not automatically dead
+- [reset-and-import-shalom.ts PII risk](project_reset_and_import_shalom_pii.md) — hardcoded real PII + unconditional deleteMany() + documented Turso invocation, high severity if committed
+- [.gitignore *.db.bak pattern history](project_gitignore_bak_pattern_history.md) — was too narrow, fixed to *.db.bak* on 2026-08-05, verify fix gets committed

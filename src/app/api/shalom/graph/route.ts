@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       });
       const rate = calculateAttendanceRate(statuses);
       const grade = calculateGrade(rate);
-      gradeMap[member.name] = grade;
+      if (grade !== "-") gradeMap[member.name] = grade;
     }
 
     // Search term histories for matching names not found in current
@@ -112,7 +112,8 @@ export async function GET(request: NextRequest) {
               return att?.status || "";
             });
             const rate = calculateAttendanceRate(statuses);
-            gradeMap[member.name] = calculateGrade(rate);
+            const grade = calculateGrade(rate);
+            if (grade !== "-") gradeMap[member.name] = grade;
           }
         }
       }

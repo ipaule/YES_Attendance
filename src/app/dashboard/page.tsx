@@ -3,7 +3,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { ClipboardList, BarChart3, FolderOpen, Megaphone, TrendingUp, History, UserX, CalendarDays } from "lucide-react";
+import { ClipboardList, BarChart3, FolderOpen, Megaphone, TrendingUp, History, UserX, CalendarDays, HelpCircle } from "lucide-react";
 import { fetchJson } from "@/lib/http";
 import type { Group } from "@/types";
 
@@ -45,8 +45,14 @@ export default function DashboardPage() {
     return { label, href, icon, ...t };
   };
 
-  // 공지사항 — everyone
-  sections.push({ title: "", items: [mk("공지사항", "/dashboard/links", Megaphone, "orange")] });
+  // 공지사항 · 사용 안내 — everyone
+  sections.push({
+    title: "",
+    items: [
+      mk("공지사항", "/dashboard/links", Megaphone, "orange"),
+      mk("사용 안내", "/dashboard/help", HelpCircle, "gray"),
+    ],
+  });
 
   if (user.role === "PASTOR" && groups) {
     const shalom = groups.find(g => g.name === "샬롬");

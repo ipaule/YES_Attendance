@@ -137,6 +137,11 @@ export async function PATCH(
   const newGroupName = data.groupName !== undefined ? data.groupName : oldGroupName;
   const newTeamName = data.teamName !== undefined ? data.teamName : oldTeamName;
   const assignmentChanged = newGroupName !== oldGroupName || newTeamName !== oldTeamName;
+  // Set when "add to new team" below can't find a matching Team row — the
+  // roster field still saves, but the person won't show up on the team's
+  // attendance table until a Team row for this name/group exists. Surfaced
+  // to the client so this doesn't fail silently (C9).
+  let syncWarning: string | undefined;
 
   if (assignmentChanged) {
     // 1. Remove from old team (if any). Member.name can change above; use new name.
@@ -170,11 +175,17 @@ export async function PATCH(
         where: { name: newGroupName },
         select: { id: true },
       });
+      if (!newGroup) {
+        syncWarning = `"${newGroupName}" 공동체를 찾을 수 없어 출석표에는 반영되지 않았습니다.`;
+      }
       if (newGroup) {
         const newTeam = await prisma.team.findFirst({
           where: { name: newTeamName, groupId: newGroup.id },
           select: { id: true },
         });
+        if (!newTeam) {
+          syncWarning = `"${newTeamName}" 순을 찾을 수 없어 출석표에는 반영되지 않았습니다.`;
+        }
         if (newTeam) {
           const already = await prisma.member.findFirst({
             where: { name: member.name, teamId: newTeam.id },
@@ -210,7 +221,7 @@ export async function PATCH(
     }
   }
 
-  return NextResponse.json({ member });
+  return NextResponse.json({ member, warning: syncWarning });
 }
 
 export async function DELETE(

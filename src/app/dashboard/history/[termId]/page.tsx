@@ -313,7 +313,7 @@ export default function TermDetailPage() {
                               );
                             })}
                             <td className="px-2 py-1.5 text-center text-xs font-medium text-gray-700">
-                              {rate.toFixed(0)}%
+                              {rate >= 0 ? `${rate.toFixed(0)}%` : "-"}
                             </td>
                             <td className="px-2 py-1.5 text-center">
                               <span

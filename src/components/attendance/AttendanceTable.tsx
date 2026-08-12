@@ -3,9 +3,15 @@
 import { useState, useMemo, useRef, useLayoutEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, ArrowUpDown, GripVertical, Lock, Unlock } from "lucide-react";
+import { Plus, Trash2, ArrowUpDown, GripVertical, Lock, Unlock, ChevronLeft, ChevronRight, CheckCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAttendanceMutation } from "@/hooks/useAttendanceMutation";
+import { useBulkMarkPresent } from "@/hooks/useBulkMarkPresent";
+import { useToast } from "@/components/Toast";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { HelpTip } from "@/components/HelpTip";
+import { STATUS_OPTIONS } from "@/lib/attendance-status";
+import { helpAnswer } from "@/content/help";
 import {
   DndContext,
   closestCenter,
@@ -35,6 +41,23 @@ import type {
   AttendanceRecord,
   DateColumn,
 } from "@/types";
+
+function getAttendance(
+  member: Member & { attendances: AttendanceRecord[] },
+  dateId: string
+) {
+  return member.attendances.find((a) => a.attendanceDateId === dateId);
+}
+
+function getMemberStatuses(
+  member: Member & { attendances: AttendanceRecord[] },
+  dates: DateColumn[]
+) {
+  return dates.map((d) => {
+    const att = getAttendance(member, d.id);
+    return att?.status || "";
+  });
+}
 
 function SortableTableRow({ id, children, editRowId }: { id: string; children: React.ReactNode; editRowId?: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -93,13 +116,11 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("none");
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const showError = (message: string) => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    setErrorMessage(message);
-    errorTimeoutRef.current = setTimeout(() => setErrorMessage(null), 4000);
-  };
+  const { showToast } = useToast();
+  const { markAllPresent, isPending: bulkMarkPending } = useBulkMarkPresent(team);
+
+  const [confirmDeleteDate, setConfirmDeleteDate] = useState<DateColumn | null>(null);
+  const [confirmDeleteMember, setConfirmDeleteMember] = useState<Member | null>(null);
 
   const attendanceMutation = useAttendanceMutation(team.id);
 
@@ -123,7 +144,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
       setShowAddMember(false);
       setNewMember({ name: "", gender: "남", birthYear: "" });
     },
-    onError: () => showError("저장 실패 — 다시 시도해주세요"),
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const deleteMemberMutation = useMutation({
@@ -135,7 +156,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team", team.id] });
     },
-    onError: () => showError("저장 실패 — 다시 시도해주세요"),
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
 
@@ -157,7 +178,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
       setShowDatePicker(false);
       setNewDate("");
     },
-    onError: (err) => showError(err instanceof Error ? err.message : "저장 실패 — 다시 시도해주세요"),
+    onError: (err) => showToast(err instanceof Error ? err.message : "저장 실패 — 다시 시도해주세요"),
   });
 
   const deleteDateMutation = useMutation({
@@ -169,7 +190,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team", team.id] });
     },
-    onError: () => showError("저장 실패 — 다시 시도해주세요"),
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const toggleLockMutation = useMutation({
@@ -185,7 +206,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team", team.id] });
     },
-    onError: () => showError("저장 실패 — 다시 시도해주세요"),
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const reorderMutation = useMutation({
@@ -198,7 +219,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
-    onError: () => showError("저장 실패 — 다시 시도해주세요"),
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["team", team.id] }),
   });
 
@@ -222,23 +243,10 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
     reorderMutation.mutate(reordered.map((m) => m.id));
   };
 
-  const getAttendance = (
-    member: Member & { attendances: AttendanceRecord[] },
-    dateId: string
-  ) => {
-    return member.attendances.find((a) => a.attendanceDateId === dateId);
-  };
-
-  const getMemberStatuses = (
-    member: Member & { attendances: AttendanceRecord[] },
-    dates: DateColumn[]
-  ) => {
-    return dates.map((d) => {
-      const att = getAttendance(member, d.id);
-      return att?.status || "";
-    });
-  };
-
+  // The render-time setStableMemberIds below (dnd-kit stability, see its
+  // comment) is what breaks Compiler's ability to preserve this memoization;
+  // a deliberate tradeoff per CLAUDE.md's React Compiler guidance, not a bug.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const sortedMembers = useMemo(() => {
     if (!sortKey || sortDir === "none") return team.members;
     return [...team.members].sort((a, b) => {
@@ -329,6 +337,39 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
     hasAutoScrolledRef.current = true;
   }, [targetDateId]);
 
+  // ‹ / › / 오늘 nav (A9) — reuses the dateThRefs scroll machinery above.
+  // No filtering: all date columns stay visible, this just scrolls the
+  // focused one into view and drives the "N명 중 M명 기록됨" counter (A8).
+  const [navDateId, setNavDateId] = useState<string | null>(targetDateId);
+  const navIndex = navDateId ? team.dates.findIndex((d) => d.id === navDateId) : -1;
+  const navDate = navIndex >= 0 ? team.dates[navIndex] : null;
+  const navRecordedCount = navDate
+    ? team.members.filter((m) => getAttendance(m, navDate.id)).length
+    : 0;
+
+  const scrollDateIntoView = (dateId: string) => {
+    dateThRefs.current.get(dateId)?.scrollIntoView({ inline: "center", block: "nearest" });
+  };
+  const goPrevDate = () => {
+    if (navIndex > 0) {
+      const d = team.dates[navIndex - 1];
+      setNavDateId(d.id);
+      scrollDateIntoView(d.id);
+    }
+  };
+  const goNextDate = () => {
+    if (navIndex >= 0 && navIndex < team.dates.length - 1) {
+      const d = team.dates[navIndex + 1];
+      setNavDateId(d.id);
+      scrollDateIntoView(d.id);
+    }
+  };
+  const goToday = () => {
+    if (!targetDateId) return;
+    setNavDateId(targetDateId);
+    scrollDateIntoView(targetDateId);
+  };
+
   return (
     <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${className || ""}`}>
       {/* Header */}
@@ -354,6 +395,49 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Legend (A1) + date nav / recorded count (A8/A9) */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b border-gray-100 text-xs text-gray-500">
+        <div className="flex items-center gap-3">
+          {STATUS_OPTIONS.map((o) => (
+            <span key={o.value || "blank"} className="inline-flex items-center gap-1">
+              <span className={`font-bold ${o.colorClass}`}>{o.glyph}</span>
+              <span>{o.meaning}</span>
+              {o.value === "" && <HelpTip text={helpAnswer("a14")} />}
+            </span>
+          ))}
+          <span className="flex items-center gap-1 text-gray-400">
+            <Lock className="h-3 w-3" />
+            잠금
+            <HelpTip text={helpAnswer("a13")} />
+          </span>
+        </div>
+        {navDate && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={goPrevDate}
+              disabled={navIndex <= 0}
+              className="w-7 h-7 flex items-center justify-center text-gray-400 disabled:opacity-30 hover:text-indigo-600"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="font-medium text-gray-700 min-w-[64px] text-center">{navDate.label}</span>
+            <button
+              onClick={goNextDate}
+              disabled={navIndex < 0 || navIndex >= team.dates.length - 1}
+              className="w-7 h-7 flex items-center justify-center text-gray-400 disabled:opacity-30 hover:text-indigo-600"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <button onClick={goToday} className="text-indigo-600 hover:underline px-1">
+              오늘
+            </button>
+            <span className="text-gray-400">
+              · {team.members.length}명 중 {navRecordedCount}명 기록됨
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Date picker */}
@@ -505,27 +589,33 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                 >
                   <div className="flex flex-col items-center gap-0.5">
                     <span className="text-xs">{date.label}</span>
-                    {canLockOrDeleteDates && (
-                      <div className="flex items-center">
-                        <button
-                          onClick={() => toggleLockMutation.mutate({ dateId: date.id, locked: !date.locked })}
-                          className={`flex items-center justify-center w-11 h-11 transition-colors flex-shrink-0 ${date.locked ? "text-red-400 hover:text-red-600" : "text-gray-300 hover:text-gray-500"}`}
-                          title={date.locked ? "잠금 해제" : "잠금"}
-                        >
-                          {date.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm("이 날짜를 삭제하시겠습니까?")) {
-                              deleteDateMutation.mutate(date.id);
-                            }
-                          }}
-                          className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => markAllPresent(date.id)}
+                        disabled={!!date.locked || bulkMarkPending}
+                        title="전체 출석 체크 (빈칸만 채웁니다)"
+                        className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-indigo-500 transition-colors flex-shrink-0 disabled:opacity-30"
+                      >
+                        <CheckCheck className="h-3 w-3" />
+                      </button>
+                      {canLockOrDeleteDates && (
+                        <>
+                          <button
+                            onClick={() => toggleLockMutation.mutate({ dateId: date.id, locked: !date.locked })}
+                            className={`flex items-center justify-center w-11 h-11 transition-colors flex-shrink-0 ${date.locked ? "text-red-400 hover:text-red-600" : "text-gray-300 hover:text-gray-500"}`}
+                            title={date.locked ? "잠금 해제" : "잠금"}
+                          >
+                            {date.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteDate(date)}
+                            className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </th>
               ))}
@@ -533,13 +623,13 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                 className="sticky right-[100px] z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[72px] cursor-pointer hover:text-indigo-600 select-none whitespace-nowrap"
                 onClick={() => toggleSort("rate")}
               >
-                출석률{sortIcon("rate")}
+                출석률{sortIcon("rate")} <HelpTip text={helpAnswer("b2")} />
               </th>
               <th
                 className="sticky right-11 z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[56px] cursor-pointer hover:text-indigo-600 select-none whitespace-nowrap"
                 onClick={() => toggleSort("grade")}
               >
-                등급{sortIcon("grade")}
+                등급{sortIcon("grade")} <HelpTip text={helpAnswer("b4")} />
               </th>
               <th className="sticky right-0 z-20 bg-gray-50 px-1 py-2 w-11" />
             </tr>
@@ -600,7 +690,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                                   status,
                                   awrReason,
                                 },
-                                { onError: () => showError("저장 실패 — 다시 시도해주세요") }
+                                { onError: () => showToast("저장 실패 — 다시 시도해주세요") }
                               );
                             }}
                           />
@@ -611,7 +701,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                   {/* Rate */}
                   <td className="sticky right-[100px] z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[72px]">
                     <span className="text-xs font-medium text-gray-700">
-                      {rate.toFixed(0)}%
+                      {rate >= 0 ? `${rate.toFixed(0)}%` : "-"}
                     </span>
                   </td>
                   {/* Grade */}
@@ -626,11 +716,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                   <td className="sticky right-0 z-20 bg-white group-hover:bg-gray-50 px-1 py-1 w-11">
                     {canManageMembers && (
                       <button
-                        onClick={() => {
-                          if (confirm(`${member.name}님을 삭제하시겠습니까?`)) {
-                            deleteMemberMutation.mutate(member.id);
-                          }
-                        }}
+                        onClick={() => setConfirmDeleteMember(member)}
                         className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-500 transition-colors"
                       >
                         <Trash2 className="h-3 w-3" />
@@ -660,11 +746,38 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
       </div>
       </DndContext>
 
-      {errorMessage && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 shadow-lg">
-          {errorMessage}
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!confirmDeleteDate}
+        onOpenChange={(open) => !open && setConfirmDeleteDate(null)}
+        title="날짜 삭제"
+        description={confirmDeleteDate ? `"${confirmDeleteDate.label}" 날짜를 삭제하시겠습니까?` : ""}
+        impact={
+          confirmDeleteDate
+            ? [`이 날짜의 출석 기록 ${team.members.filter((m) => getAttendance(m, confirmDeleteDate.id)).length}건 삭제`]
+            : []
+        }
+        pending={deleteDateMutation.isPending}
+        onConfirm={() => {
+          if (!confirmDeleteDate) return;
+          deleteDateMutation.mutate(confirmDeleteDate.id, {
+            onSuccess: () => setConfirmDeleteDate(null),
+          });
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!confirmDeleteMember}
+        onOpenChange={(open) => !open && setConfirmDeleteMember(null)}
+        title="순원 삭제"
+        description={confirmDeleteMember ? `${confirmDeleteMember.name}님을 삭제하시겠습니까?` : ""}
+        pending={deleteMemberMutation.isPending}
+        onConfirm={() => {
+          if (!confirmDeleteMember) return;
+          deleteMemberMutation.mutate(confirmDeleteMember.id, {
+            onSuccess: () => setConfirmDeleteMember(null),
+          });
+        }}
+      />
     </div>
   );
 }

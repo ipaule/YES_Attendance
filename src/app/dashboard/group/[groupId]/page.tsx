@@ -6,7 +6,10 @@ import { useState } from "react";
 import { Plus, Users, Pencil, Trash2, Check, X, ArrowLeft, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AttendanceChart } from "@/components/graphs/AttendanceChart";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 import { fetchJson } from "@/lib/http";
+import type { TeamWithData } from "@/types";
 
 interface GroupGraphResponse {
   chartData: Record<string, string | number>[];
@@ -30,10 +33,12 @@ export default function GroupPage() {
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [selectedLeaderId, setSelectedLeaderId] = useState("");
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<TeamSummary | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["teams", groupId],
@@ -73,6 +78,7 @@ export default function GroupPage() {
       setShowAddTeam(false);
       setSelectedLeaderId("");
     },
+    onError: (err) => showToast(err instanceof Error ? err.message : "저장 실패 — 다시 시도해주세요"),
   });
 
   const editTeamMutation = useMutation({
@@ -89,6 +95,7 @@ export default function GroupPage() {
       queryClient.invalidateQueries({ queryKey: ["teams", groupId] });
       setEditingTeam(null);
     },
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const deleteTeamMutation = useMutation({
@@ -97,10 +104,24 @@ export default function GroupPage() {
       if (!res.ok) throw new Error("Failed to delete team");
       return res.json();
     },
+    onSuccess: () => setConfirmDeleteTeam(null),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["teams", groupId] });
       queryClient.invalidateQueries({ queryKey: ["available-leaders", groupId] });
     },
+    onError: () => showToast("삭제 실패 — 다시 시도해주세요"),
+  });
+
+  // Fetched on-demand (not part of the summary list query) so the confirm
+  // dialog can show exact counts — reuses the existing per-team detail
+  // endpoint instead of duplicating _count selects across teams/route.ts.
+  const { data: deleteImpactTeam, isLoading: deleteImpactLoading } = useQuery({
+    queryKey: ["team-delete-impact", confirmDeleteTeam?.id],
+    queryFn: async (): Promise<TeamWithData> => {
+      const data = await fetchJson<{ team: TeamWithData }>(`/api/teams/${confirmDeleteTeam!.id}`);
+      return data.team;
+    },
+    enabled: !!confirmDeleteTeam,
   });
 
   const [graphMode, setGraphMode] = useState<"count" | "percentage">("count");
@@ -258,9 +279,7 @@ export default function GroupPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (confirm(`"${team.name}" 순을 삭제하시겠습니까?`)) {
-                              deleteTeamMutation.mutate(team.id);
-                            }
+                            setConfirmDeleteTeam(team);
                           }}
                           className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-500 transition-colors"
                         >
@@ -324,6 +343,27 @@ export default function GroupPage() {
           />
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmDeleteTeam}
+        onOpenChange={(open) => !open && setConfirmDeleteTeam(null)}
+        title="순 삭제"
+        description={confirmDeleteTeam ? `"${confirmDeleteTeam.name}" 순을 삭제하시겠습니까?` : ""}
+        confirmWord={confirmDeleteTeam?.name}
+        pending={deleteTeamMutation.isPending}
+        impact={
+          confirmDeleteTeam
+            ? [
+                `순원 ${confirmDeleteTeam._count.members}명`,
+                deleteImpactLoading || !deleteImpactTeam
+                  ? "날짜/출석 기록 불러오는 중..."
+                  : `날짜 ${deleteImpactTeam.dates.length}개, 출석 기록 ${deleteImpactTeam.members.reduce((sum, m) => sum + m.attendances.length, 0)}건`,
+                "이 함께 삭제됩니다",
+              ]
+            : []
+        }
+        onConfirm={() => confirmDeleteTeam && deleteTeamMutation.mutate(confirmDeleteTeam.id)}
+      />
     </div>
   );
 }

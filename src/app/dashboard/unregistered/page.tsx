@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Search, Trash2, ArrowUpDown } from "lucide-react";
 import { ColoredDropdown } from "@/components/ColoredDropdown";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 import { fetchJson } from "@/lib/http";
 
 interface UnregisteredMember {
@@ -46,6 +48,8 @@ function termRank(value: string): number {
 export default function UnregisteredPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [confirmDeleteMember, setConfirmDeleteMember] = useState<UnregisteredMember | null>(null);
   const [search, setSearch] = useState("");
   const [filterGroup, setFilterGroup] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -90,6 +94,7 @@ export default function UnregisteredPage() {
       queryClient.invalidateQueries({ queryKey: ["unregistered"] });
       queryClient.invalidateQueries({ queryKey: ["roster"] });
     },
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const deleteMutation = useMutation({
@@ -98,10 +103,12 @@ export default function UnregisteredPage() {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
+    onSuccess: () => setConfirmDeleteMember(null),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["unregistered"] });
       queryClient.invalidateQueries({ queryKey: ["roster"] });
     },
+    onError: () => showToast("삭제 실패 — 다시 시도해주세요"),
   });
 
   const filtered = useMemo(() => {
@@ -296,11 +303,7 @@ export default function UnregisteredPage() {
                   </td>
                   <td className="px-1 py-1">
                     <button
-                      onClick={() => {
-                        if (confirm(`${m.name}님을 삭제하시겠습니까?`)) {
-                          deleteMutation.mutate(m.id);
-                        }
-                      }}
+                      onClick={() => setConfirmDeleteMember(m)}
                       className="text-gray-300 hover:text-red-500"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -317,6 +320,17 @@ export default function UnregisteredPage() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!confirmDeleteMember}
+        onOpenChange={(open) => !open && setConfirmDeleteMember(null)}
+        title="재적 삭제"
+        description={confirmDeleteMember ? `${confirmDeleteMember.name}님을 재적에서 삭제하시겠습니까?` : ""}
+        impact={["이름이 같은 모든 순의 순원 기록도 함께 삭제됩니다"]}
+        confirmWord={confirmDeleteMember?.name}
+        pending={deleteMutation.isPending}
+        onConfirm={() => confirmDeleteMember && deleteMutation.mutate(confirmDeleteMember.id)}
+      />
     </div>
   );
 }

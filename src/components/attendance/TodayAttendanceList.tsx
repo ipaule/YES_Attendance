@@ -1,8 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { useAttendanceMutation } from "@/hooks/useAttendanceMutation";
+import { useBulkMarkPresent } from "@/hooks/useBulkMarkPresent";
+import { useToast } from "@/components/Toast";
+import { STATUS_OPTIONS } from "@/lib/attendance-status";
+import { StatusOptionList } from "@/components/StatusOptionList";
 import type { AttendanceStatus, AttendanceRecord, Member, TeamWithData } from "@/types";
 
 interface TodayAttendanceListProps {
@@ -10,11 +14,10 @@ interface TodayAttendanceListProps {
   className?: string;
 }
 
-const STATUS_BUTTONS: { status: AttendanceStatus; label: string; active: string }[] = [
-  { status: "HERE", label: "출석", active: "bg-green-600 text-white border-green-600" },
-  { status: "ABSENT", label: "결석", active: "bg-red-500 text-white border-red-500" },
-  { status: "AWR", label: "사유결석", active: "bg-yellow-500 text-white border-yellow-500" },
-];
+// Mobile keeps its tap-again-to-clear gesture, so it only offers the three
+// real statuses here — same STATUS_OPTIONS source as the desktop popover,
+// just without the explicit "지우기" button (A2: same words either way).
+const MOBILE_STATUS_OPTIONS = STATUS_OPTIONS.filter((o) => o.value !== "");
 
 function getAttendance(
   member: Member & { attendances: AttendanceRecord[] },
@@ -25,6 +28,8 @@ function getAttendance(
 
 export function TodayAttendanceList({ team, className }: TodayAttendanceListProps) {
   const attendanceMutation = useAttendanceMutation(team.id);
+  const { showToast } = useToast();
+  const { markAllPresent, undo, lastMarked, isPending: bulkPending } = useBulkMarkPresent(team);
 
   // Default to the most recent past-or-today date, same logic as AttendanceTable's targetDateId.
   const defaultDateId = useMemo(() => {
@@ -48,17 +53,6 @@ export function TodayAttendanceList({ team, className }: TodayAttendanceListProp
   const [selectedDateId, setSelectedDateId] = useState<string | null>(defaultDateId);
   const [reasonEditId, setReasonEditId] = useState<string | null>(null);
   const [reasonDraft, setReasonDraft] = useState("");
-  const [bulkPending, setBulkPending] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [lastMarkedIds, setLastMarkedIds] = useState<string[] | null>(null);
-  const [undoPending, setUndoPending] = useState(false);
-  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showError = (message: string) => {
-    if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-    setErrorMessage(message);
-    errorTimeoutRef.current = setTimeout(() => setErrorMessage(null), 4000);
-  };
 
   const currentIndex = selectedDateId
     ? team.dates.findIndex((d) => d.id === selectedDateId)
@@ -67,7 +61,6 @@ export function TodayAttendanceList({ team, className }: TodayAttendanceListProp
 
   const changeDate = (dateId: string) => {
     setSelectedDateId(dateId);
-    setLastMarkedIds(null);
     setReasonEditId(null);
   };
 
@@ -87,10 +80,10 @@ export function TodayAttendanceList({ team, className }: TodayAttendanceListProp
     : 0;
 
   const locked = !!selectedDate?.locked;
+  const showUndo = !!selectedDateId && lastMarked?.dateId === selectedDateId && lastMarked.memberIds.length > 0;
 
   const handleStatusTap = (member: Member & { attendances: AttendanceRecord[] }, status: AttendanceStatus) => {
     if (!selectedDateId || locked) return;
-    setLastMarkedIds(null);
     const att = getAttendance(member, selectedDateId);
     const nextStatus = att?.status === status ? "" : status;
     attendanceMutation.mutate(
@@ -100,7 +93,7 @@ export function TodayAttendanceList({ team, className }: TodayAttendanceListProp
         status: nextStatus,
         awrReason: att?.awrReason || undefined,
       },
-      { onError: () => showError("저장 실패 — 다시 시도해주세요") }
+      { onError: () => showToast("저장 실패 — 다시 시도해주세요") }
     );
   };
 
@@ -125,51 +118,9 @@ export function TodayAttendanceList({ team, className }: TodayAttendanceListProp
         status: att.status,
         awrReason: reasonDraft || undefined,
       },
-      { onError: () => showError("저장 실패 — 다시 시도해주세요") }
+      { onError: () => showToast("저장 실패 — 다시 시도해주세요") }
     );
     setReasonEditId(null);
-  };
-
-  const handleMarkAllPresent = async () => {
-    if (!selectedDateId || locked) return;
-    const blankMembers = team.members.filter((m) => !getAttendance(m, selectedDateId));
-    if (blankMembers.length === 0) return;
-    setBulkPending(true);
-    setLastMarkedIds(null);
-    const results = await Promise.allSettled(
-      blankMembers.map((m) =>
-        attendanceMutation.mutateAsync({
-          memberId: m.id,
-          attendanceDateId: selectedDateId,
-          status: "HERE",
-        })
-      )
-    );
-    const succeededIds = blankMembers
-      .filter((_, i) => results[i].status === "fulfilled")
-      .map((m) => m.id);
-    const failedCount = results.filter((r) => r.status === "rejected").length;
-    setBulkPending(false);
-    if (succeededIds.length > 0) setLastMarkedIds(succeededIds);
-    if (failedCount > 0) showError(`${failedCount}명 저장 실패 — 다시 시도해주세요`);
-  };
-
-  const handleUndo = async () => {
-    if (!selectedDateId || !lastMarkedIds || lastMarkedIds.length === 0) return;
-    setUndoPending(true);
-    const results = await Promise.allSettled(
-      lastMarkedIds.map((memberId) =>
-        attendanceMutation.mutateAsync({
-          memberId,
-          attendanceDateId: selectedDateId,
-          status: "",
-        })
-      )
-    );
-    const failedCount = results.filter((r) => r.status === "rejected").length;
-    setUndoPending(false);
-    setLastMarkedIds(null);
-    if (failedCount > 0) showError(`${failedCount}명 되돌리기 실패 — 다시 시도해주세요`);
   };
 
   return (
@@ -210,19 +161,19 @@ export function TodayAttendanceList({ team, className }: TodayAttendanceListProp
       {/* Mark all present / undo */}
       <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
         <button
-          onClick={handleMarkAllPresent}
+          onClick={() => selectedDateId && markAllPresent(selectedDateId)}
           disabled={bulkPending || locked || !selectedDateId}
           className="flex-1 min-h-[44px] text-sm font-medium bg-indigo-600 text-white rounded-lg px-3 hover:bg-indigo-700 disabled:opacity-50"
         >
-          {bulkPending ? "처리 중..." : "전체 출석 체크"}
+          {bulkPending ? "처리 중..." : "전체 출석 체크 (빈칸만 채웁니다)"}
         </button>
-        {lastMarkedIds && lastMarkedIds.length > 0 && (
+        {showUndo && (
           <button
-            onClick={handleUndo}
-            disabled={undoPending}
+            onClick={undo}
+            disabled={bulkPending}
             className="min-h-[44px] text-sm font-medium text-gray-600 border border-gray-300 rounded-lg px-3 hover:bg-gray-50 disabled:opacity-50"
           >
-            {undoPending ? "되돌리는 중..." : "되돌리기"}
+            {bulkPending ? "되돌리는 중..." : "되돌리기"}
           </button>
         )}
       </div>
@@ -244,20 +195,13 @@ export function TodayAttendanceList({ team, className }: TodayAttendanceListProp
               <div className="flex items-center gap-2">
                 <span className="w-16 min-w-[64px] text-sm truncate">{member.name}</span>
                 <div className="flex flex-1 gap-1.5">
-                  {STATUS_BUTTONS.map((b) => (
-                    <button
-                      key={b.status}
-                      onClick={() => handleStatusTap(member, b.status)}
-                      disabled={locked}
-                      className={`flex-1 min-h-[44px] text-xs font-medium rounded-lg border transition-colors disabled:opacity-60 disabled:cursor-default ${
-                        status === b.status
-                          ? b.active
-                          : "bg-white text-gray-500 border-gray-300 hover:border-gray-400"
-                      }`}
-                    >
-                      {b.label}
-                    </button>
-                  ))}
+                  <StatusOptionList
+                    current={status || ""}
+                    disabled={locked}
+                    onSelect={(v) => v && handleStatusTap(member, v)}
+                    options={MOBILE_STATUS_OPTIONS}
+                    className="flex flex-1 gap-1.5"
+                  />
                   {canHaveReason && (
                     <button
                       onClick={() => openReasonEditor(member)}
@@ -312,12 +256,6 @@ export function TodayAttendanceList({ team, className }: TodayAttendanceListProp
       <div className="px-3 py-2 border-t border-gray-100 text-center text-xs text-gray-400">
         {team.members.length}명 중 {recordedCount}명 기록됨
       </div>
-
-      {errorMessage && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 shadow-lg">
-          {errorMessage}
-        </div>
-      )}
     </div>
   );
 }

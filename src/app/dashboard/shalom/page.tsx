@@ -23,6 +23,8 @@ import { ArrowLeft, Plus, Trash2, ArrowUpDown, Save, GripVertical, Search, MoveR
 import { useAuth } from "@/hooks/useAuth";
 import { normalizeBirthYear } from "@/lib/profile";
 import { fetchJson } from "@/lib/http";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 
 interface ShalomMember {
   id: string;
@@ -67,6 +69,7 @@ export default function ShalomListPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const canMoveToRoster = user?.role === "PASTOR";
 
   const [sortKey, setSortKey] = useState<SortKey>("visitDate");
@@ -80,8 +83,10 @@ export default function ShalomListPage() {
   const [flushMode, setFlushMode] = useState<"new" | "existing">("new");
   const [flushName, setFlushName] = useState("");
   const [flushHistoryId, setFlushHistoryId] = useState("");
+  const [flushConfirmText, setFlushConfirmText] = useState("");
   const [moveTarget, setMoveTarget] = useState<ShalomMember | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
+  const [confirmDeleteMember, setConfirmDeleteMember] = useState<ShalomMember | null>(null);
 
   const { data: members } = useQuery({
     queryKey: ["shalom-members"],
@@ -111,6 +116,7 @@ export default function ShalomListPage() {
       return res.json();
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["shalom-members"] }),
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const deleteMutation = useMutation({
@@ -119,7 +125,9 @@ export default function ShalomListPage() {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
+    onSuccess: () => setConfirmDeleteMember(null),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["shalom-members"] }),
+    onError: () => showToast("삭제 실패 — 다시 시도해주세요"),
   });
 
   const moveMutation = useMutation({
@@ -149,14 +157,16 @@ export default function ShalomListPage() {
       if (!res.ok) throw new Error((await res.json()).error);
       return res.json();
     },
-    onSettled: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shalom-members"] });
       queryClient.invalidateQueries({ queryKey: ["shalom-histories"] });
       setShowFlush(false);
       setSelected(new Set());
       setFlushName("");
       setFlushHistoryId("");
+      setFlushConfirmText("");
     },
+    onError: (err) => showToast(err instanceof Error ? err.message : "저장 실패 — 다시 시도해주세요"),
   });
 
   const filtered = useMemo(() => {
@@ -217,6 +227,7 @@ export default function ShalomListPage() {
     if (selected.size === 0) return;
     if (flushMode === "new" && !flushName.trim()) return;
     if (flushMode === "existing" && !flushHistoryId) return;
+    if (flushConfirmText !== "삭제") return;
     flushMutation.mutate({
       memberIds: Array.from(selected),
       ...(flushMode === "new" ? { historyName: flushName } : { historyId: flushHistoryId }),
@@ -234,6 +245,7 @@ export default function ShalomListPage() {
       return res.json();
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["shalom-members"] }),
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const sensors = useSensors(
@@ -346,6 +358,10 @@ export default function ShalomListPage() {
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4 space-y-4">
             <h3 className="text-lg font-bold text-gray-800">폴더에 저장</h3>
             <p className="text-sm text-gray-600">선택한 {selected.size}명을 폴더에 저장하고 리스트에서 삭제합니다.</p>
+            <ul className="bg-red-50 rounded-lg p-3 text-sm text-red-700 list-disc list-inside space-y-0.5">
+              <li>일부 필드만 폴더에 보존되고, 나머지 정보는 사라집니다</li>
+              <li>원본 샬롬 리스트 항목은 삭제되며 되돌릴 수 없습니다</li>
+            </ul>
             <div className="flex gap-2">
               <button
                 onClick={() => setFlushMode("new")}
@@ -381,11 +397,28 @@ export default function ShalomListPage() {
                 ))}
               </select>
             )}
+            <div>
+              <p className="text-sm text-gray-600 mb-1.5">
+                확인을 위해 아래에 <span className="font-bold text-red-600">삭제</span>을(를) 입력해주세요.
+              </p>
+              <input
+                type="text"
+                value={flushConfirmText}
+                onChange={(e) => setFlushConfirmText(e.target.value)}
+                placeholder="삭제"
+                className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowFlush(false)} className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2">취소</button>
+              <button
+                onClick={() => { setShowFlush(false); setFlushConfirmText(""); }}
+                className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2"
+              >
+                취소
+              </button>
               <button
                 onClick={handleFlush}
-                disabled={flushMutation.isPending}
+                disabled={flushMutation.isPending || flushConfirmText !== "삭제"}
                 className="text-sm bg-amber-600 text-white rounded-lg px-4 py-2 hover:bg-amber-700 disabled:opacity-50"
               >
                 {flushMutation.isPending ? "저장 중..." : "저장"}
@@ -519,7 +552,7 @@ export default function ShalomListPage() {
                               <Search className="h-3.5 w-3.5" />
                             </button>
                             <button
-                              onClick={() => { if (confirm(`${m.name}님을 삭제하시겠습니까?`)) deleteMutation.mutate(m.id); }}
+                              onClick={() => setConfirmDeleteMember(m)}
                               className="text-gray-300 hover:text-red-500"
                             >
                               <Trash2 className="h-3 w-3" />
@@ -540,6 +573,15 @@ export default function ShalomListPage() {
           </div>
         </div>
       </DndContext>
+
+      <ConfirmDialog
+        open={!!confirmDeleteMember}
+        onOpenChange={(open) => !open && setConfirmDeleteMember(null)}
+        title="샬롬 리스트에서 삭제"
+        description={confirmDeleteMember ? `${confirmDeleteMember.name}님을 삭제하시겠습니까?` : ""}
+        pending={deleteMutation.isPending}
+        onConfirm={() => confirmDeleteMember && deleteMutation.mutate(confirmDeleteMember.id)}
+      />
     </div>
   );
 }

@@ -11,6 +11,8 @@ import { computePeerGroup, formatBirthdayMD } from "@/lib/profile";
 import { chipClassFor } from "@/lib/dropdownColors";
 import { MultiSelectDropdown, type MultiSelectOption } from "@/components/MultiSelectDropdown";
 import { ColoredDropdown } from "@/components/ColoredDropdown";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
@@ -55,6 +57,8 @@ function SortableRow({ id, children }: { id: string; children: React.ReactNode }
 export default function RosterPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [confirmDeleteMember, setConfirmDeleteMember] = useState<RosterMember | null>(null);
   const [search, setSearch] = useState("");
   const [filterBirthYear, setFilterBirthYear] = useState("");
   const [filterGender, setFilterGender] = useState<string[]>([]);
@@ -152,12 +156,16 @@ export default function RosterPage() {
         body: JSON.stringify({ teamName }),
       });
       if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return res.json() as Promise<{ warning?: string }>;
+    },
+    onSuccess: (data) => {
+      if (data.warning) showToast(data.warning);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["roster"] });
       queryClient.invalidateQueries({ queryKey: ["unregistered"] });
     },
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const fieldMutation = useMutation({
@@ -183,6 +191,7 @@ export default function RosterPage() {
       for (const [qk, data] of ctx?.snapshots ?? []) {
         queryClient.setQueryData(qk, data);
       }
+      showToast("저장 실패 — 다시 시도해주세요");
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["roster"] });
@@ -196,7 +205,9 @@ export default function RosterPage() {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
+    onSuccess: () => setConfirmDeleteMember(null),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["roster"] }),
+    onError: () => showToast("삭제 실패 — 다시 시도해주세요"),
   });
 
   const reorderMutation = useMutation({
@@ -465,7 +476,7 @@ export default function RosterPage() {
                             <Search className="h-3.5 w-3.5" />
                           </button>
                           <button
-                            onClick={() => { if (confirm(`${m.name}님을 삭제하시겠습니까?`)) deleteMutation.mutate(m.id); }}
+                            onClick={() => setConfirmDeleteMember(m)}
                             className="text-gray-300 hover:text-red-500"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -485,6 +496,17 @@ export default function RosterPage() {
           </div>
         </div>
       </DndContext>
+
+      <ConfirmDialog
+        open={!!confirmDeleteMember}
+        onOpenChange={(open) => !open && setConfirmDeleteMember(null)}
+        title="재적 삭제"
+        description={confirmDeleteMember ? `${confirmDeleteMember.name}님을 재적에서 삭제하시겠습니까?` : ""}
+        impact={["이름이 같은 모든 순의 순원 기록도 함께 삭제됩니다"]}
+        confirmWord={confirmDeleteMember?.name}
+        pending={deleteMutation.isPending}
+        onConfirm={() => confirmDeleteMember && deleteMutation.mutate(confirmDeleteMember.id)}
+      />
     </div>
   );
 }

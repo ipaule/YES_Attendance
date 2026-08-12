@@ -6,11 +6,16 @@ export function calculateAttendanceRate(
   const hereCount = statuses.filter((s) => s === "HERE").length;
   const totalDates = statuses.length - excludedCount;
 
-  if (totalDates === 0) return 0;
+  // No dates with a recorded outcome yet — distinct from a real 0% rate
+  // (attended none of N recorded dates). Callers show "-" instead of a
+  // percentage/grade for this sentinel (B1: a brand-new member with zero
+  // history should not read as an F).
+  if (totalDates === 0) return -1;
   return (hereCount / totalDates) * 100;
 }
 
 export function calculateGrade(rate: number): string {
+  if (rate < 0) return "-";
   if (rate >= 80) return "A";
   if (rate >= 60) return "B";
   if (rate >= 40) return "C";

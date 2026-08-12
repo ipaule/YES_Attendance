@@ -8,7 +8,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ClipboardList,
   BarChart3,
-  Users,
   FolderOpen,
   TrendingUp,
   Settings,
@@ -19,6 +18,7 @@ import {
   KeyRound,
   UserX,
   CalendarDays,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchJson } from "@/lib/http";
@@ -148,6 +148,19 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
             리더쉽 관리
           </Link>
         )}
+        <Link
+          href="/dashboard/help"
+          onClick={onClose}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm transition-colors",
+            pathname === "/dashboard/help"
+              ? "bg-indigo-50 text-indigo-700 font-medium"
+              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          )}
+        >
+          <HelpCircle className="h-4 w-4" />
+          사용 안내
+        </Link>
         <button
           onClick={() => setShowPwModal(true)}
           className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"

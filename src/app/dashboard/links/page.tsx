@@ -11,6 +11,8 @@ import {
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { fetchJson } from "@/lib/http";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 
 interface LinkItem {
   id: string;
@@ -37,6 +39,7 @@ export default function LinksPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [showAdd, setShowAdd] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newUrl, setNewUrl] = useState("");
@@ -44,6 +47,7 @@ export default function LinksPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+  const [confirmDeleteLink, setConfirmDeleteLink] = useState<LinkItem | null>(null);
 
   const canWrite = user?.role === "PASTOR" || user?.role === "EXECUTIVE";
 
@@ -54,6 +58,7 @@ export default function LinksPage() {
       return res.json();
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["links"] }),
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor));
@@ -91,6 +96,7 @@ export default function LinksPage() {
       setNewTitle("");
       setNewUrl("");
     },
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const updateMutation = useMutation({
@@ -107,6 +113,7 @@ export default function LinksPage() {
       queryClient.invalidateQueries({ queryKey: ["links"] });
       setEditingId(null);
     },
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const deleteMutation = useMutation({
@@ -115,7 +122,9 @@ export default function LinksPage() {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
+    onSuccess: () => setConfirmDeleteLink(null),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["links"] }),
+    onError: () => showToast("삭제 실패 — 다시 시도해주세요"),
   });
 
   const copyOne = (link: LinkItem) => {
@@ -261,7 +270,7 @@ export default function LinksPage() {
                           <Pencil className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => { if (confirm(`"${link.title}" 공지를 삭제하시겠습니까?`)) deleteMutation.mutate(link.id); }}
+                          onClick={() => setConfirmDeleteLink(link)}
                           className="text-gray-300 hover:text-red-500 p-1 rounded"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -288,6 +297,15 @@ export default function LinksPage() {
           <p>공지사항이 없습니다.</p>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmDeleteLink}
+        onOpenChange={(open) => !open && setConfirmDeleteLink(null)}
+        title="공지 삭제"
+        description={confirmDeleteLink ? `"${confirmDeleteLink.title}" 공지를 삭제하시겠습니까?` : ""}
+        pending={deleteMutation.isPending}
+        onConfirm={() => confirmDeleteLink && deleteMutation.mutate(confirmDeleteLink.id)}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Printer, Copy, Check } from "lucide-react";
 import { CareNotesPrintable } from "@/components/CareNotesPrintable";
+import { useToast } from "@/components/Toast";
 
 interface BirthdayEntry {
   mmdd: string;
@@ -35,6 +36,7 @@ interface CareNoteTeam {
 
 export default function WeeklyPrepPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [careTeams, setCareTeams] = useState<CareNoteTeam[] | null>(null);
   const [printing, setPrinting] = useState(false);
   const [printTeamId, setPrintTeamId] = useState<string | null>(null);
@@ -69,6 +71,8 @@ export default function WeeklyPrepPage() {
       // Wait for layout + image loads, then trigger print.
       await new Promise((resolve) => setTimeout(resolve, 400));
       window.print();
+    } catch {
+      showToast("인쇄 준비 실패 — 다시 시도해주세요");
     } finally {
       setPrinting(false);
     }

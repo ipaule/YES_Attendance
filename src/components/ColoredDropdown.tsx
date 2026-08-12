@@ -6,6 +6,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import { chipClassFor } from "@/lib/dropdownColors";
 import { fetchJson } from "@/lib/http";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 
 export interface DropdownOption {
   id: string;
@@ -37,11 +39,13 @@ export function ColoredDropdown({
   className = "",
 }: Props) {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [newValue, setNewValue] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [confirmDeleteOption, setConfirmDeleteOption] = useState<DropdownOption | null>(null);
   const [position, setPosition] = useState<{ top: number; left: number; placement: "below" | "above" }>({ top: 0, left: 0, placement: "below" });
   const triggerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -134,6 +138,7 @@ export function ColoredDropdown({
       queryClient.invalidateQueries({ queryKey: ["dropdown-options", category] });
       setEditId(null);
     },
+    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const deleteMutation = useMutation({
@@ -143,7 +148,9 @@ export function ColoredDropdown({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dropdown-options", category] });
+      setConfirmDeleteOption(null);
     },
+    onError: () => showToast("삭제 실패 — 다시 시도해주세요"),
   });
 
   const selected = options.find((o) => o.value === value);
@@ -237,11 +244,7 @@ export function ColoredDropdown({
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (confirm(`"${opt.value}" 항목을 삭제하시겠습니까?`)) {
-                        deleteMutation.mutate(opt.id);
-                      }
-                    }}
+                    onClick={() => setConfirmDeleteOption(opt)}
                     className="text-gray-300 hover:text-red-500"
                   >
                     <Trash2 className="h-3 w-3" />
@@ -321,6 +324,15 @@ export function ColoredDropdown({
         <ChevronDown className="h-3 w-3" />
       </button>
       {panel}
+      <ConfirmDialog
+        open={!!confirmDeleteOption}
+        onOpenChange={(o) => !o && setConfirmDeleteOption(null)}
+        title="항목 삭제"
+        description={confirmDeleteOption ? `"${confirmDeleteOption.value}" 항목을 삭제하시겠습니까?` : ""}
+        impact={["이 항목을 사용 중인 행이 있다면 빈 값으로 표시됩니다"]}
+        pending={deleteMutation.isPending}
+        onConfirm={() => confirmDeleteOption && deleteMutation.mutate(confirmDeleteOption.id)}
+      />
     </div>
   );
 }

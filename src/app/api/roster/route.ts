@@ -97,8 +97,8 @@ export async function GET(request: NextRequest) {
   const result = members
     .map((m) => {
       const statuses = attendanceMap[m.name] ?? attendanceMap[normalizeRosterName(m.name)] ?? [];
-      const rate = statuses.length > 0 ? calculateAttendanceRate(statuses) : -1;
-      const grade = rate >= 0 ? calculateGrade(rate) : "-";
+      const rate = calculateAttendanceRate(statuses);
+      const grade = calculateGrade(rate);
       return { ...m, rate: rate >= 0 ? Math.round(rate) : -1, grade };
     })
     .filter((m) => {

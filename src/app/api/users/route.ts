@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { findDeleteBlockers } from "@/lib/leader-refs";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -51,5 +52,11 @@ export async function GET(request: NextRequest) {
     orderBy: [{ role: "asc" }, { username: "asc" }],
   });
 
-  return NextResponse.json({ users });
+  const blockers = await findDeleteBlockers(users);
+  const usersWithBlockers = users.map((u) => ({
+    ...u,
+    deleteBlockers: blockers.get(u.id) ?? [],
+  }));
+
+  return NextResponse.json({ users: usersWithBlockers });
 }

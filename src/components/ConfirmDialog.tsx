@@ -16,6 +16,8 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
   pending?: boolean;
   destructive?: boolean;
+  /** When true, the confirm button is hidden entirely — there is nothing the user can do here. */
+  blocked?: boolean;
 }
 
 // Generalizes the app's two ad-hoc destructive-confirm patterns (plain
@@ -32,9 +34,10 @@ export function ConfirmDialog({
   onConfirm,
   pending = false,
   destructive = true,
+  blocked = false,
 }: ConfirmDialogProps) {
   const [typed, setTyped] = useState("");
-  const canConfirm = !confirmWord || typed === confirmWord;
+  const canConfirm = !blocked && (!confirmWord || typed === confirmWord);
 
   return (
     <Dialog.Root
@@ -82,17 +85,21 @@ export function ConfirmDialog({
           )}
           <div className="flex gap-2 justify-end">
             <Dialog.Close asChild>
-              <button className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2">취소</button>
+              <button className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2">
+                {blocked ? "닫기" : "취소"}
+              </button>
             </Dialog.Close>
-            <button
-              onClick={onConfirm}
-              disabled={!canConfirm || pending}
-              className={`text-sm text-white rounded-lg px-4 py-2 disabled:opacity-50 ${
-                destructive ? "bg-red-600 hover:bg-red-700" : "bg-indigo-600 hover:bg-indigo-700"
-              }`}
-            >
-              {pending ? "처리 중..." : confirmLabel}
-            </button>
+            {!blocked && (
+              <button
+                onClick={onConfirm}
+                disabled={!canConfirm || pending}
+                className={`text-sm text-white rounded-lg px-4 py-2 disabled:opacity-50 ${
+                  destructive ? "bg-red-600 hover:bg-red-700" : "bg-indigo-600 hover:bg-indigo-700"
+                }`}
+              >
+                {pending ? "처리 중..." : confirmLabel}
+              </button>
+            )}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

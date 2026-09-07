@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { canManageRoles } from "@/lib/permissions";
+import { findDeleteBlockers } from "@/lib/leader-refs";
 
 export async function PATCH(
   request: NextRequest,
@@ -27,6 +28,13 @@ export async function PATCH(
 
   if (data.groupId !== undefined) {
     updateData.groupId = data.groupId;
+  }
+
+  // Role or group changed => that user's cached JWT claims are now wrong and
+  // possibly over-privileged. Kill their sessions; they re-login (or get
+  // renewed at their next /me) with fresh claims.
+  if (Object.keys(updateData).length > 0) {
+    updateData.tokenVersion = { increment: 1 };
   }
 
   const user = await prisma.user.update({
@@ -65,17 +73,22 @@ export async function DELETE(
     return NextResponse.json({ error: "자기 자신은 삭제할 수 없습니다." }, { status: 400 });
   }
 
-  // If user leads a team, unlink first
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { teamId: true },
+    select: { username: true },
   });
 
-  if (user?.teamId) {
-    await prisma.team.update({
-      where: { id: user.teamId },
-      data: { leaderId: null },
-    });
+  if (!user) {
+    return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 });
+  }
+
+  const blockers = await findDeleteBlockers([{ id: userId, username: user.username }]);
+  const reasons = blockers.get(userId);
+  if (reasons && reasons.length > 0) {
+    return NextResponse.json(
+      { error: "이 사용자는 삭제할 수 없습니다.", reasons },
+      { status: 409 }
+    );
   }
 
   await prisma.user.delete({ where: { id: userId } });

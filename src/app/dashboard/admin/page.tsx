@@ -22,6 +22,7 @@ interface UserRecord {
   group: { id: string; name: string } | null;
   team: { id: string; name: string } | null;
   createdAt: string;
+  deleteBlockers: string[];
 }
 
 export default function AdminPage() {
@@ -89,12 +90,7 @@ export default function AdminPage() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const res = await fetch(`/api/users/${userId}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "삭제 실패");
-      }
-      return res.json();
+      return fetchJson(`/api/users/${userId}`, { method: "DELETE" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -237,8 +233,20 @@ export default function AdminPage() {
       <ConfirmDialog
         open={!!confirmDeleteUser}
         onOpenChange={(open) => !open && setConfirmDeleteUser(null)}
-        title="사용자 삭제"
-        description={confirmDeleteUser ? `"${confirmDeleteUser.username}" 사용자를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.` : ""}
+        title={
+          confirmDeleteUser && confirmDeleteUser.deleteBlockers.length > 0
+            ? "삭제할 수 없습니다"
+            : "사용자 삭제"
+        }
+        description={
+          confirmDeleteUser
+            ? confirmDeleteUser.deleteBlockers.length > 0
+              ? `"${confirmDeleteUser.username}" 사용자는 아래 이유로 삭제할 수 없습니다.`
+              : `"${confirmDeleteUser.username}" 사용자를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+            : ""
+        }
+        impact={confirmDeleteUser?.deleteBlockers}
+        blocked={!!confirmDeleteUser && confirmDeleteUser.deleteBlockers.length > 0}
         pending={deleteUserMutation.isPending}
         onConfirm={() => confirmDeleteUser && deleteUserMutation.mutate(confirmDeleteUser.id)}
       />

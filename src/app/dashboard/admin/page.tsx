@@ -12,11 +12,6 @@ import { useToast } from "@/components/Toast";
 import type { Role } from "@/types";
 
 const ROLE_LABEL: Record<string, string> = { PASTOR: "사역자", EXECUTIVE: "공동체장", LEADER: "순장" };
-const ROLE_ACCESS: Record<string, string> = {
-  PASTOR: "모든 공동체와 관리 기능(재적, 미등록자, 리더쉽 관리 등)에 접근합니다.",
-  EXECUTIVE: "자신의 공동체 전체 현황과 그래프에 접근합니다.",
-  LEADER: "자신의 순 출석표에만 접근합니다.",
-};
 
 interface UserRecord {
   id: string;
@@ -37,7 +32,6 @@ export default function AdminPage() {
   type SortDir = "none" | "asc" | "desc";
   const [sortKey, setSortKey] = useState<SortKey | null>("group");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [pendingRoleChange, setPendingRoleChange] = useState<{ userId: string; username: string; fromRole: string; toRole: Role } | null>(null);
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<UserRecord | null>(null);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -73,6 +67,7 @@ export default function AdminPage() {
       data,
     }: {
       userId: string;
+      username: string;
       data: { role?: Role; groupId?: string };
     }) => {
       const res = await fetch(`/api/users/${userId}`, {
@@ -83,9 +78,11 @@ export default function AdminPage() {
       if (!res.ok) throw new Error("Failed to update user");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      setPendingRoleChange(null);
+      if (variables.data.role) {
+        showToast(`${variables.username}님 → ${getRoleLabel(variables.data.role)}`);
+      }
     },
     onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
@@ -201,7 +198,7 @@ export default function AdminPage() {
                       onChange={(e) => {
                         const toRole = e.target.value as Role;
                         if (toRole === u.role) return;
-                        setPendingRoleChange({ userId: u.id, username: u.username, fromRole: u.role, toRole });
+                        updateUserMutation.mutate({ userId: u.id, username: u.username, data: { role: toRole } });
                       }}
                       disabled={u.id === user?.id}
                       className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
@@ -236,25 +233,6 @@ export default function AdminPage() {
           </table>
         </div>
       </div>
-
-      <ConfirmDialog
-        open={!!pendingRoleChange}
-        onOpenChange={(open) => !open && setPendingRoleChange(null)}
-        title="역할 변경"
-        description={
-          pendingRoleChange
-            ? `${pendingRoleChange.username}님의 역할을 ${getRoleLabel(pendingRoleChange.fromRole)} → ${getRoleLabel(pendingRoleChange.toRole)}(으)로 변경하시겠습니까?`
-            : ""
-        }
-        impact={pendingRoleChange ? [ROLE_ACCESS[pendingRoleChange.toRole]] : []}
-        confirmLabel="변경"
-        destructive={false}
-        pending={updateUserMutation.isPending}
-        onConfirm={() =>
-          pendingRoleChange &&
-          updateUserMutation.mutate({ userId: pendingRoleChange.userId, data: { role: pendingRoleChange.toRole } })
-        }
-      />
 
       <ConfirmDialog
         open={!!confirmDeleteUser}

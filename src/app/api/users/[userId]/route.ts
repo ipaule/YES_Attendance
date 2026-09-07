@@ -30,13 +30,6 @@ export async function PATCH(
     updateData.groupId = data.groupId;
   }
 
-  // Role or group changed => that user's cached JWT claims are now wrong and
-  // possibly over-privileged. Kill their sessions; they re-login (or get
-  // renewed at their next /me) with fresh claims.
-  if (Object.keys(updateData).length > 0) {
-    updateData.tokenVersion = { increment: 1 };
-  }
-
   const user = await prisma.user.update({
     where: { id: userId },
     data: updateData,

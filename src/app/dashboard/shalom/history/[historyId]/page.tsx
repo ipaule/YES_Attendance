@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, FolderOpen, FolderPlus, Move } from "lucide-react";
 import { fetchJson } from "@/lib/http";
+import { useRowSelection } from "@/hooks/useRowSelection";
 
 interface ShalomRecord {
   id: string;
@@ -31,7 +32,6 @@ export default function ShalomHistoryDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showMove, setShowMove] = useState(false);
   const [moveMode, setMoveMode] = useState<"existing" | "new">("existing");
   const [moveTargetId, setMoveTargetId] = useState("");
@@ -71,7 +71,7 @@ export default function ShalomHistoryDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shalom-history", historyId] });
       queryClient.invalidateQueries({ queryKey: ["shalom-histories"] });
-      setSelected(new Set());
+      rowSelection.clear();
       setShowMove(false);
       setMoveTargetId("");
       setNewFolderName("");
@@ -80,30 +80,19 @@ export default function ShalomHistoryDetailPage() {
     onError: (e: Error) => setMoveError(e.message),
   });
 
+  const sorted = data ? [...data.data].sort((a, b) => (b.visitDate || "").localeCompare(a.visitDate || "")) : [];
+  const rowSelection = useRowSelection(sorted.map((p) => p.id));
+  const { selectedIds, isSelected, toggle, toggleAll, allSelected } = rowSelection;
+
   if (isLoading) return <div className="flex items-center justify-center min-h-[40vh]"><p className="text-gray-500">로딩 중...</p></div>;
   if (isError || !data) return <div className="flex items-center justify-center min-h-[40vh]"><p className="text-red-500">데이터를 불러올 수 없습니다.</p></div>;
 
-  const sorted = [...data.data].sort((a, b) => (b.visitDate || "").localeCompare(a.visitDate || ""));
-
-  const toggleSelect = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (selected.size === sorted.length) setSelected(new Set());
-    else setSelected(new Set(sorted.map((p) => p.id)));
-  };
-
   const handleMove = () => {
-    if (selected.size === 0) return;
+    if (selectedIds.length === 0) return;
     if (moveMode === "existing" && !moveTargetId) return;
     if (moveMode === "new" && !newFolderName.trim()) return;
     moveMutation.mutate({
-      personIds: Array.from(selected),
+      personIds: selectedIds,
       ...(moveMode === "existing" ? { toId: moveTargetId } : { newFolderName }),
     });
   };
@@ -127,11 +116,11 @@ export default function ShalomHistoryDetailPage() {
         </div>
       </div>
 
-      {selected.size > 0 && (
+      {selectedIds.length > 0 && (
         <div className="flex items-center justify-between bg-indigo-50 text-indigo-700 text-sm rounded-lg px-3 py-2">
-          <span>{selected.size}명 선택됨</span>
+          <span>{selectedIds.length}명 선택됨</span>
           <div className="flex items-center gap-3">
-            <button onClick={() => setSelected(new Set())} className="text-indigo-500 hover:text-indigo-700 font-medium">선택 해제</button>
+            <button onClick={rowSelection.clear} className="text-indigo-500 hover:text-indigo-700 font-medium">선택 해제</button>
             <button
               onClick={() => { setShowMove(true); setMoveError(null); }}
               className="flex items-center gap-1.5 bg-indigo-600 text-white rounded-lg px-3 py-1.5 hover:bg-indigo-700 transition-colors font-medium"
@@ -148,7 +137,7 @@ export default function ShalomHistoryDetailPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="w-8 px-1 py-2"><input type="checkbox" checked={sorted.length > 0 && selected.size === sorted.length} onChange={toggleSelectAll} className="rounded" /></th>
+                <th className="w-8 px-1 py-2"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded" /></th>
                 <th className="px-2 py-2 text-center font-medium text-gray-400 w-8">#</th>
                 <th className="px-2 py-2 text-left font-medium text-gray-600 whitespace-nowrap w-[80px]">이름</th>
                 <th className="px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap w-[44px]">성별</th>
@@ -163,9 +152,15 @@ export default function ShalomHistoryDetailPage() {
             </thead>
             <tbody>
               {sorted.map((m, i) => (
-                <tr key={m.id} className={`border-b border-gray-100 ${selected.has(m.id) ? "bg-indigo-50" : ""}`}>
+                <tr key={m.id} className={`border-b border-gray-100 ${isSelected(m.id) ? "bg-indigo-50" : ""}`}>
                   <td className="px-1 py-1.5 text-center">
-                    <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} className="rounded" />
+                    <input
+                      type="checkbox"
+                      checked={isSelected(m.id)}
+                      onChange={(e) => toggle(i, (e.nativeEvent as MouseEvent).shiftKey)}
+                      onMouseDown={(e) => e.shiftKey && e.preventDefault()}
+                      className="rounded"
+                    />
                   </td>
                   <td className="px-2 py-1.5 text-center text-xs text-gray-400">{i + 1}</td>
                   <td className="px-2 py-1.5 text-sm whitespace-nowrap">{m.name || "-"}</td>
@@ -195,7 +190,7 @@ export default function ShalomHistoryDetailPage() {
           onClick={() => setShowMove(false)}
         >
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-gray-900">{selected.size}명 이동</h3>
+            <h3 className="text-lg font-bold text-gray-900">{selectedIds.length}명 이동</h3>
             <div className="flex gap-2">
               <button
                 onClick={() => setMoveMode("existing")}

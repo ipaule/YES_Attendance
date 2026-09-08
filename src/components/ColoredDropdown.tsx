@@ -86,10 +86,17 @@ export function ColoredDropdown({
         setEditId(null);
       }
     };
-    const handleScroll = () => {
-      setOpen(false);
-      setShowAdd(false);
-      setEditId(null);
+    const handleScroll = (e: Event) => {
+      // Scrolling the option list itself must never close the panel.
+      if (panelRef.current?.contains(e.target as Node)) return;
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (rect && (rect.bottom < 0 || rect.top > window.innerHeight)) {
+        setOpen(false);
+        setShowAdd(false);
+        setEditId(null);
+        return;
+      }
+      computePosition();
     };
     const handleResize = () => computePosition();
 

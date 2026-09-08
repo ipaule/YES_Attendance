@@ -8,6 +8,7 @@ import { ColoredDropdown } from "@/components/ColoredDropdown";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { fetchJson } from "@/lib/http";
+import { useRowSelection } from "@/hooks/useRowSelection";
 
 interface UnregisteredMember {
   id: string;
@@ -49,7 +50,7 @@ export default function UnregisteredPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const [confirmDeleteMember, setConfirmDeleteMember] = useState<UnregisteredMember | null>(null);
+  const [confirmDeleteMembers, setConfirmDeleteMembers] = useState<UnregisteredMember[] | null>(null);
   const [search, setSearch] = useState("");
   const [filterGroup, setFilterGroup] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -81,14 +82,26 @@ export default function UnregisteredPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<UnregisteredMember> }) => {
-      const res = await fetch(`/api/roster/${id}`, {
+    mutationFn: async ({ ids, data }: { ids: string[]; data: Partial<UnregisteredMember> }) => {
+      if (ids.length > 1) {
+        return fetchJson<{ ok: number; warnings: string[]; failed: string[] }>("/api/roster/bulk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberIds: ids, patch: data }),
+        });
+      }
+      const json = await fetchJson<{ warning?: string }>(`/api/roster/${ids[0]}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return { ok: 1, warnings: json.warning ? [json.warning] : [], failed: [] as string[] };
+    },
+    onSuccess: (data, { ids }) => {
+      for (const w of data.warnings) showToast(w);
+      if (ids.length > 1) {
+        showToast(`${data.ok}명 변경됨${data.failed.length ? ` · ${data.failed.length}명 실패` : ""}`);
+      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["unregistered"] });
@@ -98,12 +111,21 @@ export default function UnregisteredPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/roster/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
+    mutationFn: async (ids: string[]) => {
+      if (ids.length > 1) {
+        return fetchJson<{ ok: number; failed: string[] }>("/api/roster/bulk-delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberIds: ids }),
+        });
+      }
+      return fetchJson(`/api/roster/${ids[0]}`, { method: "DELETE" });
     },
-    onSuccess: () => setConfirmDeleteMember(null),
+    onSuccess: (_data, ids) => {
+      setConfirmDeleteMembers(null);
+      rowSelection.clear();
+      if (ids.length > 1) showToast(`${ids.length}명 삭제됨`);
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["unregistered"] });
       queryClient.invalidateQueries({ queryKey: ["roster"] });
@@ -163,6 +185,15 @@ export default function UnregisteredPage() {
     />
   );
 
+  const rowSelection = useRowSelection(filtered.map((m) => m.id));
+  const { selectedIds, isSelected, toggle, toggleAll, allSelected, targetsFor } = rowSelection;
+
+  const handleDeleteClick = (m: UnregisteredMember) => {
+    const ids = targetsFor(m.id);
+    const targets = ids.length > 1 ? filtered.filter((x) => ids.includes(x.id)) : [m];
+    setConfirmDeleteMembers(targets);
+  };
+
   return (
     <div className="space-y-4 pb-20 lg:pb-4">
       <div className="flex items-center gap-3">
@@ -207,12 +238,20 @@ export default function UnregisteredPage() {
         )}
       </div>
 
+      {selectedIds.length > 0 && (
+        <div className="flex items-center justify-between bg-indigo-50 text-indigo-700 text-sm rounded-lg px-3 py-2">
+          <span>{selectedIds.length}명 선택됨</span>
+          <button onClick={rowSelection.clear} className="text-indigo-500 hover:text-indigo-700 font-medium">선택 해제</button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
+                <Th><input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded" /></Th>
                 <Th>#</Th>
                 <SortTh label="이름" k="name" onClick={toggleSort} icon={sortIcon} className="sticky left-0 z-20 bg-gray-50" />
                 <SortTh label="영문" k="englishName" onClick={toggleSort} icon={sortIcon} className="hidden" />
@@ -230,7 +269,16 @@ export default function UnregisteredPage() {
             </thead>
             <tbody>
               {filtered.map((m, idx) => (
-                <tr key={m.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <tr key={m.id} className={`border-b border-gray-100 ${isSelected(m.id) ? "bg-indigo-50" : "hover:bg-gray-50"}`}>
+                  <td className="px-1 py-1 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isSelected(m.id)}
+                      onChange={(e) => toggle(idx, (e.nativeEvent as MouseEvent).shiftKey)}
+                      onMouseDown={(e) => e.shiftKey && e.preventDefault()}
+                      className="rounded"
+                    />
+                  </td>
                   <td className="px-2 py-1 text-center text-xs text-gray-400">{idx + 1}</td>
                   <td className="sticky left-0 z-20 bg-white px-2 py-1">
                     <button
@@ -251,7 +299,7 @@ export default function UnregisteredPage() {
                     <ColoredDropdown
                       category="community"
                       value={m.groupName}
-                      onChange={(v) => updateMutation.mutate({ id: m.id, data: { groupName: v } })}
+                      onChange={(v) => updateMutation.mutate({ ids: targetsFor(m.id), data: { groupName: v } })}
                     />
                   </td>
                   <td className="px-2 py-1 text-xs text-gray-600 whitespace-nowrap">{m.phone || "—"}</td>
@@ -261,7 +309,7 @@ export default function UnregisteredPage() {
                       value={m.recentAttendanceOverride || m.recentAttendance}
                       onChange={(v) =>
                         updateMutation.mutate({
-                          id: m.id,
+                          ids: targetsFor(m.id),
                           data: { recentAttendanceOverride: v },
                         })
                       }
@@ -272,14 +320,14 @@ export default function UnregisteredPage() {
                     <ColoredDropdown
                       category="contact_status"
                       value={m.contactStatus}
-                      onChange={(v) => updateMutation.mutate({ id: m.id, data: { contactStatus: v } })}
+                      onChange={(v) => updateMutation.mutate({ ids: targetsFor(m.id), data: { contactStatus: v } })}
                     />
                   </td>
                   <td className="px-2 py-1 whitespace-nowrap">
                     <ColoredDropdown
                       category="person_status"
                       value={m.personStatus}
-                      onChange={(v) => updateMutation.mutate({ id: m.id, data: { personStatus: v } })}
+                      onChange={(v) => updateMutation.mutate({ ids: targetsFor(m.id), data: { personStatus: v } })}
                     />
                   </td>
                   <td className="px-2 py-1">
@@ -288,7 +336,7 @@ export default function UnregisteredPage() {
                       defaultValue={m.statusReason}
                       onBlur={(e) => {
                         if (e.target.value !== m.statusReason) {
-                          updateMutation.mutate({ id: m.id, data: { statusReason: e.target.value } });
+                          updateMutation.mutate({ ids: targetsFor(m.id), data: { statusReason: e.target.value } });
                         }
                       }}
                       className="w-full text-xs border border-transparent hover:border-gray-200 focus:border-indigo-300 rounded px-1 py-0.5 focus:outline-none"
@@ -298,12 +346,12 @@ export default function UnregisteredPage() {
                     <ColoredDropdown
                       category="assignee"
                       value={m.assignee}
-                      onChange={(v) => updateMutation.mutate({ id: m.id, data: { assignee: v } })}
+                      onChange={(v) => updateMutation.mutate({ ids: targetsFor(m.id), data: { assignee: v } })}
                     />
                   </td>
                   <td className="px-1 py-1">
                     <button
-                      onClick={() => setConfirmDeleteMember(m)}
+                      onClick={() => handleDeleteClick(m)}
                       className="text-gray-300 hover:text-red-500"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -322,14 +370,24 @@ export default function UnregisteredPage() {
       </div>
 
       <ConfirmDialog
-        open={!!confirmDeleteMember}
-        onOpenChange={(open) => !open && setConfirmDeleteMember(null)}
+        open={!!confirmDeleteMembers}
+        onOpenChange={(open) => !open && setConfirmDeleteMembers(null)}
         title="재적 삭제"
-        description={confirmDeleteMember ? `${confirmDeleteMember.name}님을 재적에서 삭제하시겠습니까?` : ""}
-        impact={["이름이 같은 모든 순의 순원 기록도 함께 삭제됩니다"]}
-        confirmWord={confirmDeleteMember?.name}
+        description={
+          confirmDeleteMembers && confirmDeleteMembers.length === 1
+            ? `${confirmDeleteMembers[0].name}님을 재적에서 삭제하시겠습니까?`
+            : confirmDeleteMembers
+              ? `${confirmDeleteMembers.length}명을 재적에서 삭제하시겠습니까?`
+              : ""
+        }
+        impact={
+          confirmDeleteMembers && confirmDeleteMembers.length > 1
+            ? [confirmDeleteMembers.map((m) => m.name).join(", "), "이름이 같은 모든 순의 순원 기록도 함께 삭제됩니다"]
+            : ["이름이 같은 모든 순의 순원 기록도 함께 삭제됩니다"]
+        }
+        confirmWord={confirmDeleteMembers?.length === 1 ? confirmDeleteMembers[0].name : undefined}
         pending={deleteMutation.isPending}
-        onConfirm={() => confirmDeleteMember && deleteMutation.mutate(confirmDeleteMember.id)}
+        onConfirm={() => confirmDeleteMembers && deleteMutation.mutate(confirmDeleteMembers.map((m) => m.id))}
       />
     </div>
   );

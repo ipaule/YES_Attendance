@@ -25,6 +25,7 @@ import { normalizeBirthYear } from "@/lib/profile";
 import { fetchJson } from "@/lib/http";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
+import { useRowSelection } from "@/hooks/useRowSelection";
 
 interface ShalomMember {
   id: string;
@@ -50,11 +51,11 @@ interface FolderSummary {
 type SortKey = "name" | "gender" | "birthYear" | "visitDate" | "inviter" | "leader" | "status";
 type SortDir = "none" | "asc" | "desc";
 
-function SortableTableRow({ id, children }: { id: string; children: React.ReactNode }) {
+function SortableTableRow({ id, selected, children }: { id: string; selected: boolean; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
-    <tr ref={setNodeRef} style={style} className="border-b border-gray-100 hover:bg-gray-50" {...attributes}>
+    <tr ref={setNodeRef} style={style} className={`border-b border-gray-100 ${selected ? "bg-indigo-50" : "hover:bg-gray-50"}`} {...attributes}>
       <td className="px-1 py-1 text-center w-6">
         <button {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
           <GripVertical className="h-3.5 w-3.5" />
@@ -74,7 +75,6 @@ export default function ShalomListPage() {
 
   const [sortKey, setSortKey] = useState<SortKey>("visitDate");
   const [sortDir, setSortDir] = useState<SortDir>("none");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [filterGender, setFilterGender] = useState("");
   const [filterBirthYear, setFilterBirthYear] = useState("");
@@ -84,9 +84,9 @@ export default function ShalomListPage() {
   const [flushName, setFlushName] = useState("");
   const [flushHistoryId, setFlushHistoryId] = useState("");
   const [flushConfirmText, setFlushConfirmText] = useState("");
-  const [moveTarget, setMoveTarget] = useState<ShalomMember | null>(null);
+  const [moveTargets, setMoveTargets] = useState<ShalomMember[] | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
-  const [confirmDeleteMember, setConfirmDeleteMember] = useState<ShalomMember | null>(null);
+  const [confirmDeleteMembers, setConfirmDeleteMembers] = useState<ShalomMember[] | null>(null);
 
   const { data: members } = useQuery({
     queryKey: ["shalom-members"],
@@ -106,43 +106,71 @@ export default function ShalomListPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<ShalomMember> }) => {
-      const res = await fetch(`/api/shalom/${id}`, {
+    mutationFn: async ({ ids, data }: { ids: string[]; data: Partial<ShalomMember> }) => {
+      if (ids.length > 1) {
+        return fetchJson<{ ok: number }>("/api/shalom/bulk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberIds: ids, patch: data }),
+        });
+      }
+      await fetchJson(`/api/shalom/${ids[0]}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return { ok: 1 };
+    },
+    onSuccess: (data, { ids }) => {
+      if (ids.length > 1) showToast(`${data.ok}명 변경됨`);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["shalom-members"] }),
     onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/shalom/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
+    mutationFn: async (ids: string[]) => {
+      if (ids.length > 1) {
+        return fetchJson<{ ok: number }>("/api/shalom/bulk-delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberIds: ids }),
+        });
+      }
+      await fetchJson(`/api/shalom/${ids[0]}`, { method: "DELETE" });
+      return { ok: 1 };
     },
-    onSuccess: () => setConfirmDeleteMember(null),
+    onSuccess: (_data, ids) => {
+      setConfirmDeleteMembers(null);
+      rowSelection.clear();
+      if (ids.length > 1) showToast(`${ids.length}명 삭제됨`);
+    },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["shalom-members"] }),
     onError: () => showToast("삭제 실패 — 다시 시도해주세요"),
   });
 
   const moveMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/shalom/${id}/move-to-roster`, { method: "POST" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "이동 실패");
-      return json;
+    mutationFn: async (ids: string[]) => {
+      if (ids.length > 1) {
+        return fetchJson<{ ok: number; failed: { id: string; error: string }[] }>("/api/shalom/move-to-roster", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberIds: ids }),
+        });
+      }
+      await fetchJson(`/api/shalom/${ids[0]}/move-to-roster`, { method: "POST" });
+      return { ok: 1, failed: [] as { id: string; error: string }[] };
     },
-    onSuccess: () => {
+    onSuccess: (data, ids) => {
       queryClient.invalidateQueries({ queryKey: ["shalom-members"] });
       queryClient.invalidateQueries({ queryKey: ["roster"] });
       queryClient.invalidateQueries({ queryKey: ["unregistered"] });
-      setMoveTarget(null);
+      setMoveTargets(null);
       setMoveError(null);
+      rowSelection.clear();
+      if (ids.length > 1) {
+        showToast(`${data.ok}명 이동됨${data.failed.length ? ` · ${data.failed.length}명 건너뜀` : ""}`);
+      }
     },
     onError: (e: Error) => setMoveError(e.message),
   });
@@ -161,7 +189,7 @@ export default function ShalomListPage() {
       queryClient.invalidateQueries({ queryKey: ["shalom-members"] });
       queryClient.invalidateQueries({ queryKey: ["shalom-histories"] });
       setShowFlush(false);
-      setSelected(new Set());
+      rowSelection.clear();
       setFlushName("");
       setFlushHistoryId("");
       setFlushConfirmText("");
@@ -209,27 +237,29 @@ export default function ShalomListPage() {
     <ArrowUpDown className={`h-3 w-3 inline-block ml-0.5 ${sortKey === key && sortDir !== "none" ? "text-indigo-600" : "text-gray-400"}`} />
   );
 
-  const toggleSelect = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+  const rowSelection = useRowSelection(sorted.map((m) => m.id));
+  const { selectedIds, isSelected, toggle, toggleAll, allSelected, targetsFor } = rowSelection;
+
+  const handleDeleteClick = (m: ShalomMember) => {
+    const ids = targetsFor(m.id);
+    const targets = ids.length > 1 ? sorted.filter((x) => ids.includes(x.id)) : [m];
+    setConfirmDeleteMembers(targets);
   };
 
-  const toggleSelectAll = () => {
-    if (!members) return;
-    if (selected.size === members.length) setSelected(new Set());
-    else setSelected(new Set(members.map((m) => m.id)));
+  const handleMoveClick = (m: ShalomMember) => {
+    setMoveError(null);
+    const ids = targetsFor(m.id);
+    const targets = ids.length > 1 ? sorted.filter((x) => ids.includes(x.id)) : [m];
+    setMoveTargets(targets);
   };
 
   const handleFlush = () => {
-    if (selected.size === 0) return;
+    if (selectedIds.length === 0) return;
     if (flushMode === "new" && !flushName.trim()) return;
     if (flushMode === "existing" && !flushHistoryId) return;
     if (flushConfirmText !== "삭제") return;
     flushMutation.mutate({
-      memberIds: Array.from(selected),
+      memberIds: selectedIds,
       ...(flushMode === "new" ? { historyName: flushName } : { historyId: flushHistoryId }),
     });
   };
@@ -283,11 +313,11 @@ export default function ShalomListPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowFlush(true)}
-            disabled={selected.size === 0}
+            disabled={selectedIds.length === 0}
             className="flex items-center gap-1.5 text-sm bg-amber-600 text-white rounded-lg px-4 py-2 hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="h-4 w-4" />
-            선택 기록 저장 ({selected.size})
+            선택 기록 저장 ({selectedIds.length})
           </button>
           <button
             onClick={() => router.push("/dashboard/shalom/new")}
@@ -357,7 +387,7 @@ export default function ShalomListPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4 space-y-4">
             <h3 className="text-lg font-bold text-gray-800">폴더에 저장</h3>
-            <p className="text-sm text-gray-600">선택한 {selected.size}명을 폴더에 저장하고 리스트에서 삭제합니다.</p>
+            <p className="text-sm text-gray-600">선택한 {selectedIds.length}명을 폴더에 저장하고 리스트에서 삭제합니다.</p>
             <ul className="bg-red-50 rounded-lg p-3 text-sm text-red-700 list-disc list-inside space-y-0.5">
               <li>일부 필드만 폴더에 보존되고, 나머지 정보는 사라집니다</li>
               <li>원본 샬롬 리스트 항목은 삭제되며 되돌릴 수 없습니다</li>
@@ -429,28 +459,32 @@ export default function ShalomListPage() {
       )}
 
       {/* Move-to-roster confirmation dialog */}
-      {moveTarget && (
+      {moveTargets && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4">
             <h3 className="text-lg font-bold text-gray-800">로스터로 이동</h3>
             <p className="text-sm text-gray-600">
-              <span className="font-medium">{moveTarget.name}</span>님을 로스터로 이동하시겠습니까?
+              {moveTargets.length === 1 ? (
+                <><span className="font-medium">{moveTargets[0].name}</span>님을 로스터로 이동하시겠습니까?</>
+              ) : (
+                <>{moveTargets.length}명을 로스터로 이동하시겠습니까?</>
+              )}
               <br />
-              <span className="text-xs text-gray-400">이동 후 미등록자 리스트에 추가됩니다.</span>
+              <span className="text-xs text-gray-400">이동 후 미등록자 리스트에 추가됩니다. 졸업 상태가 아니거나 이미 이동된 인원은 건너뜁니다.</span>
             </p>
             {moveError && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-xs text-red-700">{moveError}</div>
             )}
             <div className="flex gap-2 justify-end">
               <button
-                onClick={() => { setMoveTarget(null); setMoveError(null); }}
+                onClick={() => { setMoveTargets(null); setMoveError(null); }}
                 disabled={moveMutation.isPending}
                 className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2"
               >
                 취소
               </button>
               <button
-                onClick={() => moveMutation.mutate(moveTarget.id)}
+                onClick={() => moveMutation.mutate(moveTargets.map((m) => m.id))}
                 disabled={moveMutation.isPending}
                 className="text-sm bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700 disabled:opacity-50"
               >
@@ -458,6 +492,13 @@ export default function ShalomListPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {selectedIds.length > 0 && (
+        <div className="flex items-center justify-between bg-indigo-50 text-indigo-700 text-sm rounded-lg px-3 py-2">
+          <span>{selectedIds.length}명 선택됨</span>
+          <button onClick={rowSelection.clear} className="text-indigo-500 hover:text-indigo-700 font-medium">선택 해제</button>
         </div>
       )}
 
@@ -469,7 +510,7 @@ export default function ShalomListPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="w-7 px-1 py-2" />
-                  <th className="w-8 px-1 py-2"><input type="checkbox" checked={members?.length ? selected.size === members.length : false} onChange={toggleSelectAll} className="rounded" /></th>
+                  <th className="w-8 px-1 py-2"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded" /></th>
                   <th className="w-8 px-1 py-2 text-center font-medium text-gray-400">#</th>
                   <th className="sticky left-0 z-20 bg-gray-50 px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[80px] text-center" onClick={() => toggleSort("name")}><div className="flex items-center justify-center gap-0.5">이름{sortIcon("name")}</div></th>
                   <th className="px-1 py-2 font-medium text-gray-600 cursor-pointer select-none whitespace-nowrap w-[44px] text-center" onClick={() => toggleSort("gender")}><div className="flex items-center justify-center gap-0.5">성별{sortIcon("gender")}</div></th>
@@ -490,9 +531,15 @@ export default function ShalomListPage() {
                     const canShowMoveButton = canMoveToRoster && !moved;
                     const moveEnabled = m.status === "졸업";
                     return (
-                      <SortableTableRow key={m.id} id={m.id}>
+                      <SortableTableRow key={m.id} id={m.id} selected={isSelected(m.id)}>
                         <td className="px-1 py-1 text-center">
-                          <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} className="rounded" />
+                          <input
+                            type="checkbox"
+                            checked={isSelected(m.id)}
+                            onChange={(e) => toggle(idx, (e.nativeEvent as MouseEvent).shiftKey)}
+                            onMouseDown={(e) => e.shiftKey && e.preventDefault()}
+                            className="rounded"
+                          />
                         </td>
                         <td className="px-2 py-1 text-center text-xs text-gray-400">{idx + 1}</td>
                         <td className="sticky left-0 z-20 bg-white px-2 py-1">
@@ -517,7 +564,7 @@ export default function ShalomListPage() {
                         <td className="px-2 py-1 text-center">
                           <select
                             value={m.status}
-                            onChange={(e) => updateMutation.mutate({ id: m.id, data: { status: e.target.value } })}
+                            onChange={(e) => updateMutation.mutate({ ids: targetsFor(m.id), data: { status: e.target.value } })}
                             className={`text-[10px] font-medium px-1 py-0.5 rounded-full border-0 cursor-pointer ${statusColor(m.status)}`}
                           >
                             <option value="방문">방문</option>
@@ -533,10 +580,7 @@ export default function ShalomListPage() {
                               </span>
                             ) : canShowMoveButton ? (
                               <button
-                                onClick={() => {
-                                  setMoveError(null);
-                                  setMoveTarget(m);
-                                }}
+                                onClick={() => handleMoveClick(m)}
                                 disabled={!moveEnabled}
                                 title={moveEnabled ? "로스터로 이동" : "졸업 상태에서만 이동 가능"}
                                 className={`${moveEnabled ? "text-gray-400 hover:text-indigo-600" : "text-gray-200 cursor-not-allowed"}`}
@@ -552,7 +596,7 @@ export default function ShalomListPage() {
                               <Search className="h-3.5 w-3.5" />
                             </button>
                             <button
-                              onClick={() => setConfirmDeleteMember(m)}
+                              onClick={() => handleDeleteClick(m)}
                               className="text-gray-300 hover:text-red-500"
                             >
                               <Trash2 className="h-3 w-3" />
@@ -575,12 +619,19 @@ export default function ShalomListPage() {
       </DndContext>
 
       <ConfirmDialog
-        open={!!confirmDeleteMember}
-        onOpenChange={(open) => !open && setConfirmDeleteMember(null)}
+        open={!!confirmDeleteMembers}
+        onOpenChange={(open) => !open && setConfirmDeleteMembers(null)}
         title="샬롬 리스트에서 삭제"
-        description={confirmDeleteMember ? `${confirmDeleteMember.name}님을 삭제하시겠습니까?` : ""}
+        description={
+          confirmDeleteMembers && confirmDeleteMembers.length === 1
+            ? `${confirmDeleteMembers[0].name}님을 삭제하시겠습니까?`
+            : confirmDeleteMembers
+              ? `${confirmDeleteMembers.length}명을 삭제하시겠습니까?`
+              : ""
+        }
+        impact={confirmDeleteMembers && confirmDeleteMembers.length > 1 ? [confirmDeleteMembers.map((m) => m.name).join(", ")] : undefined}
         pending={deleteMutation.isPending}
-        onConfirm={() => confirmDeleteMember && deleteMutation.mutate(confirmDeleteMember.id)}
+        onConfirm={() => confirmDeleteMembers && deleteMutation.mutate(confirmDeleteMembers.map((m) => m.id))}
       />
     </div>
   );

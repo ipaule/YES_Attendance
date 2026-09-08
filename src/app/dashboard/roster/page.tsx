@@ -19,6 +19,7 @@ import {
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { fetchJson } from "@/lib/http";
+import { useRowSelection } from "@/hooks/useRowSelection";
 
 interface RosterMember {
   id: string;
@@ -39,11 +40,11 @@ interface RosterMember {
   grade: string;
 }
 
-function SortableRow({ id, children }: { id: string; children: React.ReactNode }) {
+function SortableRow({ id, selected, children }: { id: string; selected: boolean; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
-    <tr ref={setNodeRef} style={style} className="border-b border-gray-100 hover:bg-gray-50" {...attributes}>
+    <tr ref={setNodeRef} style={style} className={`border-b border-gray-100 ${selected ? "bg-indigo-50" : "hover:bg-gray-50"}`} {...attributes}>
       <td className="px-1 py-1 text-center w-6">
         <button {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
           <GripVertical className="h-3.5 w-3.5" />
@@ -58,7 +59,7 @@ export default function RosterPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const [confirmDeleteMember, setConfirmDeleteMember] = useState<RosterMember | null>(null);
+  const [confirmDeleteMembers, setConfirmDeleteMembers] = useState<RosterMember[] | null>(null);
   const [search, setSearch] = useState("");
   const [filterBirthYear, setFilterBirthYear] = useState("");
   const [filterGender, setFilterGender] = useState<string[]>([]);
@@ -148,42 +149,32 @@ export default function RosterPage() {
     return opts;
   }, [allTeams, filterGroup]);
 
-  const assignMutation = useMutation({
-    mutationFn: async ({ id, teamName }: { id: string; teamName: string }) => {
-      const res = await fetch(`/api/roster/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamName }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json() as Promise<{ warning?: string }>;
-    },
-    onSuccess: (data) => {
-      if (data.warning) showToast(data.warning);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["roster"] });
-      queryClient.invalidateQueries({ queryKey: ["unregistered"] });
-    },
-    onError: () => showToast("저장 실패 — 다시 시도해주세요"),
-  });
-
+  // Handles both the single-row PATCH (targets.length === 1) and the bulk
+  // endpoint (targets.length > 1) — used by every inline field edit
+  // (community/training/baptism/salvation dropdowns and the 순장 select).
   const fieldMutation = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<RosterMember> }) => {
-      const res = await fetch(`/api/roster/${id}`, {
+    mutationFn: async ({ ids, patch }: { ids: string[]; patch: Partial<RosterMember> }) => {
+      if (ids.length > 1) {
+        return fetchJson<{ ok: number; warnings: string[]; failed: string[] }>("/api/roster/bulk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberIds: ids, patch }),
+        });
+      }
+      const json = await fetchJson<{ warning?: string }>(`/api/roster/${ids[0]}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return { ok: 1, warnings: json.warning ? [json.warning] : [], failed: [] as string[] };
     },
-    onMutate: async ({ id, patch }) => {
+    onMutate: async ({ ids, patch }) => {
       await queryClient.cancelQueries({ queryKey: ["roster"] });
       const snapshots = queryClient.getQueriesData<RosterMember[]>({ queryKey: ["roster"] });
+      const idSet = new Set(ids);
       for (const [qk, data] of snapshots) {
         if (!data) continue;
-        queryClient.setQueryData(qk, data.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+        queryClient.setQueryData(qk, data.map((m) => (idSet.has(m.id) ? { ...m, ...patch } : m)));
       }
       return { snapshots };
     },
@@ -193,6 +184,12 @@ export default function RosterPage() {
       }
       showToast("저장 실패 — 다시 시도해주세요");
     },
+    onSuccess: (data, { ids }) => {
+      for (const w of data.warnings) showToast(w);
+      if (ids.length > 1) {
+        showToast(`${data.ok}명 변경됨${data.failed.length ? ` · ${data.failed.length}명 실패` : ""}`);
+      }
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["roster"] });
       queryClient.invalidateQueries({ queryKey: ["unregistered"] });
@@ -200,12 +197,21 @@ export default function RosterPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/roster/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
+    mutationFn: async (ids: string[]) => {
+      if (ids.length > 1) {
+        return fetchJson<{ ok: number; failed: string[] }>("/api/roster/bulk-delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberIds: ids }),
+        });
+      }
+      return fetchJson(`/api/roster/${ids[0]}`, { method: "DELETE" });
     },
-    onSuccess: () => setConfirmDeleteMember(null),
+    onSuccess: (_data, ids) => {
+      setConfirmDeleteMembers(null);
+      rowSelection.clear();
+      if (ids.length > 1) showToast(`${ids.length}명 삭제됨`);
+    },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["roster"] }),
     onError: () => showToast("삭제 실패 — 다시 시도해주세요"),
   });
@@ -257,6 +263,15 @@ export default function RosterPage() {
   const sortIcon = (key: SortKey) => (
     <ArrowUpDown className={`h-3 w-3 inline-block ml-0.5 ${sortKey === key && sortDir !== "none" ? "text-indigo-600" : "text-gray-400"}`} />
   );
+
+  const rowSelection = useRowSelection(sortedMembers.map((m) => m.id));
+  const { selectedIds, isSelected, toggle, toggleAll, allSelected, targetsFor } = rowSelection;
+
+  const handleDeleteClick = (m: RosterMember) => {
+    const ids = targetsFor(m.id);
+    const targets = ids.length > 1 ? (sortedMembers ?? []).filter((x) => ids.includes(x.id)) : [m];
+    setConfirmDeleteMembers(targets);
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -356,6 +371,13 @@ export default function RosterPage() {
         )}
       </div>
 
+      {selectedIds.length > 0 && (
+        <div className="flex items-center justify-between bg-indigo-50 text-indigo-700 text-sm rounded-lg px-3 py-2">
+          <span>{selectedIds.length}명 선택됨</span>
+          <button onClick={rowSelection.clear} className="text-indigo-500 hover:text-indigo-700 font-medium">선택 해제</button>
+        </div>
+      )}
+
       {/* Table */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -364,6 +386,7 @@ export default function RosterPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="w-7 px-1 py-2" />
+                  <th className="w-8 px-1 py-2 text-center"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded" /></th>
                   <th className="w-8 px-1 py-2 text-center font-medium text-gray-400">#</th>
                   <SortTh label="이름" k="name" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} className="sticky left-0 z-20 bg-gray-50" />
                   <SortTh label="영문" k="englishName" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} className="hidden" />
@@ -384,7 +407,16 @@ export default function RosterPage() {
               <SortableContext items={sortedMembers.map((m) => m.id)} strategy={verticalListSortingStrategy}>
                 <tbody>
                   {sortedMembers.map((m, idx) => (
-                    <SortableRow key={m.id} id={m.id}>
+                    <SortableRow key={m.id} id={m.id} selected={isSelected(m.id)}>
+                      <td className="px-1 py-1 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected(m.id)}
+                          onChange={(e) => toggle(idx, (e.nativeEvent as MouseEvent).shiftKey)}
+                          onMouseDown={(e) => e.shiftKey && e.preventDefault()}
+                          className="rounded"
+                        />
+                      </td>
                       <td className="px-2 py-1 text-center text-xs text-gray-400">{idx + 1}</td>
                       <td className="sticky left-0 z-20 bg-white px-2 py-1 whitespace-nowrap">
                         <button
@@ -406,7 +438,7 @@ export default function RosterPage() {
                         <ColoredDropdown
                           category="community"
                           value={m.groupName}
-                          onChange={(v) => fieldMutation.mutate({ id: m.id, patch: { groupName: v, teamName: "" } })}
+                          onChange={(v) => fieldMutation.mutate({ ids: targetsFor(m.id), patch: { groupName: v, teamName: "" } })}
                           placeholder="—"
                         />
                       </td>
@@ -414,7 +446,7 @@ export default function RosterPage() {
                         <select
                           value={m.teamName}
                           disabled={!m.groupName}
-                          onChange={(e) => assignMutation.mutate({ id: m.id, teamName: e.target.value })}
+                          onChange={(e) => fieldMutation.mutate({ ids: targetsFor(m.id), patch: { teamName: e.target.value } })}
                           className={`text-xs rounded px-1.5 py-0.5 border ${
                             !m.groupName
                               ? "bg-gray-50 text-gray-300 border-gray-200"
@@ -439,7 +471,7 @@ export default function RosterPage() {
                         <ColoredDropdown
                           category="training"
                           value={m.training}
-                          onChange={(v) => fieldMutation.mutate({ id: m.id, patch: { training: v } })}
+                          onChange={(v) => fieldMutation.mutate({ ids: targetsFor(m.id), patch: { training: v } })}
                           placeholder="—"
                         />
                       </td>
@@ -448,7 +480,7 @@ export default function RosterPage() {
                         <ColoredDropdown
                           category="baptism_status"
                           value={m.baptismStatus}
-                          onChange={(v) => fieldMutation.mutate({ id: m.id, patch: { baptismStatus: v } })}
+                          onChange={(v) => fieldMutation.mutate({ ids: targetsFor(m.id), patch: { baptismStatus: v } })}
                           placeholder="—"
                         />
                       </td>
@@ -456,7 +488,7 @@ export default function RosterPage() {
                         <ColoredDropdown
                           category="salvation_assurance"
                           value={m.salvationAssurance}
-                          onChange={(v) => fieldMutation.mutate({ id: m.id, patch: { salvationAssurance: v } })}
+                          onChange={(v) => fieldMutation.mutate({ ids: targetsFor(m.id), patch: { salvationAssurance: v } })}
                           placeholder="—"
                         />
                       </td>
@@ -476,7 +508,7 @@ export default function RosterPage() {
                             <Search className="h-3.5 w-3.5" />
                           </button>
                           <button
-                            onClick={() => setConfirmDeleteMember(m)}
+                            onClick={() => handleDeleteClick(m)}
                             className="text-gray-300 hover:text-red-500"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -498,14 +530,24 @@ export default function RosterPage() {
       </DndContext>
 
       <ConfirmDialog
-        open={!!confirmDeleteMember}
-        onOpenChange={(open) => !open && setConfirmDeleteMember(null)}
+        open={!!confirmDeleteMembers}
+        onOpenChange={(open) => !open && setConfirmDeleteMembers(null)}
         title="재적 삭제"
-        description={confirmDeleteMember ? `${confirmDeleteMember.name}님을 재적에서 삭제하시겠습니까?` : ""}
-        impact={["이름이 같은 모든 순의 순원 기록도 함께 삭제됩니다"]}
-        confirmWord={confirmDeleteMember?.name}
+        description={
+          confirmDeleteMembers && confirmDeleteMembers.length === 1
+            ? `${confirmDeleteMembers[0].name}님을 재적에서 삭제하시겠습니까?`
+            : confirmDeleteMembers
+              ? `${confirmDeleteMembers.length}명을 재적에서 삭제하시겠습니까?`
+              : ""
+        }
+        impact={
+          confirmDeleteMembers && confirmDeleteMembers.length > 1
+            ? [confirmDeleteMembers.map((m) => m.name).join(", "), "이름이 같은 모든 순의 순원 기록도 함께 삭제됩니다"]
+            : ["이름이 같은 모든 순의 순원 기록도 함께 삭제됩니다"]
+        }
+        confirmWord={confirmDeleteMembers?.length === 1 ? confirmDeleteMembers[0].name : undefined}
         pending={deleteMutation.isPending}
-        onConfirm={() => confirmDeleteMember && deleteMutation.mutate(confirmDeleteMember.id)}
+        onConfirm={() => confirmDeleteMembers && deleteMutation.mutate(confirmDeleteMembers.map((m) => m.id))}
       />
     </div>
   );

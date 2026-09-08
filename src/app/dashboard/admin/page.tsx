@@ -43,7 +43,7 @@ export default function AdminPage() {
       const data = await fetchJson<{ users: UserRecord[] }>("/api/users");
       return data.users;
     },
-    enabled: user?.role === "PASTOR",
+    enabled: user?.role === "PASTOR" || (user?.role === "EXECUTIVE" && user?.group?.name === "샬롬"),
   });
 
   const { data: communityOptions = [] } = useQuery({
@@ -125,7 +125,10 @@ export default function AdminPage() {
     <ArrowUpDown className={`h-3 w-3 inline-block ml-0.5 ${sortKey === key && sortDir !== "none" ? "text-indigo-600" : "text-gray-400"}`} />
   );
 
-  if (user?.role !== "PASTOR") {
+  const isPastor = user?.role === "PASTOR";
+  const isShalomExecutive = user?.role === "EXECUTIVE" && user?.group?.name === "샬롬";
+
+  if (!isPastor && !isShalomExecutive) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
         <p className="text-red-500">권한이 없습니다.</p>
@@ -189,20 +192,24 @@ export default function AdminPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <select
-                      value={u.role}
-                      onChange={(e) => {
-                        const toRole = e.target.value as Role;
-                        if (toRole === u.role) return;
-                        updateUserMutation.mutate({ userId: u.id, username: u.username, data: { role: toRole } });
-                      }}
-                      disabled={u.id === user?.id}
-                      className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
-                    >
-                      <option value="LEADER">순장</option>
-                      <option value="EXECUTIVE">공동체장</option>
-                      <option value="PASTOR">사역자</option>
-                    </select>
+                    {isPastor ? (
+                      <select
+                        value={u.role}
+                        onChange={(e) => {
+                          const toRole = e.target.value as Role;
+                          if (toRole === u.role) return;
+                          updateUserMutation.mutate({ userId: u.id, username: u.username, data: { role: toRole } });
+                        }}
+                        disabled={u.id === user?.id}
+                        className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                      >
+                        <option value="LEADER">순장</option>
+                        <option value="EXECUTIVE">공동체장</option>
+                        <option value="PASTOR">사역자</option>
+                      </select>
+                    ) : (
+                      <span className="text-xs text-gray-500">{getRoleLabel(u.role)}</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {u.group?.name ? (

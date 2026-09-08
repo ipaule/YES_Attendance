@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { canAccessTeam } from "@/lib/permissions";
+import { canAccessTeam, canManageTeamsInGroup } from "@/lib/permissions";
+import { findTeamDeleteBlockers } from "@/lib/leader-refs";
 
 export async function GET(
   _request: NextRequest,
@@ -40,7 +41,12 @@ export async function GET(
     return NextResponse.json({ error: "순을 찾을 수 없습니다." }, { status: 404 });
   }
 
-  return NextResponse.json({ team });
+  const deleteBlockers = await findTeamDeleteBlockers({
+    name: team.name,
+    leaderUsername: team.leader?.username ?? null,
+  });
+
+  return NextResponse.json({ team: { ...team, deleteBlockers } });
 }
 
 export async function PATCH(
@@ -48,11 +54,22 @@ export async function PATCH(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   const session = await getSession();
-  if (!session || session.role !== "PASTOR") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  if (!session) {
+    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
   }
 
   const { teamId } = await params;
+
+  const existingTeam = await prisma.team.findUnique({
+    where: { id: teamId },
+    select: { groupId: true },
+  });
+  if (!existingTeam) {
+    return NextResponse.json({ error: "순을 찾을 수 없습니다." }, { status: 404 });
+  }
+  if (!(await canManageTeamsInGroup(session, existingTeam.groupId))) {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  }
 
   const data = await request.json();
   const updateData: Record<string, unknown> = {};
@@ -98,19 +115,39 @@ export async function DELETE(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   const session = await getSession();
-  if (!session || session.role !== "PASTOR") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  if (!session) {
+    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
   }
 
   const { teamId } = await params;
 
   const team = await prisma.team.findUnique({
     where: { id: teamId },
-    select: { leaderId: true },
+    select: {
+      name: true,
+      leaderId: true,
+      groupId: true,
+      leader: { select: { username: true } },
+    },
   });
 
   if (!team) {
     return NextResponse.json({ error: "순을 찾을 수 없습니다." }, { status: 404 });
+  }
+
+  if (!(await canManageTeamsInGroup(session, team.groupId))) {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  }
+
+  const reasons = await findTeamDeleteBlockers({
+    name: team.name,
+    leaderUsername: team.leader?.username ?? null,
+  });
+  if (reasons.length > 0) {
+    return NextResponse.json(
+      { error: "이 순은 삭제할 수 없습니다.", reasons },
+      { status: 409 }
+    );
   }
 
   if (team.leaderId) {

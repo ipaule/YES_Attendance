@@ -32,6 +32,17 @@ export function canManageRoles(user: JWTPayload): boolean {
   return user.role === "PASTOR";
 }
 
+export async function canDeleteUser(
+  user: JWTPayload,
+  target: { role: string; groupId: string | null }
+): Promise<boolean> {
+  if (user.role === "PASTOR") return true;
+  if (user.role !== "EXECUTIVE") return false;
+  if (target.role !== "LEADER") return false;
+  if (target.groupId !== user.groupId) return false;
+  return canAccessShalom(user);
+}
+
 export function canViewGroupGraph(
   user: JWTPayload,
   groupId: string

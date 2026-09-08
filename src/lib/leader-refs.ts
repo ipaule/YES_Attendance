@@ -56,3 +56,28 @@ export async function findDeleteBlockers(
 
   return reasons;
 }
+
+/**
+ * Finds reasons a 순 (Team) cannot be deleted: its leader's name (current
+ * leader's username, or the team's own name if it drifted / has no leader)
+ * still appears in the 샬롬 리스트 (ShalomMember.leader, free text) — deleting
+ * the team would orphan that reference.
+ */
+export async function findTeamDeleteBlockers(team: {
+  name: string;
+  leaderUsername: string | null;
+}): Promise<string[]> {
+  const names = Array.from(
+    new Set([team.name, ...(team.leaderUsername ? [team.leaderUsername] : [])])
+  );
+
+  const matches = await prisma.shalomMember.groupBy({
+    by: ["leader"],
+    where: { leader: { in: names } },
+    _count: true,
+  });
+
+  return matches.map(
+    ({ leader, _count }) => `샬롬 리스트에서 ${_count}명이 '${leader}'을(를) 순장으로 기록하고 있습니다.`
+  );
+}

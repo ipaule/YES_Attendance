@@ -70,7 +70,7 @@ export default function ShalomListPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { showToast } = useToast();
-  const canMoveToRoster = user?.role === "PASTOR";
+  const canMoveToRoster = user?.role === "PASTOR" || (user?.role === "EXECUTIVE" && user?.group?.name === "샬롬");
 
   const [sortKey, setSortKey] = useState<SortKey>("visitDate");
   const [sortDir, setSortDir] = useState<SortDir>("none");

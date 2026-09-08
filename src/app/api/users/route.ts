@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { findDeleteBlockers } from "@/lib/leader-refs";
+import { canAccessShalom } from "@/lib/permissions";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -33,12 +34,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ users });
   }
 
-  // Full user list - Pastor only
-  if (session.role !== "PASTOR") {
+  // Full user list - Pastor only; Shalom Executive gets a scoped view (own-group leaders only)
+  const isPastor = session.role === "PASTOR";
+  const isShalomExecutive = !isPastor && (await canAccessShalom(session));
+  if (!isPastor && !isShalomExecutive) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
   const users = await prisma.user.findMany({
+    where: isShalomExecutive ? { groupId: session.groupId, role: "LEADER" } : undefined,
     select: {
       id: true,
       username: true,

@@ -133,7 +133,7 @@ export function Sidebar({ user, onLogout, onClose }: SidebarProps) {
 
       {/* Admin + Password + Logout */}
       <div className="px-3 py-4 border-t border-gray-100 space-y-1">
-        {user.role === "PASTOR" && (
+        {(user.role === "PASTOR" || (user.role === "EXECUTIVE" && user.group?.name === "샬롬")) && (
           <Link
             href="/dashboard/admin"
             onClick={onClose}

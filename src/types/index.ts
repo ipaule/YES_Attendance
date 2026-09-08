@@ -60,4 +60,5 @@ export interface AttendanceRecord {
 export interface TeamWithData extends Team {
   members: (Member & { attendances: AttendanceRecord[] })[];
   dates: DateColumn[];
+  deleteBlockers?: string[];
 }

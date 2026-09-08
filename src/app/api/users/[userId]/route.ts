@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { canManageRoles } from "@/lib/permissions";
+import { canManageRoles, canDeleteUser } from "@/lib/permissions";
 import { findDeleteBlockers } from "@/lib/leader-refs";
 
 export async function PATCH(
@@ -56,10 +56,6 @@ export async function DELETE(
     return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
   }
 
-  if (!canManageRoles(session)) {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
-  }
-
   const { userId } = await params;
 
   if (userId === session.userId) {
@@ -68,11 +64,15 @@ export async function DELETE(
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { username: true },
+    select: { username: true, role: true, groupId: true },
   });
 
   if (!user) {
     return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 });
+  }
+
+  if (!(await canDeleteUser(session, user))) {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
   const blockers = await findDeleteBlockers([{ id: userId, username: user.username }]);

@@ -60,6 +60,13 @@ function getMobileNavItems(user: User) {
       href: `/dashboard/group/${user.groupId}`,
       icon: FolderOpen,
     });
+    if (user.group?.name === "샬롬") {
+      items.push({
+        label: "관리",
+        href: "/dashboard/admin",
+        icon: Settings,
+      });
+    }
   }
 
   if (user.role === "PASTOR") {

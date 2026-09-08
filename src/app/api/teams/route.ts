@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { canManageTeamsInGroup } from "@/lib/permissions";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -56,8 +57,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "PASTOR") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  if (!session) {
+    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
   }
 
   const { groupId, leaderId } = await request.json();
@@ -67,6 +68,10 @@ export async function POST(request: NextRequest) {
       { error: "공동체와 순장을 선택해주세요." },
       { status: 400 }
     );
+  }
+
+  if (!(await canManageTeamsInGroup(session, groupId))) {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
   // Use leader's username as the team name

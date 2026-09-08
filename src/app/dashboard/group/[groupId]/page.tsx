@@ -138,7 +138,7 @@ export default function GroupPage() {
   });
 
   const groupName = data?.[0]?.group?.name || "";
-  const canManage = user?.role === "PASTOR";
+  const canManage = user?.role === "PASTOR" || (user?.role === "EXECUTIVE" && user?.groupId === groupId);
 
   if (isLoading) {
     return (
@@ -347,19 +347,36 @@ export default function GroupPage() {
       <ConfirmDialog
         open={!!confirmDeleteTeam}
         onOpenChange={(open) => !open && setConfirmDeleteTeam(null)}
-        title="순 삭제"
-        description={confirmDeleteTeam ? `"${confirmDeleteTeam.name}" 순을 삭제하시겠습니까?` : ""}
-        confirmWord={confirmDeleteTeam?.name}
+        title={
+          deleteImpactTeam && deleteImpactTeam.deleteBlockers && deleteImpactTeam.deleteBlockers.length > 0
+            ? "삭제할 수 없습니다"
+            : "순 삭제"
+        }
+        description={
+          confirmDeleteTeam
+            ? deleteImpactTeam?.deleteBlockers && deleteImpactTeam.deleteBlockers.length > 0
+              ? `"${confirmDeleteTeam.name}" 순은 아래 이유로 삭제할 수 없습니다.`
+              : `"${confirmDeleteTeam.name}" 순을 삭제하시겠습니까?`
+            : ""
+        }
+        confirmWord={
+          deleteImpactTeam?.deleteBlockers && deleteImpactTeam.deleteBlockers.length > 0
+            ? undefined
+            : confirmDeleteTeam?.name
+        }
         pending={deleteTeamMutation.isPending}
+        blocked={!!deleteImpactTeam?.deleteBlockers && deleteImpactTeam.deleteBlockers.length > 0}
         impact={
           confirmDeleteTeam
-            ? [
-                `순원 ${confirmDeleteTeam._count.members}명`,
-                deleteImpactLoading || !deleteImpactTeam
-                  ? "날짜/출석 기록 불러오는 중..."
-                  : `날짜 ${deleteImpactTeam.dates.length}개, 출석 기록 ${deleteImpactTeam.members.reduce((sum, m) => sum + m.attendances.length, 0)}건`,
-                "이 함께 삭제됩니다",
-              ]
+            ? deleteImpactTeam?.deleteBlockers && deleteImpactTeam.deleteBlockers.length > 0
+              ? deleteImpactTeam.deleteBlockers
+              : [
+                  `순원 ${confirmDeleteTeam._count.members}명`,
+                  deleteImpactLoading || !deleteImpactTeam
+                    ? "날짜/출석 기록 불러오는 중..."
+                    : `날짜 ${deleteImpactTeam.dates.length}개, 출석 기록 ${deleteImpactTeam.members.reduce((sum, m) => sum + m.attendances.length, 0)}건`,
+                  "이 함께 삭제됩니다",
+                ]
             : []
         }
         onConfirm={() => confirmDeleteTeam && deleteTeamMutation.mutate(confirmDeleteTeam.id)}

@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { canAccessShalom } from "@/lib/permissions";
 
 export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ memberId: string }> }
 ) {
   const session = await getSession();
-  if (!session || session.role !== "PASTOR") {
+  if (!session) {
+    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+  }
+  if (!(await canAccessShalom(session))) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 

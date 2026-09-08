@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { compareSync, hashSync } from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getSession, signToken, setAuthCookie } from "@/lib/auth";
 
 export async function PATCH(request: NextRequest) {
   const session = await getSession();
@@ -27,10 +27,30 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "현재 비밀번호가 올바르지 않습니다." }, { status: 401 });
   }
 
-  await prisma.user.update({
+  const updated = await prisma.user.update({
     where: { id: session.userId },
-    data: { password: hashSync(newPassword, 10) },
+    data: { password: hashSync(newPassword, 10), tokenVersion: { increment: 1 } },
+    select: { id: true, username: true, role: true, groupId: true, teamId: true, tokenVersion: true },
   });
 
-  return NextResponse.json({ success: true, message: "비밀번호가 변경되었습니다." });
+  const response = NextResponse.json({ success: true, message: "비밀번호가 변경되었습니다." });
+
+  // The bump above kills every OTHER device's session on their next /me.
+  // Re-issue this one so the device the change was made on stays logged in.
+  // loginAt is carried forward, not reset — a password change must not buy
+  // another 90 days.
+  const persist = session.persist ?? true;
+  const token = await signToken({
+    userId: updated.id,
+    username: updated.username,
+    role: updated.role,
+    groupId: updated.groupId,
+    teamId: updated.teamId,
+    tokenVersion: updated.tokenVersion,
+    loginAt: session.loginAt ?? Math.floor(Date.now() / 1000),
+    persist,
+  });
+  setAuthCookie(response, token, persist);
+
+  return response;
 }

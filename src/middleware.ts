@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
+import { verifyToken, clearAuthCookie } from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ error: "인증이 만료되었습니다." }, { status: 401 });
     }
     const response = NextResponse.redirect(new URL("/login", request.url));
-    response.cookies.set("token", "", { maxAge: 0 });
+    clearAuthCookie(response); // must match path:"/" the cookie was set with, or the delete no-ops
     return response;
   }
 

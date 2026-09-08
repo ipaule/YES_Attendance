@@ -17,13 +17,18 @@ export function useAuth() {
         setUser(data.user);
       } else {
         setUser(null);
+        // Cookie was a structurally-valid JWT (middleware let us through) but
+        // the session is dead — revoked tokenVersion, expired past the
+        // absolute cap, or a deleted account. Middleware can't see any of
+        // that, so bounce here instead of rendering a blank dashboard.
+        router.replace("/login");
       }
     } catch {
-      setUser(null);
+      setUser(null); // transient network failure — do NOT bounce
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     fetchUser();

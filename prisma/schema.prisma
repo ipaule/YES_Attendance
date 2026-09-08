@@ -9,15 +9,16 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  password  String
-  role      String   @default("LEADER") // PASTOR, EXECUTIVE, LEADER
-  groupId   String?
-  group     Group?   @relation(fields: [groupId], references: [id])
-  teamId    String?  @unique
-  team      Team?    @relation("LeaderOfTeam")
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  username     String   @unique
+  password     String
+  role         String   @default("LEADER") // PASTOR, EXECUTIVE, LEADER
+  groupId      String?
+  group        Group?   @relation(fields: [groupId], references: [id])
+  teamId       String?  @unique
+  team         Team?    @relation("LeaderOfTeam")
+  tokenVersion Int      @default(0) // bumped to revoke outstanding session tokens
+  createdAt    DateTime @default(now())
 }
 
 model Group {

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { compareSync } from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { signToken } from "@/lib/auth";
+import { signToken, setAuthCookie } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json();
+    const { username, password, persist } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json(
@@ -32,12 +32,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Trust boundary: only an explicit boolean counts. A client sending
+    // "false" (string), null, or nothing gets the default-ON behavior, never
+    // a silent downgrade of the user's actual intent.
+    const remember = typeof persist === "boolean" ? persist : true;
+
     const token = await signToken({
       userId: user.id,
       username: user.username,
       role: user.role,
       groupId: user.groupId,
       teamId: user.teamId,
+      tokenVersion: user.tokenVersion,
+      loginAt: Math.floor(Date.now() / 1000),
+      persist: remember,
     });
 
     const response = NextResponse.json({
@@ -50,12 +58,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    response.cookies.set("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-    });
+    setAuthCookie(response, token, remember);
 
     return response;
   } catch {

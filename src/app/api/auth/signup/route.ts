@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hashSync } from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { signToken } from "@/lib/auth";
+import { signToken, setAuthCookie } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,12 +45,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Signing up is inherently your own device — always persist.
     const token = await signToken({
       userId: user.id,
       username: user.username,
       role: user.role,
       groupId: user.groupId,
       teamId: user.teamId,
+      tokenVersion: user.tokenVersion,
+      loginAt: Math.floor(Date.now() / 1000),
+      persist: true,
     });
 
     const response = NextResponse.json({
@@ -63,12 +67,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    response.cookies.set("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-    });
+    setAuthCookie(response, token, true);
 
     return response;
   } catch {

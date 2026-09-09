@@ -105,6 +105,10 @@ async function main() {
   // ── Member ────────────────────────────────────────────────────────────────
   // No new columns detected — verified match.
 
+  // ── User ──────────────────────────────────────────────────────────────────
+  const usr = await getColumns("User");
+  await addCol("User", "tokenVersion", "INTEGER NOT NULL DEFAULT 0", usr);
+
   console.log("Migration complete.");
 }
 

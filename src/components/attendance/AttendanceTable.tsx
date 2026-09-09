@@ -87,7 +87,9 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const { user } = useAuth();
-  const canManageMembers = user?.role === "PASTOR";
+  const canManageMembers =
+    user?.role === "PASTOR" ||
+    (user?.role === "EXECUTIVE" && user?.groupId === team.groupId);
   const canManageDates = user?.role === "PASTOR" || user?.role === "EXECUTIVE";
   const canLockOrDeleteDates =
     user?.role === "PASTOR" || user?.role === "EXECUTIVE" || user?.role === "LEADER";

@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { resolveRosterMember } from "@/lib/roster-match";
+import { canManageMembersInTeam } from "@/lib/permissions";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ memberId: string }> }
 ) {
   const session = await getSession();
-  if (!session || session.role !== "PASTOR") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  if (!session) {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
   }
 
   const { memberId } = await params;
@@ -21,6 +22,10 @@ export async function PATCH(
 
   if (!member) {
     return NextResponse.json({ error: "멤버를 찾을 수 없습니다." }, { status: 404 });
+  }
+
+  if (!(await canManageMembersInTeam(session, member.teamId))) {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
   const data = await request.json();
@@ -45,8 +50,8 @@ export async function DELETE(
   { params }: { params: Promise<{ memberId: string }> }
 ) {
   const session = await getSession();
-  if (!session || session.role !== "PASTOR") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  if (!session) {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
   }
 
   const { memberId } = await params;
@@ -64,6 +69,10 @@ export async function DELETE(
 
   if (!member) {
     return NextResponse.json({ error: "멤버를 찾을 수 없습니다." }, { status: 404 });
+  }
+
+  if (!(await canManageMembersInTeam(session, member.teamId))) {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
   await prisma.member.delete({ where: { id: memberId } });

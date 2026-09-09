@@ -28,6 +28,19 @@ export async function canManageTeamsInGroup(
   return false;
 }
 
+export async function canManageMembersInTeam(
+  user: JWTPayload,
+  teamId: string
+): Promise<boolean> {
+  if (user.role !== "PASTOR" && user.role !== "EXECUTIVE") return false;
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
+    select: { groupId: true },
+  });
+  if (!team) return false;
+  return canManageTeamsInGroup(user, team.groupId);
+}
+
 export function canManageRoles(user: JWTPayload): boolean {
   return user.role === "PASTOR";
 }

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { resolveRosterMember } from "@/lib/roster-match";
+import { canManageMembersInTeam } from "@/lib/permissions";
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "PASTOR") {
-    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  if (!session) {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
   }
 
   const { name, gender, birthYear, teamId } = await request.json();
@@ -16,6 +17,10 @@ export async function POST(request: NextRequest) {
       { error: "모든 필드를 입력해주세요." },
       { status: 400 }
     );
+  }
+
+  if (!(await canManageMembersInTeam(session, teamId))) {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
   // Get max order

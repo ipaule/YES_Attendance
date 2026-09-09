@@ -24,6 +24,12 @@ export async function PATCH(
 
   if (data.role !== undefined) {
     updateData.role = data.role;
+    // Force this one user's existing sessions to re-check on their next
+    // /api/auth/me call, same mechanism password change already uses —
+    // otherwise their JWT keeps the old role for up to 24h (sliding
+    // renewal window). Removed in 0fbadc2 before this column existed;
+    // restored now that it's been on the schema since 9a6ffb8.
+    updateData.tokenVersion = { increment: 1 };
   }
 
   if (data.groupId !== undefined) {

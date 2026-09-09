@@ -28,6 +28,14 @@ export async function canManageTeamsInGroup(
   return false;
 }
 
+export async function canManageDatesInTeam(
+  user: JWTPayload,
+  teamId: string
+): Promise<boolean> {
+  if (user.role !== "PASTOR" && user.role !== "EXECUTIVE") return false;
+  return canAccessTeam(user, teamId);
+}
+
 export async function canManageMembersInTeam(
   user: JWTPayload,
   teamId: string

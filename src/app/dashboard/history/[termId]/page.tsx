@@ -9,7 +9,9 @@ import {
   calculateGrade,
   getGradeColor,
 } from "@/lib/attendance";
+import { statusOption } from "@/lib/attendance-status";
 import { fetchJson } from "@/lib/http";
+import type { AttendanceStatus } from "@/types";
 
 interface TermData {
   id: string;
@@ -286,29 +288,23 @@ export default function TermDetailPage() {
                               const att = member.attendances.find(
                                 (a) => a.attendanceDate.label === date.label
                               );
-                              const status = att?.status || "";
+                              const status = (att?.status || "") as AttendanceStatus | "";
+                              const opt = statusOption(status);
                               return (
-                                <td
-                                  key={date.label}
-                                  className="px-1 py-1.5 text-center"
-                                  title={
-                                    att?.status === "AWR" && att?.awrReason
-                                      ? att.awrReason
-                                      : undefined
-                                  }
-                                >
-                                  {status === "HERE" && (
-                                    <span className="text-green-600 font-bold">O</span>
-                                  )}
-                                  {status === "ABSENT" && (
-                                    <span className="text-red-500 font-bold">X</span>
-                                  )}
-                                  {status === "AWR" && (
-                                    <span className="text-yellow-500 font-bold">△</span>
-                                  )}
-                                  {!status && (
-                                    <span className="text-gray-300">-</span>
-                                  )}
+                                <td key={date.label} className="px-1 py-1.5 text-center">
+                                  <div className="flex flex-col items-center">
+                                    <span className={`font-bold leading-none ${opt.colorClass}`}>
+                                      {opt.glyph}
+                                    </span>
+                                    {att?.awrReason && (
+                                      <span
+                                        className="max-w-[56px] px-0.5 text-[8px] leading-tight text-gray-500 truncate"
+                                        title={att.awrReason}
+                                      >
+                                        {att.awrReason}
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
                               );
                             })}

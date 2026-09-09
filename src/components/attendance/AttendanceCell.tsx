@@ -58,19 +58,24 @@ function AttendanceCellImpl({ status, awrReason, onChange, locked }: AttendanceC
       <Popover.Trigger asChild>
         <button
           type="button"
-          className={`relative w-11 h-11 flex items-center justify-center rounded-lg transition-colors ${
+          className={`relative w-11 h-11 flex flex-col items-center justify-center rounded-lg transition-colors ${
             locked ? "cursor-default opacity-60" : "hover:bg-gray-100 cursor-pointer"
           }`}
         >
-          <span className={`font-bold text-lg ${colorClass}`}>{glyph}</span>
+          <span className={`font-bold text-lg leading-none ${colorClass}`}>{glyph}</span>
+          {hasReason && (
+            <span
+              className="w-full px-0.5 text-[8px] leading-tight text-gray-500 truncate"
+              title={awrReason ?? undefined}
+            >
+              {awrReason}
+            </span>
+          )}
           {missingReason && (
             <span
               className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-amber-500"
               title="사유결석 사유 없음"
             />
-          )}
-          {hasReason && !missingReason && (
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500" />
           )}
         </button>
       </Popover.Trigger>

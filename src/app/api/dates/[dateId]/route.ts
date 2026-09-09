@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { canAccessTeam } from "@/lib/permissions";
+import { canAccessTeam, canManageDatesInTeam } from "@/lib/permissions";
 
 export async function PATCH(
   request: NextRequest,
@@ -50,7 +50,7 @@ export async function DELETE(
     return NextResponse.json({ error: "날짜를 찾을 수 없습니다." }, { status: 404 });
   }
 
-  const hasAccess = await canAccessTeam(session, dateRecord.teamId);
+  const hasAccess = await canManageDatesInTeam(session, dateRecord.teamId);
   if (!hasAccess) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }

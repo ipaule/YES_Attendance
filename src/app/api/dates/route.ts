@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { canAccessTeam } from "@/lib/permissions";
+import { canManageDatesInTeam } from "@/lib/permissions";
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const hasAccess = await canAccessTeam(session, teamId);
+  const hasAccess = await canManageDatesInTeam(session, teamId);
   if (!hasAccess) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }

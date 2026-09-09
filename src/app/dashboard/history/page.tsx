@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, RotateCcw, CalendarPlus, FolderPlus } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { fetchJson } from "@/lib/http";
 import { HistoryTree, type HistoryTreeHandle, type HistoryTreeNode } from "@/components/HistoryTree";
 
@@ -34,6 +35,7 @@ async function patchJson<T>(url: string, body: unknown): Promise<T> {
 export default function HistoryPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const treeRef = useRef<HistoryTreeHandle>(null);
 
   // Date range state
@@ -132,6 +134,18 @@ export default function HistoryPage() {
     setConfirmText("");
     setTermName("");
   };
+
+  // Page-level gate, same pattern as /dashboard/admin, /dashboard/group and
+  // /dashboard/shalom — /api/terms is PASTOR-only server-side, so a leader
+  // or non-owning executive hitting this route directly would otherwise see
+  // the full page shell (날짜 일괄 추가, 새로운 텀 시작) with an empty tree.
+  if (user && user.role !== "PASTOR") {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <p className="text-red-500">권한이 없습니다.</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

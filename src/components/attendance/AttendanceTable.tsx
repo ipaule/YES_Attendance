@@ -91,7 +91,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
     user?.role === "PASTOR" ||
     (user?.role === "EXECUTIVE" && user?.groupId === team.groupId);
   const canManageDates = user?.role === "PASTOR" || user?.role === "EXECUTIVE";
-  const canLockOrDeleteDates =
+  const canLockDates =
     user?.role === "PASTOR" || user?.role === "EXECUTIVE" || user?.role === "LEADER";
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMember, setNewMember] = useState({
@@ -605,25 +605,28 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                       >
                         <CheckCheck className="h-3 w-3" />
                       </button>
-                      {canLockOrDeleteDates && (
-                        <>
-                          {/* Lock/delete stay visible at every width — LEADER (mobile-only
-                              in practice) can lock/delete dates too, unlike the PASTOR/
-                              EXECUTIVE-only bulk-check button above. */}
-                          <button
-                            onClick={() => toggleLockMutation.mutate({ dateId: date.id, locked: !date.locked })}
-                            className={`inline-flex items-center justify-center w-11 h-11 transition-colors flex-shrink-0 ${date.locked ? "text-red-400 hover:text-red-600" : "text-gray-300 hover:text-gray-500"}`}
-                            title={date.locked ? "잠금 해제" : "잠금"}
-                          >
-                            {date.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                          </button>
-                          <button
-                            onClick={() => setConfirmDeleteDate(date)}
-                            className="inline-flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </>
+                      {canLockDates && (
+                        // Lock stays visible at every width — LEADER (mobile-only in
+                        // practice) can lock/unlock dates too, unlike the PASTOR/
+                        // EXECUTIVE-only bulk-check button above. Delete is gated
+                        // separately below to PASTOR/EXECUTIVE only: date columns are
+                        // shared structure and deleting one cascades every member's
+                        // attendance for that date, so a leader must not be able to.
+                        <button
+                          onClick={() => toggleLockMutation.mutate({ dateId: date.id, locked: !date.locked })}
+                          className={`inline-flex items-center justify-center w-11 h-11 transition-colors flex-shrink-0 ${date.locked ? "text-red-400 hover:text-red-600" : "text-gray-300 hover:text-gray-500"}`}
+                          title={date.locked ? "잠금 해제" : "잠금"}
+                        >
+                          {date.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                        </button>
+                      )}
+                      {canManageDates && (
+                        <button
+                          onClick={() => setConfirmDeleteDate(date)}
+                          className="inline-flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       )}
                     </div>
                   </div>

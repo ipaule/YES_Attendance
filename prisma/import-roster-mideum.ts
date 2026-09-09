@@ -4,8 +4,6 @@ const prisma = new PrismaClient();
 
 type Entry = [string, string, string, string, string]; // name, birthDate, gender, phone, rawNote
 
-const GROUP_NAME = "믿음";
-
 const data: Record<string, Entry[]> = {
   // 권오익 — already imported, backfill birthday only
   권오익: [

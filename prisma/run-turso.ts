@@ -1,6 +1,11 @@
 // Wrapper to run any seed script against Turso
 // Usage: TURSO_DATABASE_URL=... TURSO_AUTH_TOKEN=... npx tsx prisma/run-turso.ts <script>
 // Example: npx tsx prisma/run-turso.ts prisma/sample-data2.ts
+//
+// require() is load-bearing here — this monkey-patches Node's CJS module
+// cache/require chain so target scripts transparently get the Turso-backed
+// PrismaClient, which isn't expressible with static ESM imports.
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
 import { createClient } from "@libsql/client";
@@ -19,19 +24,12 @@ const OriginalPrismaClient = PrismaClient;
 const libsql = createClient({ url, authToken });
 const adapter = new PrismaLibSQL(libsql);
 
-// Override the module cache so when scripts import PrismaClient, they get the Turso version
 const Module = require("module");
-const originalResolveFilename = Module._resolveFilename;
 let tursoClient: InstanceType<typeof PrismaClient> | null = null;
 
-Module._resolveFilename = function (request: string, ...args: unknown[]) {
-  return originalResolveFilename.call(this, request, ...args);
-};
-
 // Patch PrismaClient constructor
-const originalProto = OriginalPrismaClient.prototype;
 const handler = {
-  construct(_target: unknown, args: unknown[]) {
+  construct(_target: unknown, _args: unknown[]) {
     if (!tursoClient) {
       tursoClient = new OriginalPrismaClient({ adapter } as never);
     }

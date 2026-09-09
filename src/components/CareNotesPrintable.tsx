@@ -278,6 +278,7 @@ export function CareNotesPrintable({ teams, filterTeamId }: Props) {
                       <>
                         <td className="care-note-leader-tag">순장</td>
                         <td className="care-note-photo-cell">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- print layout, next/image's lazy load + wrapper break print output */}
                           <img
                             className="care-note-photo"
                             src={r.row.photo || "/default-profile.jpg"}
@@ -293,6 +294,7 @@ export function CareNotesPrintable({ teams, filterTeamId }: Props) {
                       <>
                         <td className="care-note-num">{r.number}</td>
                         <td className="care-note-photo-cell">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- print layout, next/image's lazy load + wrapper break print output */}
                           <img
                             className="care-note-photo"
                             src={r.row.photo || "/default-profile.jpg"}

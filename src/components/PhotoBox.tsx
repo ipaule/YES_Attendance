@@ -36,6 +36,7 @@ export function PhotoBox({ url, memberId, onUploaded, onCleared }: PhotoBoxProps
   return (
     <div className="flex flex-col gap-1.5">
       <div className="w-[150px] h-[150px] flex-shrink-0 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary uploaded photo URL, fixed 150x150, no next/image config needed */}
         <img
           src={src}
           alt="프로필"

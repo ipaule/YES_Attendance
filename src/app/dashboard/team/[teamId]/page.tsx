@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -12,6 +13,7 @@ export default function TeamPage() {
   const params = useParams();
   const teamId = params.teamId as string;
   const router = useRouter();
+  const [tab, setTab] = useState<"check" | "table">("check");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["team", teamId],
@@ -51,8 +53,23 @@ export default function TeamPage() {
         </h1>
       </div>
 
-      <TodayAttendanceList team={data} className="lg:hidden" />
-      <AttendanceTable team={data} className="hidden lg:block" />
+      <div className="flex lg:hidden border-b border-gray-200">
+        <button
+          onClick={() => setTab("check")}
+          className={`flex-1 min-h-[44px] text-sm font-medium ${tab === "check" ? "text-indigo-600 border-b-2 border-indigo-600" : "text-gray-400"}`}
+        >
+          체크
+        </button>
+        <button
+          onClick={() => setTab("table")}
+          className={`flex-1 min-h-[44px] text-sm font-medium ${tab === "table" ? "text-indigo-600 border-b-2 border-indigo-600" : "text-gray-400"}`}
+        >
+          전체표
+        </button>
+      </div>
+
+      <TodayAttendanceList team={data} className={tab === "check" ? "lg:hidden" : "hidden"} />
+      <AttendanceTable team={data} className={tab === "table" ? "block lg:block" : "hidden lg:block"} />
     </div>
   );
 }

@@ -68,7 +68,7 @@ function SortableTableRow({ id, children, editRowId }: { id: string; children: R
   };
   return (
     <tr ref={setNodeRef} style={style} className="group border-b border-gray-100 hover:bg-gray-50" {...attributes} data-edit-row={editRowId || undefined}>
-      <td className="px-1 py-1 text-center w-6">
+      <td className="hidden lg:table-cell bg-white px-1 py-1 text-center w-6">
         <button {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
           <GripVertical className="h-3.5 w-3.5" />
         </button>
@@ -325,7 +325,11 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
         bestId = d.id;
       }
     }
-    return bestId;
+    // Fall back to the first date (same as TodayAttendanceList's defaultDateId)
+    // when every date is in the future — a team with only upcoming Sundays
+    // pre-added otherwise got `null` here, which hid the entire nav bar
+    // (prev/next/오늘/counter) with zero scroll affordance on a wide table.
+    return bestId ?? team.dates[0]?.id ?? null;
   }, [team.dates]);
 
   useLayoutEffect(() => {
@@ -334,10 +338,11 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
     const nameTh = nameThRef.current;
     const targetTh = dateThRefs.current.get(targetDateId);
     if (!container || !nameTh || !targetTh) return;
+    if (container.clientWidth === 0) return;
     const delta = targetTh.getBoundingClientRect().left - nameTh.getBoundingClientRect().right;
     container.scrollLeft = container.scrollLeft + delta;
     hasAutoScrolledRef.current = true;
-  }, [targetDateId]);
+  });
 
   // ‹ / › / 오늘 nav (A9) — reuses the dateThRefs scroll machinery above.
   // No filtering: all date columns stay visible, this just scrolls the
@@ -559,8 +564,8 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="bg-gray-50 px-1 py-2 w-6" />
-              <th className="bg-gray-50 px-1 py-2 text-center font-medium text-gray-400 w-8 min-w-[32px]">#</th>
+              <th className="hidden lg:table-cell bg-gray-50 px-1 py-2 w-6" />
+              <th className="hidden lg:table-cell bg-gray-50 px-1 py-2 text-center font-medium text-gray-400 w-8 min-w-[32px]">#</th>
               <th
                 ref={nameThRef}
                 className="sticky left-0 z-20 bg-gray-50 px-2 py-2 text-left font-medium text-gray-600 w-16 min-w-[64px] cursor-pointer hover:text-indigo-600 select-none"
@@ -569,13 +574,13 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                 이름{sortIcon("name")}
               </th>
               <th
-                className="bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-10 min-w-[40px] whitespace-nowrap cursor-pointer hover:text-indigo-600 select-none"
+                className="hidden lg:table-cell bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-10 min-w-[40px] whitespace-nowrap cursor-pointer hover:text-indigo-600 select-none"
                 onClick={() => toggleSort("gender")}
               >
                 성별{sortIcon("gender")}
               </th>
               <th
-                className="bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-14 min-w-[56px] cursor-pointer hover:text-indigo-600 select-none"
+                className="hidden lg:table-cell bg-gray-50 px-1 py-2 text-center font-medium text-gray-600 w-14 min-w-[56px] cursor-pointer hover:text-indigo-600 select-none"
                 onClick={() => toggleSort("birthYear")}
               >
                 또래{sortIcon("birthYear")}
@@ -596,22 +601,25 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                         onClick={() => markAllPresent(date.id)}
                         disabled={!!date.locked || bulkMarkPending}
                         title="전체 출석 체크 (빈칸만 채웁니다)"
-                        className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-indigo-500 transition-colors flex-shrink-0 disabled:opacity-30"
+                        className="hidden lg:inline-flex items-center justify-center w-11 h-11 text-gray-300 hover:text-indigo-500 transition-colors flex-shrink-0 disabled:opacity-30"
                       >
                         <CheckCheck className="h-3 w-3" />
                       </button>
                       {canLockOrDeleteDates && (
                         <>
+                          {/* Lock/delete stay visible at every width — LEADER (mobile-only
+                              in practice) can lock/delete dates too, unlike the PASTOR/
+                              EXECUTIVE-only bulk-check button above. */}
                           <button
                             onClick={() => toggleLockMutation.mutate({ dateId: date.id, locked: !date.locked })}
-                            className={`flex items-center justify-center w-11 h-11 transition-colors flex-shrink-0 ${date.locked ? "text-red-400 hover:text-red-600" : "text-gray-300 hover:text-gray-500"}`}
+                            className={`inline-flex items-center justify-center w-11 h-11 transition-colors flex-shrink-0 ${date.locked ? "text-red-400 hover:text-red-600" : "text-gray-300 hover:text-gray-500"}`}
                             title={date.locked ? "잠금 해제" : "잠금"}
                           >
                             {date.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
                           </button>
                           <button
                             onClick={() => setConfirmDeleteDate(date)}
-                            className="flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                            className="inline-flex items-center justify-center w-11 h-11 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
                           >
                             <Trash2 className="h-3 w-3" />
                           </button>
@@ -622,18 +630,18 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                 </th>
               ))}
               <th
-                className="sticky right-[100px] z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[72px] cursor-pointer hover:text-indigo-600 select-none whitespace-nowrap"
+                className="sticky right-14 lg:right-[100px] z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[72px] cursor-pointer hover:text-indigo-600 select-none whitespace-nowrap"
                 onClick={() => toggleSort("rate")}
               >
                 출석률{sortIcon("rate")} <HelpTip text={helpAnswer("b2")} />
               </th>
               <th
-                className="sticky right-11 z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[56px] cursor-pointer hover:text-indigo-600 select-none whitespace-nowrap"
+                className="sticky right-0 lg:right-11 z-20 bg-gray-50 px-2 py-2 text-center font-medium text-gray-600 w-[56px] cursor-pointer hover:text-indigo-600 select-none whitespace-nowrap"
                 onClick={() => toggleSort("grade")}
               >
                 등급{sortIcon("grade")} <HelpTip text={helpAnswer("b4")} />
               </th>
-              <th className="sticky right-0 z-20 bg-gray-50 px-1 py-2 w-11" />
+              <th className="hidden lg:table-cell sticky right-0 z-20 bg-gray-50 px-1 py-2 w-11" />
             </tr>
           </thead>
           <SortableContext items={stableMemberIds} strategy={verticalListSortingStrategy}>
@@ -644,7 +652,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
               const grade = calculateGrade(rate);
               return (
                 <SortableTableRow key={member.id} id={member.id}>
-                  <td className="bg-white px-1 py-1 text-center text-xs text-gray-400 w-8">{idx + 1}</td>
+                  <td className="hidden lg:table-cell bg-white px-1 py-1 text-center text-xs text-gray-400 w-8">{idx + 1}</td>
                   {/* Name */}
                   <td className="sticky left-0 z-20 bg-white group-hover:bg-gray-50 px-2 py-1 w-16">
                     {canManageMembers ? (
@@ -665,11 +673,11 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                     )}
                   </td>
                   {/* Gender */}
-                  <td className="bg-white px-1 py-1 text-center w-10">
+                  <td className="hidden lg:table-cell bg-white px-1 py-1 text-center w-10">
                     <span className={`text-xs font-medium ${member.gender === "남" ? "text-blue-600" : member.gender === "여" ? "text-red-600" : "text-gray-500"}`}>{member.gender || "-"}</span>
                   </td>
                   {/* Birth Year */}
-                  <td className="bg-white px-1 py-1 text-center w-14">
+                  <td className="hidden lg:table-cell bg-white px-1 py-1 text-center w-14">
                     <span className="text-xs text-gray-500">{member.birthYear}</span>
                   </td>
                   {/* Attendance cells */}
@@ -701,13 +709,13 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                     );
                   })}
                   {/* Rate */}
-                  <td className="sticky right-[100px] z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[72px]">
+                  <td className="sticky right-14 lg:right-[100px] z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[72px]">
                     <span className="text-xs font-medium text-gray-700">
                       {rate >= 0 ? `${rate.toFixed(0)}%` : "-"}
                     </span>
                   </td>
                   {/* Grade */}
-                  <td className="sticky right-11 z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[56px]">
+                  <td className="sticky right-0 lg:right-11 z-20 bg-white group-hover:bg-gray-50 px-2 py-1 text-center w-[56px]">
                     <span
                       className={`inline-block text-xs font-bold px-1.5 py-0.5 rounded ${getGradeColor(grade)}`}
                     >
@@ -715,7 +723,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                     </span>
                   </td>
                   {/* Delete (pastor/exec only) */}
-                  <td className="sticky right-0 z-20 bg-white group-hover:bg-gray-50 px-1 py-1 w-11">
+                  <td className="hidden lg:table-cell sticky right-0 z-20 bg-white group-hover:bg-gray-50 px-1 py-1 w-11">
                     {canManageMembers && (
                       <button
                         onClick={() => setConfirmDeleteMember(member)}

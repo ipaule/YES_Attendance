@@ -156,6 +156,17 @@ export function TodayAttendanceList({ team, className }: TodayAttendanceListProp
         >
           <ChevronRight className="h-5 w-5" />
         </button>
+        {/* Mirrors AttendanceTable's 오늘 button (desktop/전체표) — this tab
+            had its own separately-coded date-nav that never got the same
+            control when it was added there. */}
+        {defaultDateId && selectedDateId !== defaultDateId && (
+          <button
+            onClick={() => changeDate(defaultDateId)}
+            className="text-sm text-indigo-600 hover:underline px-1 flex-shrink-0"
+          >
+            오늘
+          </button>
+        )}
       </div>
 
       {/* Mark all present / undo */}

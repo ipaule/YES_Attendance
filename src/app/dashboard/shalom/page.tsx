@@ -94,6 +94,11 @@ export default function ShalomListPage() {
       const data = await fetchJson<{ members: ShalomMember[] }>("/api/shalom");
       return data.members;
     },
+    // API 403s for any role other than PASTOR/샬롬-EXECUTIVE; without this
+    // guard the query still fires, the 403 silently resolves toward an empty
+    // list, and a blocked user sees the full page shell with "리스트가
+    // 비어있습니다." instead of a permission message.
+    enabled: !!user && canMoveToRoster,
   });
 
   const { data: folders } = useQuery({
@@ -300,6 +305,18 @@ export default function ShalomListPage() {
     if (s === "졸업") return "bg-purple-50 text-purple-700";
     return "bg-gray-50 text-gray-700";
   };
+
+  // Page-level gate, same pattern as /dashboard/admin — canMoveToRoster is
+  // the identical PASTOR-or-샬롬-EXECUTIVE check that already gated the
+  // per-row move button, just never used to gate the page itself. Wait for
+  // `user` to load first so this doesn't flash for an authorized viewer.
+  if (user && !canMoveToRoster) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <p className="text-red-500">권한이 없습니다.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pb-20 lg:pb-4">

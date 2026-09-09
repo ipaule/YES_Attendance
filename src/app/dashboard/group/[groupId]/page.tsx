@@ -75,6 +75,10 @@ export default function GroupPage() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["teams", groupId] });
       queryClient.invalidateQueries({ queryKey: ["available-leaders", groupId] });
+      // Partial key match (no graphMode) so either count/percentage variant
+      // that's currently cached gets refetched — a new/renamed/deleted team
+      // otherwise left the chart legend showing stale names until reload.
+      queryClient.invalidateQueries({ queryKey: ["graph", "group", groupId] });
       setShowAddTeam(false);
       setSelectedLeaderId("");
     },
@@ -93,6 +97,7 @@ export default function GroupPage() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["teams", groupId] });
+      queryClient.invalidateQueries({ queryKey: ["graph", "group", groupId] });
       setEditingTeam(null);
     },
     onError: () => showToast("저장 실패 — 다시 시도해주세요"),
@@ -108,6 +113,7 @@ export default function GroupPage() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["teams", groupId] });
       queryClient.invalidateQueries({ queryKey: ["available-leaders", groupId] });
+      queryClient.invalidateQueries({ queryKey: ["graph", "group", groupId] });
     },
     onError: () => showToast("삭제 실패 — 다시 시도해주세요"),
   });
@@ -139,6 +145,20 @@ export default function GroupPage() {
 
   const groupName = data?.[0]?.group?.name || "";
   const canManage = user?.role === "PASTOR" || (user?.role === "EXECUTIVE" && user?.groupId === groupId);
+
+  // Page-level gate, same pattern as /dashboard/admin and /dashboard/shalom —
+  // `canManage` is also exactly "who's allowed to view this page at all"
+  // (LEADER is scoped to their own team page, never a group page). Without
+  // this, LEADER (and an EXECUTIVE of a different group) could load any
+  // group's page directly by URL — the `/api/teams` route happens to ignore
+  // the groupId param for LEADER today, but that's incidental, not a gate.
+  if (user && !canManage) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <p className="text-red-500">권한이 없습니다.</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -203,7 +223,7 @@ export default function GroupPage() {
               setShowAddTeam(false);
               setSelectedLeaderId("");
             }}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2"
           >
             취소
           </button>

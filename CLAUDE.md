@@ -16,7 +16,10 @@ This project uses `moduleResolution: 'bundler'`. Do not add `ignoreDeprecations`
 This project enforces `react-hooks/refs` — a ref's value cannot be read during render. For values that need referential stability across renders (e.g. stabilizing an array passed to a child), use the "adjust state during render" pattern (compare-then-`setState` in the render body) instead of `useRef`.
 
 ## Known Lint Baseline
-`npm run lint` reports 4 pre-existing errors / 11 warnings unrelated to any single change: `require()` imports in `prisma/run-turso.ts`, a React Compiler memoization-skip in `AttendanceTable.tsx`'s `sortedMembers` useMemo, and assorted unused-vars/`<img>` warnings. If your lint output matches this exactly, you haven't introduced anything new.
+`npm run lint` is clean — 0 errors, 0 warnings. Any output means your change introduced it. (Two deliberate suppressions remain and are expected: the `require()` monkey-patching in `prisma/run-turso.ts`, and the `react-hooks/preserve-manual-memoization` disable on `AttendanceTable.tsx`'s `sortedMembers` — both have inline comments explaining why.)
+
+## E2E Tests
+`npm run e2e` runs the Playwright smoke suite in `e2e/` (mobile + desktop projects). Requires `E2E_USER`/`E2E_PASS` env vars for a real account; skips itself if unset. `npm run e2e:ui` for the interactive runner.
 
 ## Shared Helpers
 - `src/lib/http.ts` — `fetchJson`/`HttpError`: use for TanStack Query `queryFn`s so HTTP status is preserved and the global retry predicate (`QueryProvider.tsx`) can fail fast on 4xx.

@@ -92,20 +92,37 @@ export async function applyRosterPatch(
   });
 
   // Sync name/gender/birthYear changes to team Member records (existing behavior).
+  // Scoped to this roster person's own team — an unscoped update-by-name would
+  // also rewrite an unrelated homonym's Member row on a different team.
   const updates: Record<string, string> = {};
   if (data.name !== undefined && data.name !== oldMember.name) updates.name = data.name as string;
   if (data.gender !== undefined && data.gender !== oldMember.gender) updates.gender = data.gender as string;
   if (data.birthYear !== undefined && data.birthYear !== oldMember.birthYear) updates.birthYear = data.birthYear as string;
 
-  if (Object.keys(updates).length > 0) {
-    const exactUpdate = await prisma.member.updateMany({
-      where: { name: oldMember.name },
-      data: updates,
+  if (Object.keys(updates).length > 0 && oldMember.groupName && oldMember.teamName) {
+    const ownGroup = await prisma.group.findFirst({
+      where: { name: oldMember.groupName },
+      select: { id: true },
     });
-    if (exactUpdate.count === 0) {
-      const stripped = normalizeRosterName(oldMember.name);
-      if (stripped !== oldMember.name) {
-        await prisma.member.updateMany({ where: { name: stripped }, data: updates });
+    const ownTeam = ownGroup
+      ? await prisma.team.findFirst({
+          where: { name: oldMember.teamName, groupId: ownGroup.id },
+          select: { id: true },
+        })
+      : null;
+    if (ownTeam) {
+      const exactUpdate = await prisma.member.updateMany({
+        where: { name: oldMember.name, teamId: ownTeam.id },
+        data: updates,
+      });
+      if (exactUpdate.count === 0) {
+        const stripped = normalizeRosterName(oldMember.name);
+        if (stripped !== oldMember.name) {
+          await prisma.member.updateMany({
+            where: { name: stripped, teamId: ownTeam.id },
+            data: updates,
+          });
+        }
       }
     }
   }
@@ -209,13 +226,31 @@ export async function deleteRosterMember(memberId: string) {
   const roster = await prisma.rosterMember.findUnique({ where: { id: memberId } });
   if (!roster) throw new RosterMutationError("해당 인원을 찾을 수 없습니다.", 404);
 
-  // Delete all attendance Member records for this person before removing the roster entry.
-  // Try exact name first; fall back to suffix-stripped name for legacy rows.
-  const exactDel = await prisma.member.deleteMany({ where: { name: roster.name } });
-  if (exactDel.count === 0) {
-    const stripped = normalizeRosterName(roster.name);
-    if (stripped !== roster.name) {
-      await prisma.member.deleteMany({ where: { name: stripped } });
+  // Delete the attendance Member record for this specific person's own team
+  // before removing the roster entry. Scoped by team — an unscoped
+  // delete-by-name would also remove an unrelated homonym's Member row on a
+  // different team (this bit real data before; see plan/CLAUDE.md).
+  if (roster.groupName && roster.teamName) {
+    const group = await prisma.group.findFirst({
+      where: { name: roster.groupName },
+      select: { id: true },
+    });
+    const team = group
+      ? await prisma.team.findFirst({
+          where: { name: roster.teamName, groupId: group.id },
+          select: { id: true },
+        })
+      : null;
+    if (team) {
+      const exactDel = await prisma.member.deleteMany({
+        where: { name: roster.name, teamId: team.id },
+      });
+      if (exactDel.count === 0) {
+        const stripped = normalizeRosterName(roster.name);
+        if (stripped !== roster.name) {
+          await prisma.member.deleteMany({ where: { name: stripped, teamId: team.id } });
+        }
+      }
     }
   }
 

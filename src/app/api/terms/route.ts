@@ -101,22 +101,25 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Flush: unlink users from teams first, then delete everything
-    // 1. Unlink all users' teamId
+    // Flush: unlink users from teams first, then delete everything.
+    // Scoped to target-group teams only (사랑/소망/믿음) — unscoped updateMany
+    // here previously nulled 샬롬 leaders' teamId/leaderId too, severing that
+    // link with no restore path. See CLAUDE.md / plan for the corruption this caused.
+    const targetTeamIds = teams.map((t) => t.id);
+
+    // 1. Unlink users currently on a target-group team
     await prisma.user.updateMany({
-      where: { teamId: { not: null } },
+      where: { teamId: { in: targetTeamIds } },
       data: { teamId: null },
     });
 
-    // 2. Unlink all teams' leaderId
+    // 2. Unlink target-group teams' leaderId
     await prisma.team.updateMany({
-      where: { leaderId: { not: null } },
+      where: { id: { in: targetTeamIds } },
       data: { leaderId: null },
     });
 
     // 3. Delete attendance, dates, members, teams
-    const targetTeamIds = teams.map((t) => t.id);
-
     await prisma.attendance.deleteMany({
       where: { member: { teamId: { in: targetTeamIds } } },
     });
@@ -140,21 +143,42 @@ export async function POST(request: NextRequest) {
     await prisma.globalDate.deleteMany();
 
     // 5. Delete 사랑/소망/믿음 LEADER and EXECUTIVE users
-    // Keep: all PASTOR, 샬롬 users (leaders + executive)
-    const shalomGroup = await prisma.group.findFirst({
-      where: { name: "샬롬" },
-      select: { id: true },
-    });
-    await prisma.user.deleteMany({
+    // Keep: all PASTOR, 샬롬 users, and anyone with no group (previously an
+    // unscoped `groupId: { not: shalomGroup.id } }` also matched NULL groupId
+    // and deleted those too — now an explicit allowlist so NULL can't match).
+    // Also skip anyone still named as a leader in the 샬롬 리스트 (free-text
+    // ShalomMember.leader) — deleting them would leave that reference
+    // dangling with no cleanup path; report them back instead.
+    const usersToDelete = await prisma.user.findMany({
       where: {
         role: { in: ["LEADER", "EXECUTIVE"] },
-        ...(shalomGroup ? { groupId: { not: shalomGroup.id } } : {}),
+        groupId: { in: targetGroupIds },
       },
+      select: { id: true, username: true },
     });
+
+    const shalomLeaderRefs = await prisma.shalomMember.groupBy({
+      by: ["leader"],
+      where: { leader: { in: usersToDelete.map((u) => u.username) } },
+      _count: true,
+    });
+    const stillReferenced = new Set(shalomLeaderRefs.map((r) => r.leader));
+
+    const idsToDelete = usersToDelete
+      .filter((u) => !stillReferenced.has(u.username))
+      .map((u) => u.id);
+    const skippedUsers = usersToDelete
+      .filter((u) => stillReferenced.has(u.username))
+      .map((u) => u.username);
+
+    await prisma.user.deleteMany({ where: { id: { in: idsToDelete } } });
 
     return NextResponse.json({
       success: true,
       message: `"${name.trim()}" 텀이 저장되었습니다. 새로운 텀을 시작합니다.`,
+      ...(skippedUsers.length > 0 && {
+        warning: `샬롬 리스트에서 순장으로 지정된 계정은 삭제하지 않았습니다: ${skippedUsers.join(", ")}. 관리자 페이지에서 수동으로 정리해주세요.`,
+      }),
     });
   } catch {
     return NextResponse.json(

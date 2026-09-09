@@ -27,7 +27,14 @@ export async function GET() {
     return res;
   }
 
-  // Revocation. Bumped on password change and on PASTOR role/group edits.
+  // Revocation. Currently bumped on password change only — NOT on role
+  // change (PATCH /api/users/[userId] used to bump it here too, but that was
+  // reverted in 0fbadc2 because the tokenVersion column didn't exist yet at
+  // the time; the column shipped later and the bump was never restored). A
+  // demoted/promoted user keeps their old role in the JWT until the next
+  // sliding renewal (up to 24h) or password change. See debug-pass findings
+  // for whether restoring the bump is wanted — it's a behavior change (logs
+  // the user out on every role edit) so it wasn't restored automatically here.
   // ponytail: Edge middleware has no DB, so this lands on the next /me (page
   // mount), not the next arbitrary API call. Upgrade path if that window ever
   // matters: a short-TTL token + refresh, not a Session table.

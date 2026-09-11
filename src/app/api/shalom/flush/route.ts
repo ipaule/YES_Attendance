@@ -26,6 +26,20 @@ export async function POST(request: NextRequest) {
       where: { id: { in: memberIds } },
     });
 
+    // 졸업 status must reach the roster before the only surviving copy of
+    // their info is this lossy history snapshot — hard block, don't just warn.
+    // (방문/등록 have no roster step, so they flush freely.)
+    const notMoved = members.filter((m) => m.status === "졸업" && !m.movedToRosterAt);
+    if (notMoved.length > 0) {
+      return NextResponse.json(
+        {
+          error: `${notMoved.length}명이 아직 로스터로 이동되지 않았습니다. 먼저 "로스터로 이동"을 해주세요.`,
+          names: notMoved.map((m) => m.name),
+        },
+        { status: 409 }
+      );
+    }
+
     const memberData = members.map((m) => ({
       id: crypto.randomUUID(),
       name: m.name,

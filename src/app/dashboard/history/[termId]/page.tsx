@@ -11,6 +11,7 @@ import {
 } from "@/lib/attendance";
 import { statusOption } from "@/lib/attendance-status";
 import { fetchJson } from "@/lib/http";
+import { useHighlightRow } from "@/hooks/useHighlightRow";
 import type { AttendanceStatus } from "@/types";
 
 interface TermData {
@@ -53,6 +54,8 @@ export default function TermDetailPage() {
       return fetchJson<TermData>(`/api/terms/${termId}`);
     },
   });
+
+  const { highlight, isHighlighted } = useHighlightRow(data);
 
   if (isLoading) {
     return (
@@ -269,19 +272,23 @@ export default function TermDetailPage() {
                         const rate = calculateAttendanceRate(statuses);
                         const grade = calculateGrade(rate);
 
+                        const highlighted = isHighlighted(member.id);
+                        const stickyBg = highlighted ? "bg-amber-50" : "bg-white";
+
                         return (
                           <tr
                             key={member.id}
-                            className="border-b border-gray-100"
+                            id={highlighted ? `row-${highlight}` : undefined}
+                            className={`border-b border-gray-100 ${highlighted ? "bg-amber-50" : ""}`}
                           >
-                            <td className="sticky left-0 z-10 bg-white px-1 py-1.5 text-center text-xs text-gray-400 w-8">{idx + 1}</td>
-                            <td className="sticky left-8 z-10 bg-white px-2 py-1.5 text-sm">
+                            <td className={`sticky left-0 z-10 ${stickyBg} px-1 py-1.5 text-center text-xs text-gray-400 w-8`}>{idx + 1}</td>
+                            <td className={`sticky left-8 z-10 ${stickyBg} px-2 py-1.5 text-sm`}>
                               {member.name}
                             </td>
-                            <td className={`sticky left-24 z-10 bg-white px-1 py-1.5 text-center text-xs font-medium ${member.gender === "남" ? "text-blue-600" : member.gender === "여" ? "text-red-600" : "text-gray-500"}`}>
+                            <td className={`sticky left-24 z-10 ${stickyBg} px-1 py-1.5 text-center text-xs font-medium ${member.gender === "남" ? "text-blue-600" : member.gender === "여" ? "text-red-600" : "text-gray-500"}`}>
                               {member.gender || "-"}
                             </td>
-                            <td className="sticky left-[136px] z-10 bg-white px-1 py-1.5 text-center text-xs text-gray-500">
+                            <td className={`sticky left-[136px] z-10 ${stickyBg} px-1 py-1.5 text-center text-xs text-gray-500`}>
                               {member.birthYear}
                             </td>
                             {team.dates.map((date) => {

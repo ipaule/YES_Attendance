@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, FolderOpen, FolderPlus, Move } from "lucide-react";
 import { fetchJson } from "@/lib/http";
 import { useRowSelection } from "@/hooks/useRowSelection";
+import { useHighlightRow } from "@/hooks/useHighlightRow";
 
 interface ShalomRecord {
   id: string;
@@ -83,6 +84,7 @@ export default function ShalomHistoryDetailPage() {
   const sorted = data ? [...data.data].sort((a, b) => (b.visitDate || "").localeCompare(a.visitDate || "")) : [];
   const rowSelection = useRowSelection(sorted.map((p) => p.id));
   const { selectedIds, isSelected, toggle, toggleAll, allSelected } = rowSelection;
+  const { highlight, isHighlighted } = useHighlightRow(data);
 
   if (isLoading) return <div className="flex items-center justify-center min-h-[40vh]"><p className="text-gray-500">로딩 중...</p></div>;
   if (isError || !data) return <div className="flex items-center justify-center min-h-[40vh]"><p className="text-red-500">데이터를 불러올 수 없습니다.</p></div>;
@@ -152,7 +154,11 @@ export default function ShalomHistoryDetailPage() {
             </thead>
             <tbody>
               {sorted.map((m, i) => (
-                <tr key={m.id} className={`border-b border-gray-100 ${isSelected(m.id) ? "bg-indigo-50" : ""}`}>
+                <tr
+                  key={m.id}
+                  id={isHighlighted(m.id, m.name) ? `row-${highlight}` : undefined}
+                  className={`border-b border-gray-100 ${isSelected(m.id) ? "bg-indigo-50" : isHighlighted(m.id, m.name) ? "bg-amber-50" : ""}`}
+                >
                   <td className="px-1 py-1.5 text-center">
                     <input
                       type="checkbox"

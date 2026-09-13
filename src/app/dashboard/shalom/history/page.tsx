@@ -5,12 +5,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Folder, FolderPlus, Pencil, Trash2, Check, X } from "lucide-react";
 import { fetchJson } from "@/lib/http";
+import { useHistorySearch } from "@/hooks/useHistorySearch";
+import { HistorySearchBox } from "@/components/HistorySearchBox";
 
 interface FolderSummary {
   id: string;
   name: string;
   count: number;
   createdAt: string;
+}
+
+interface ShalomSearchResult {
+  name: string;
+  gender: string;
+  birthYear: string;
+  folderId: string;
+  folderName: string;
+  highlight: string;
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
@@ -54,6 +65,8 @@ export default function ShalomHistoryPage() {
       return res.folders;
     },
   });
+
+  const search = useHistorySearch<ShalomSearchResult>("shalom-history-search", "/api/shalom/history/search?q=");
 
   const createFolderMutation = useMutation({
     mutationFn: (name: string) => postJson("/api/shalom/history", { name }),
@@ -112,6 +125,30 @@ export default function ShalomHistoryPage() {
         </button>
       </div>
 
+      <HistorySearchBox
+        input={search.input}
+        onInputChange={search.setInput}
+        searching={search.searching}
+        isLoading={search.isLoading}
+        error={search.error}
+        results={search.results}
+        placeholder="이름 검색..."
+        renderRow={(r, i) => (
+          <button
+            key={`${r.folderId}-${r.highlight}-${i}`}
+            onClick={() => router.push(`/dashboard/shalom/history/${r.folderId}?highlight=${encodeURIComponent(r.highlight)}`)}
+            className="flex items-center gap-2 w-full bg-white rounded-lg border border-gray-200 hover:border-indigo-300 px-3 py-2.5 transition-colors text-left"
+          >
+            <span className="text-sm font-medium text-gray-800">{r.name}</span>
+            <span className="text-xs text-gray-400">{r.gender} · {r.birthYear}</span>
+            <span className="flex items-center gap-1 text-xs text-gray-500 flex-1 min-w-0 justify-end">
+              <Folder className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
+              <span className="truncate">{r.folderName}</span>
+            </span>
+          </button>
+        )}
+      />
+
       {actionError && (
         <div className="bg-red-50 text-red-600 text-sm rounded-lg p-3 flex items-center justify-between">
           <span>{actionError}</span>
@@ -119,7 +156,7 @@ export default function ShalomHistoryPage() {
         </div>
       )}
 
-      {creating && (
+      {!search.searching && creating && (
         <div className="flex items-center gap-2 bg-white rounded-lg border border-indigo-300 px-3 py-2">
           <FolderPlus className="h-4 w-4 text-amber-600 flex-shrink-0" />
           <input
@@ -143,7 +180,7 @@ export default function ShalomHistoryPage() {
         </div>
       )}
 
-      {folders.length === 0 && !creating ? (
+      {!search.searching && (folders.length === 0 && !creating ? (
         <div className="text-center py-12 text-gray-400"><p>저장된 폴더가 없습니다.</p></div>
       ) : (
         <div className="space-y-1">
@@ -206,7 +243,7 @@ export default function ShalomHistoryPage() {
             </div>
           ))}
         </div>
-      )}
+      ))}
     </div>
   );
 }

@@ -7,6 +7,18 @@ import { ArrowLeft, RotateCcw, CalendarPlus, FolderPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchJson } from "@/lib/http";
 import { HistoryTree, type HistoryTreeHandle, type HistoryTreeNode } from "@/components/HistoryTree";
+import { useHistorySearch } from "@/hooks/useHistorySearch";
+import { HistorySearchBox } from "@/components/HistorySearchBox";
+
+interface TermSearchResult {
+  name: string;
+  gender: string;
+  birthYear: string;
+  termId: string;
+  termName: string;
+  teamName: string;
+  highlight: string;
+}
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -57,6 +69,8 @@ export default function HistoryPage() {
       return data.terms;
     },
   });
+
+  const search = useHistorySearch<TermSearchResult>("term-search", "/api/terms/search?q=");
 
   const deleteMutation = useMutation({
     mutationFn: async (termId: string) => {
@@ -192,6 +206,27 @@ export default function HistoryPage() {
         </div>
       </div>
 
+      <HistorySearchBox
+        input={search.input}
+        onInputChange={search.setInput}
+        searching={search.searching}
+        isLoading={search.isLoading}
+        error={search.error}
+        results={search.results}
+        placeholder="이름 검색..."
+        renderRow={(r, i) => (
+          <button
+            key={`${r.termId}-${r.highlight}-${i}`}
+            onClick={() => router.push(`/dashboard/history/${r.termId}?highlight=${encodeURIComponent(r.highlight)}`)}
+            className="flex items-center gap-2 w-full bg-white rounded-lg border border-gray-200 hover:border-indigo-300 px-3 py-2.5 transition-colors text-left"
+          >
+            <span className="text-sm font-medium text-gray-800">{r.name}</span>
+            <span className="text-xs text-gray-400">{r.gender} · {r.birthYear}</span>
+            <span className="text-xs text-gray-500 flex-1 min-w-0 truncate text-right">{r.teamName} · {r.termName}</span>
+          </button>
+        )}
+      />
+
       {/* Date range form */}
       {showDateRange && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-4">
@@ -286,23 +321,25 @@ export default function HistoryPage() {
         </div>
       )}
 
-      <HistoryTree
-        ref={treeRef}
-        nodes={data ?? []}
-        onCreateFolder={(name, parentId) => createFolderMutation.mutate({ name, parentId })}
-        onRename={(id, name) => renameMutation.mutate({ id, name })}
-        onMove={async (id, parentId) => { await moveMutation.mutateAsync({ id, parentId }); }}
-        onReorder={(orderedIds) => reorderMutation.mutate(orderedIds)}
-        detailHref={(node) => `/dashboard/history/${node.id}`}
-        canDelete={() => true}
-        onDelete={async (node) => { await deleteMutation.mutateAsync(node.id); }}
-        deleteConfirmText={(node) =>
-          node.type === "FOLDER"
-            ? `"${node.name}" 폴더를 삭제하시겠습니까?\n안에 있던 항목들은 삭제되지 않고 상위 폴더로 이동됩니다.`
-            : `"${node.name}" 기록을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
-        }
-        emptyMessage="저장된 텀 기록이 없습니다."
-      />
+      {!search.searching && (
+        <HistoryTree
+          ref={treeRef}
+          nodes={data ?? []}
+          onCreateFolder={(name, parentId) => createFolderMutation.mutate({ name, parentId })}
+          onRename={(id, name) => renameMutation.mutate({ id, name })}
+          onMove={async (id, parentId) => { await moveMutation.mutateAsync({ id, parentId }); }}
+          onReorder={(orderedIds) => reorderMutation.mutate(orderedIds)}
+          detailHref={(node) => `/dashboard/history/${node.id}`}
+          canDelete={() => true}
+          onDelete={async (node) => { await deleteMutation.mutateAsync(node.id); }}
+          deleteConfirmText={(node) =>
+            node.type === "FOLDER"
+              ? `"${node.name}" 폴더를 삭제하시겠습니까?\n안에 있던 항목들은 삭제되지 않고 상위 폴더로 이동됩니다.`
+              : `"${node.name}" 기록을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+          }
+          emptyMessage="저장된 텀 기록이 없습니다."
+        />
+      )}
     </div>
   );
 }

@@ -22,7 +22,7 @@ libSQL) in production, swapping at runtime based on environment — Vercel's ser
 functions have no persistent local filesystem, so a networked SQLite-compatible service is
 required in production.
 
-```markdown
+```
 
 ## Getting Started
 

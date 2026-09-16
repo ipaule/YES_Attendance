@@ -1,4 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+```markdown
+# YES Attendance
+
+Full-stack attendance tracking platform for a 300+ person community group, built solo.
+
+## Stack
+Next.js 16, React 19, TypeScript, Prisma, Turso (libSQL) in production / SQLite locally, deployed on Vercel.
+
+## Notable engineering decisions
+
+**Custom JWT auth with `jose`, not `jsonwebtoken`.** The auth check runs in Next.js Edge
+middleware, which only exposes the WebCrypto API — no Node `crypto` module. `jose` is built
+on WebCrypto; `jsonwebtoken` depends on Node's crypto and simply can't run there. Sessions use
+a 30-day sliding window with a 90-day absolute expiry cap.
+
+**AES-256-GCM PII encryption via a Prisma extension.** A single `$allOperations` interceptor
+transparently encrypts/decrypts PII fields across every model, with a versioned envelope
+format (`v1:base64(iv‖tag‖ciphertext)`) designed to support future key rotation.
+
+**Dual-target database adapter.** Runs on local SQLite in development and Turso (networked
+libSQL) in production, swapping at runtime based on environment — Vercel's serverless
+functions have no persistent local filesystem, so a networked SQLite-compatible service is
+required in production.
+
+## Getting started
+[keep the existing create-next-app dev-server instructions here]
+```
+
+**Game_Walker_Website README — replace the create-react-app boilerplate with:**
+```markdown
 
 ## Getting Started
 

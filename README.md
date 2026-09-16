@@ -22,11 +22,6 @@ libSQL) in production, swapping at runtime based on environment — Vercel's ser
 functions have no persistent local filesystem, so a networked SQLite-compatible service is
 required in production.
 
-## Getting started
-[keep the existing create-next-app dev-server instructions here]
-```
-
-**Game_Walker_Website README — replace the create-react-app boilerplate with:**
 ```markdown
 
 ## Getting Started

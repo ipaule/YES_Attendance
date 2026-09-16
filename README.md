@@ -1,4 +1,3 @@
-```markdown
 # YES Attendance
 
 Full-stack attendance tracking platform for a 300+ person community group, built solo.
@@ -21,8 +20,6 @@ format (`v1:base64(iv‖tag‖ciphertext)`) designed to support future key rotat
 libSQL) in production, swapping at runtime based on environment — Vercel's serverless
 functions have no persistent local filesystem, so a networked SQLite-compatible service is
 required in production.
-
-```
 
 ## Getting Started
 

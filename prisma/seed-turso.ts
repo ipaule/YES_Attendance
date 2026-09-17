@@ -18,10 +18,10 @@ const prisma = new PrismaClient({ adapter } as never);
 
 async function main() {
   const groups = [
-    { name: "샬롬", order: 0 },
-    { name: "사랑", order: 1 },
-    { name: "소망", order: 2 },
-    { name: "믿음", order: 3 },
+    { name: "믿음", order: 0 },
+    { name: "소망", order: 1 },
+    { name: "사랑", order: 2 },
+    { name: "샬롬", order: 3 },
   ];
 
   for (const group of groups) {

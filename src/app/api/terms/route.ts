@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Only snapshot 사랑, 소망, 믿음
+    // Only snapshot 믿음, 소망, 사랑
     const targetGroups = await prisma.group.findMany({
-      where: { name: { in: ["사랑", "소망", "믿음"] } },
+      where: { name: { in: ["믿음", "소망", "사랑"] } },
       orderBy: { order: "asc" },
     });
     const targetGroupIds = targetGroups.map((g) => g.id);
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Flush: unlink users from teams first, then delete everything.
-    // Scoped to target-group teams only (사랑/소망/믿음) — unscoped updateMany
+    // Scoped to target-group teams only (믿음/소망/사랑) — unscoped updateMany
     // here previously nulled 샬롬 leaders' teamId/leaderId too, severing that
     // link with no restore path. See CLAUDE.md / plan for the corruption this caused.
     const targetTeamIds = teams.map((t) => t.id);
@@ -135,14 +135,14 @@ export async function POST(request: NextRequest) {
 
     // 3.5 Clear roster teamName for flushed groups
     await prisma.rosterMember.updateMany({
-      where: { groupName: { in: ["사랑", "소망", "믿음"] } },
+      where: { groupName: { in: ["믿음", "소망", "사랑"] } },
       data: { teamName: "" },
     });
 
     // 4. Clear global dates
     await prisma.globalDate.deleteMany();
 
-    // 5. Delete 사랑/소망/믿음 LEADER and EXECUTIVE users
+    // 5. Delete 믿음/소망/사랑 LEADER and EXECUTIVE users
     // Keep: all PASTOR, 샬롬 users, and anyone with no group (previously an
     // unscoped `groupId: { not: shalomGroup.id } }` also matched NULL groupId
     // and deleted those too — now an explicit allowlist so NULL can't match).

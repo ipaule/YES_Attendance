@@ -263,8 +263,8 @@ export default function HistoryPage() {
                 <h3 className="text-lg font-bold text-red-600">새로운 텀 시작</h3>
                 <div className="bg-red-50 rounded-lg p-4 text-sm text-red-700 space-y-2">
                   <p className="font-semibold">이 작업은 되돌릴 수 없습니다!</p>
-                  <p>현재 사랑·소망·믿음의 모든 데이터(순, 순원, 출석, 날짜)가<br />기록된 후 삭제됩니다.</p>
-                  <p>모든 사랑·소망·믿음 순장의 계정정보가 삭제됩니다.</p>
+                  <p>현재 믿음·소망·사랑의 모든 데이터(순, 순원, 출석, 날짜)가<br />기록된 후 삭제됩니다.</p>
+                  <p>모든 믿음·소망·사랑 순장의 계정정보가 삭제됩니다.</p>
                   <p>계속 섬기시는 순장님들은 새롭게 회원 가입을 해주세요.</p>
                 </div>
                 <p className="text-sm text-gray-600">정말 새로운 텀을 시작하시겠습니까?</p>

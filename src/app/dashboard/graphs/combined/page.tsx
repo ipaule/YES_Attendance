@@ -224,7 +224,7 @@ export default function CombinedGraphPage() {
       <AttendanceChart
         chartData={data.chartData}
         series={data.series}
-        title={`사랑 · 소망 · 믿음 합산 ${mode === "count" ? "출석 인원" : "출석률"}`}
+        title={`믿음 · 소망 · 사랑 합산 ${mode === "count" ? "출석 인원" : "출석률"}`}
         subtitle={
           mode === "count"
             ? "공동체별 출석 인원 추이 (점선: 합산 합계)"

@@ -320,9 +320,9 @@ export default function RosterPage() {
         <MultiSelectDropdown
           label="공동체"
           options={[
-            { value: "사랑", label: "사랑" },
-            { value: "소망", label: "소망" },
             { value: "믿음", label: "믿음" },
+            { value: "소망", label: "소망" },
+            { value: "사랑", label: "사랑" },
             { value: "-", label: "미배정" },
           ]}
           selected={filterGroup}

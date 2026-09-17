@@ -11,9 +11,9 @@ export async function GET() {
     where: { teamName: { not: "" } },
   });
 
-  // Get attendance by date for 사랑/소망/믿음
+  // Get attendance by date for 믿음/소망/사랑
   const targetGroups = await prisma.group.findMany({
-    where: { name: { in: ["사랑", "소망", "믿음"] } },
+    where: { name: { in: ["믿음", "소망", "사랑"] } },
     select: { id: true },
   });
   const targetGroupIds = targetGroups.map((g) => g.id);

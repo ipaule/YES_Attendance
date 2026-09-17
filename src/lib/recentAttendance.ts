@@ -6,11 +6,11 @@ import { prisma } from "./db";
 export async function buildRecentAttendanceMap(): Promise<Record<string, string>> {
   const result: Record<string, string> = {};
 
-  // Current term — only target groups (사랑/소망/믿음). The team has no
+  // Current term — only target groups (믿음/소망/사랑). The team has no
   // "term name" field, so present-in-current-term maps to the special label
   // "현재 텀" (so the UI can distinguish).
   const targetGroups = await prisma.group.findMany({
-    where: { name: { in: ["사랑", "소망", "믿음"] } },
+    where: { name: { in: ["믿음", "소망", "사랑"] } },
     select: { id: true },
   });
   const targetGroupIds = targetGroups.map((g) => g.id);

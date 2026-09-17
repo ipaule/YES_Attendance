@@ -59,9 +59,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Search current teams in 사랑/소망/믿음 for matching names
+    // Search current teams in 믿음/소망/사랑 for matching names
     const targetGroups = await prisma.group.findMany({
-      where: { name: { in: ["사랑", "소망", "믿음"] } },
+      where: { name: { in: ["믿음", "소망", "사랑"] } },
       select: { id: true },
     });
     const targetGroupIds = targetGroups.map((g) => g.id);

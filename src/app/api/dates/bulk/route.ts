@@ -73,9 +73,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Add to existing teams in 사랑, 소망, 믿음 only
+    // Add to existing teams in 믿음, 소망, 사랑 only
     const targetGroups = await prisma.group.findMany({
-      where: { name: { in: ["사랑", "소망", "믿음"] } },
+      where: { name: { in: ["믿음", "소망", "사랑"] } },
       select: { id: true },
     });
     const targetGroupIds = targetGroups.map((g) => g.id);
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `${sundays.length}개 일요일이 추가되었습니다. (사랑·소망·믿음 ${teams.length}개 순 포함)`,
+      message: `${sundays.length}개 일요일이 추가되었습니다. (믿음·소망·사랑 ${teams.length}개 순 포함)`,
       sundays: sundayLabels,
       addedCount,
     });

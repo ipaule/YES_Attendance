@@ -166,10 +166,10 @@ export default function ShalomGraphPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-1.5">
               졸업생 출석 등급
-              <HelpTip text="졸업한 인원의 사랑·소망·믿음순 출석률을 A/B/C/D이하 등급으로 나눈 분포입니다. 순에서 이름이 매칭된 졸업생만 집계되며(matched), 순 기록이 없는 졸업생은 제외됩니다." />
+              <HelpTip text="졸업한 인원의 믿음·소망·사랑순 출석률을 A/B/C/D이하 등급으로 나눈 분포입니다. 순에서 이름이 매칭된 졸업생만 집계되며(matched), 순 기록이 없는 졸업생은 제외됩니다." />
             </h3>
             <p className="text-sm text-gray-500 mb-4">
-              졸업생 {data?.totalGraduates || 0}명 중 {data?.matchedGraduates || 0}명 매칭됨 (사랑·소망·믿음 현재 + 기록)
+              졸업생 {data?.totalGraduates || 0}명 중 {data?.matchedGraduates || 0}명 매칭됨 (믿음·소망·사랑 현재 + 기록)
             </p>
             {(data?.matchedGraduates || 0) > 0 ? (
               <>

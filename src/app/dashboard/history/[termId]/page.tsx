@@ -162,7 +162,7 @@ export default function TermDetailPage() {
           gg.chartData.forEach((p) => allDatesSet.add(p.date as string))
         );
         const allDates = Array.from(allDatesSet);
-        const desiredOrder = ["사랑", "소망", "믿음"];
+        const desiredOrder = ["믿음", "소망", "사랑"];
         const orderedGraphs = desiredOrder
           .map((name) => groupGraphs.find((g) => g.groupName === name))
           .filter(Boolean) as typeof groupGraphs;
@@ -184,7 +184,7 @@ export default function TermDetailPage() {
           <AttendanceChart
             chartData={combinedData}
             series={[...orderedGraphs.map((g) => g.groupName), "합산"]}
-            title="사랑 · 소망 · 믿음 합산 출석 인원"
+            title="믿음 · 소망 · 사랑 합산 출석 인원"
             subtitle="공동체별 출석 인원 추이"
             mode="count"
           />

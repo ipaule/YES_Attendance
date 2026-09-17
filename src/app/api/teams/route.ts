@@ -106,13 +106,13 @@ export async function POST(request: NextRequest) {
       orderBy: { order: "asc" },
     });
 
-    // Only add global dates if this team is in 사랑, 소망, or 믿음
+    // Only add global dates if this team is in 믿음, 소망, or 사랑
     const group = await prisma.group.findUnique({
       where: { id: groupId },
       select: { name: true },
     });
 
-    if (group && ["사랑", "소망", "믿음"].includes(group.name)) {
+    if (group && ["믿음", "소망", "사랑"].includes(group.name)) {
       for (let i = 0; i < globalDates.length; i++) {
         const gd = globalDates[i];
         try {

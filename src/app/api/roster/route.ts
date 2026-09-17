@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
   // Get current team members for attendance lookup
   const targetGroups = await prisma.group.findMany({
-    where: { name: { in: ["사랑", "소망", "믿음"] } },
+    where: { name: { in: ["믿음", "소망", "사랑"] } },
     select: { id: true },
   });
   const targetGroupIds = targetGroups.map((g) => g.id);

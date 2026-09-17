@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
 
     const startDate = searchParams.get("startDate") || "";
     const endDate = searchParams.get("endDate") || "";
-    const desiredOrder = ["사랑", "소망", "믿음"];
+    const desiredOrder = ["믿음", "소망", "사랑"];
     const groupsRaw = await prisma.group.findMany({
       where: { name: { in: desiredOrder } },
     });
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
       .map((name) => groupsRaw.find((g) => g.name === name))
       .filter(Boolean) as typeof groupsRaw;
 
-    // Collect all data points: { isoDate, dateLabel, groupHere: {사랑:n, 소망:n, 믿음:n} }
+    // Collect all data points: { isoDate, dateLabel, groupHere: {믿음:n, 소망:n, 사랑:n} }
     type DataPoint = { isoDate: string; label: string; here: Record<string, number> };
     const allPoints: DataPoint[] = [];
 

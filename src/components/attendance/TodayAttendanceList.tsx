@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { useAttendanceMutation } from "@/hooks/useAttendanceMutation";
+import { usePrayerNoteMutation } from "@/hooks/usePrayerNoteMutation";
 import { useBulkMarkPresent } from "@/hooks/useBulkMarkPresent";
 import { useToast } from "@/components/Toast";
 import { STATUS_OPTIONS } from "@/lib/attendance-status";
 import { StatusOptionList } from "@/components/StatusOptionList";
+import { PrayerNoteCell } from "@/components/attendance/PrayerNoteCell";
 import type { AttendanceStatus, AttendanceRecord, Member, TeamWithData } from "@/types";
 
 interface TodayAttendanceListProps {
@@ -26,8 +28,13 @@ function getAttendance(
   return member.attendances.find((a) => a.attendanceDateId === dateId);
 }
 
+function getPrayerNote(member: Member, dateId: string) {
+  return member.prayerNotes?.find((n) => n.attendanceDateId === dateId);
+}
+
 export function TodayAttendanceList({ team, className }: TodayAttendanceListProps) {
   const attendanceMutation = useAttendanceMutation(team.id);
+  const prayerNoteMutation = usePrayerNoteMutation(team.id);
   const { showToast } = useToast();
   const { markAllPresent, undo, lastMarked, isPending: bulkPending } = useBulkMarkPresent(team);
 
@@ -199,6 +206,7 @@ export function TodayAttendanceList({ team, className }: TodayAttendanceListProp
       <div className="divide-y divide-gray-100">
         {team.members.map((member) => {
           const att = selectedDateId ? getAttendance(member, selectedDateId) : undefined;
+          const note = selectedDateId ? getPrayerNote(member, selectedDateId) : undefined;
           const status = att?.status;
           const canHaveReason = status === "ABSENT" || status === "AWR";
           return (
@@ -223,6 +231,18 @@ export function TodayAttendanceList({ team, className }: TodayAttendanceListProp
                         <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-indigo-500" />
                       )}
                     </button>
+                  )}
+                  {selectedDateId && (
+                    <PrayerNoteCell
+                      text={note?.text || ""}
+                      locked={locked}
+                      onChange={(text) => {
+                        prayerNoteMutation.mutate(
+                          { memberId: member.id, attendanceDateId: selectedDateId, text },
+                          { onError: () => showToast("저장 실패 — 다시 시도해주세요") }
+                        );
+                      }}
+                    />
                   )}
                 </div>
               </div>

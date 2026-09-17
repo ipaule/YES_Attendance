@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
           : []),
       ],
     },
-    select: { id: true, name: true, gender: true, birthYear: true, groupName: true },
+    select: { id: true, name: true, gender: true, birthYear: true, birthday: true, groupName: true },
   });
 
   // Exclude anyone already on THIS team's sheet (scoped to current team, not global)

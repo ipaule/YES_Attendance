@@ -41,12 +41,34 @@ export async function GET(
     return NextResponse.json({ error: "순을 찾을 수 없습니다." }, { status: 404 });
   }
 
+  // Fetched as its own top-level query, not a nested `include`, on purpose:
+  // PrayerNote.text is encrypted at rest, and the Prisma decryption
+  // middleware (src/lib/db.ts) only decrypts a query's own top-level model —
+  // it never walks into nested relations, so `prayerNotes: true` inside the
+  // team include above would return raw ciphertext.
+  const memberIds = team.members.map((m) => m.id);
+  const prayerNotes = memberIds.length
+    ? await prisma.prayerNote.findMany({ where: { memberId: { in: memberIds } } })
+    : [];
+  const notesByMember = new Map<string, typeof prayerNotes>();
+  for (const note of prayerNotes) {
+    const arr = notesByMember.get(note.memberId) ?? [];
+    arr.push(note);
+    notesByMember.set(note.memberId, arr);
+  }
+  const membersWithNotes = team.members.map((m) => ({
+    ...m,
+    prayerNotes: notesByMember.get(m.id) ?? [],
+  }));
+
   const deleteBlockers = await findTeamDeleteBlockers({
     name: team.name,
     leaderUsername: team.leader?.username ?? null,
   });
 
-  return NextResponse.json({ team: { ...team, deleteBlockers } });
+  return NextResponse.json({
+    team: { ...team, members: membersWithNotes, deleteBlockers },
+  });
 }
 
 export async function PATCH(

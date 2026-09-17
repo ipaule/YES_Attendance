@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   // Get shalom members matching query
   const shalomMembers = await prisma.shalomMember.findMany({
     where: { name: { contains: q } },
-    select: { id: true, name: true, gender: true, birthYear: true, status: true, leader: true },
+    select: { id: true, name: true, gender: true, birthYear: true, birthday: true, status: true, leader: true },
   });
 
   // Exclude those already in a shalom team

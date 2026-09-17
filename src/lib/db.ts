@@ -4,12 +4,13 @@ import { encrypt, decrypt, isEncrypted } from "./crypto";
 // Prisma model name → fields to encrypt/decrypt transparently
 const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   RosterMember: [
-    "phone", "email", "address", "prayerRequest", "note",
+    "phone", "email", "note",
     "birthday", "salvationAssurance", "statusReason",
   ],
   ShalomMember: ["phone", "note"],
   TermHistory:  ["data"],
   ShalomHistory:["data"],
+  PrayerNote: ["text"],
 };
 
 // Operations whose return value is one or more model rows (decrypt on exit)

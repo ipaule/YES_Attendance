@@ -25,18 +25,16 @@ async function main() {
   await addCol("ShalomMember", "englishName",        "TEXT NOT NULL DEFAULT ''", sm);
   await addCol("ShalomMember", "birthday",           "TEXT NOT NULL DEFAULT ''", sm);
   await addCol("ShalomMember", "email",              "TEXT NOT NULL DEFAULT ''", sm);
-  await addCol("ShalomMember", "address",            "TEXT NOT NULL DEFAULT ''", sm);
   await addCol("ShalomMember", "groupName",          "TEXT NOT NULL DEFAULT ''", sm);
   await addCol("ShalomMember", "teamName",           "TEXT NOT NULL DEFAULT ''", sm);
-  await addCol("ShalomMember", "ministry",           "TEXT NOT NULL DEFAULT ''", sm);
-  await addCol("ShalomMember", "memberNumber",       "TEXT NOT NULL DEFAULT ''", sm);
   await addCol("ShalomMember", "registrationDate",   "TEXT NOT NULL DEFAULT ''", sm);
   await addCol("ShalomMember", "salvationAssurance", "TEXT NOT NULL DEFAULT ''", sm);
   await addCol("ShalomMember", "training",           "TEXT NOT NULL DEFAULT ''", sm);
   await addCol("ShalomMember", "baptismStatus",      "TEXT NOT NULL DEFAULT ''", sm);
   await addCol("ShalomMember", "photo",              "TEXT NOT NULL DEFAULT ''", sm);
-  await addCol("ShalomMember", "prayerRequest",      "TEXT NOT NULL DEFAULT ''", sm);
   await addCol("ShalomMember", "movedToRosterAt",    "DATETIME",                 sm);
+  // address/ministry/memberNumber/prayerRequest removed for good — see
+  // scripts/drop-removed-profile-columns.ts (run once, after this script).
 
   // ── RosterMember ──────────────────────────────────────────────────────────
   const rm = await getColumns("RosterMember");
@@ -44,11 +42,8 @@ async function main() {
   await addCol("RosterMember", "birthday",                 "TEXT NOT NULL DEFAULT ''", rm);
   await addCol("RosterMember", "email",                    "TEXT NOT NULL DEFAULT ''", rm);
   await addCol("RosterMember", "phone",                    "TEXT NOT NULL DEFAULT ''", rm);
-  await addCol("RosterMember", "address",                  "TEXT NOT NULL DEFAULT ''", rm);
   await addCol("RosterMember", "salvationAssurance",       "TEXT NOT NULL DEFAULT ''", rm);
   await addCol("RosterMember", "training",                 "TEXT NOT NULL DEFAULT ''", rm);
-  await addCol("RosterMember", "memberNumber",             "TEXT NOT NULL DEFAULT ''", rm);
-  await addCol("RosterMember", "prayerRequest",            "TEXT NOT NULL DEFAULT ''", rm);
   await addCol("RosterMember", "peerGroup",                "TEXT NOT NULL DEFAULT ''", rm);
   await addCol("RosterMember", "photo",                    "TEXT NOT NULL DEFAULT ''", rm);
   await addCol("RosterMember", "baptismStatus",            "TEXT NOT NULL DEFAULT ''", rm);
@@ -58,6 +53,8 @@ async function main() {
   await addCol("RosterMember", "statusReason",             "TEXT NOT NULL DEFAULT ''", rm);
   await addCol("RosterMember", "assignee",                 "TEXT NOT NULL DEFAULT ''", rm);
   await addCol("RosterMember", "registrationDate",         "TEXT NOT NULL DEFAULT ''", rm);
+  // address/ministry/memberNumber/prayerRequest removed for good — see
+  // scripts/drop-removed-profile-columns.ts (run once, after this script).
 
   // ── DropdownOption ────────────────────────────────────────────────────────
   const doTables = await client.execute(

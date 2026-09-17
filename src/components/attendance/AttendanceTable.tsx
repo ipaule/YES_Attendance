@@ -29,11 +29,14 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { AttendanceCell } from "./AttendanceCell";
+import { PrayerNoteCell } from "./PrayerNoteCell";
 import {
   calculateAttendanceRate,
   calculateGrade,
   getGradeColor,
 } from "@/lib/attendance";
+import { computePeerGroup } from "@/lib/profile";
+import { usePrayerNoteMutation } from "@/hooks/usePrayerNoteMutation";
 import type {
   TeamWithData,
   AttendanceStatus,
@@ -47,6 +50,10 @@ function getAttendance(
   dateId: string
 ) {
   return member.attendances.find((a) => a.attendanceDateId === dateId);
+}
+
+function getPrayerNote(member: Member, dateId: string) {
+  return member.prayerNotes?.find((n) => n.attendanceDateId === dateId);
 }
 
 function getMemberStatuses(
@@ -98,8 +105,9 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
     name: "",
     gender: "남",
     birthYear: "",
+    birthday: "",
   });
-  const [suggestions, setSuggestions] = useState<{ id: string; name: string; gender: string; birthYear: string; groupName: string }[]>([]);
+  const [suggestions, setSuggestions] = useState<{ id: string; name: string; gender: string; birthYear: string; birthday: string; groupName: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [newDate, setNewDate] = useState("");
@@ -125,12 +133,14 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
   const [confirmDeleteMember, setConfirmDeleteMember] = useState<Member | null>(null);
 
   const attendanceMutation = useAttendanceMutation(team.id);
+  const prayerNoteMutation = usePrayerNoteMutation(team.id);
 
   const addMemberMutation = useMutation({
     mutationFn: async (data: {
       name: string;
       gender: string;
       birthYear: string;
+      birthday: string;
       teamId: string;
     }) => {
       const res = await fetch("/api/members", {
@@ -144,7 +154,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team", team.id] });
       setShowAddMember(false);
-      setNewMember({ name: "", gender: "남", birthYear: "" });
+      setNewMember({ name: "", gender: "남", birthYear: "", birthday: "" });
     },
     onError: () => showToast("저장 실패 — 다시 시도해주세요"),
   });
@@ -482,7 +492,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
               value={newMember.name}
               onChange={async (e) => {
                 const val = e.target.value;
-                setNewMember((prev) => ({ ...prev, name: val, gender: "", birthYear: "" }));
+                setNewMember((prev) => ({ ...prev, name: val, gender: "", birthYear: "", birthday: "" }));
                 if (val.length >= 1) {
                   try {
                     const isShalom = team.group?.name === "샬롬";
@@ -513,7 +523,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                     key={s.id}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
-                      setNewMember({ name: s.name, gender: s.gender || "남", birthYear: s.birthYear || "" });
+                      setNewMember({ name: s.name, gender: s.gender || "남", birthYear: s.birthYear || "", birthday: s.birthday || "" });
                       setShowSuggestions(false);
                       setSuggestions([]);
                     }}
@@ -525,7 +535,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                         {s.groupName || "미배정"}
                       </span>
                     )}
-                    <span className="text-xs text-gray-400">{s.gender || ""} {s.birthYear}</span>
+                    <span className="text-xs text-gray-400">{s.gender || ""} {computePeerGroup(s.birthday, s.birthYear)}</span>
                   </button>
                 ))}
               </div>
@@ -533,7 +543,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
           </div>
           {newMember.gender && (
             <span className="text-xs text-gray-500 bg-white rounded-lg px-2 py-1.5 border border-gray-200">
-              {newMember.gender} · {newMember.birthYear}
+              {newMember.gender} · {computePeerGroup(newMember.birthday, newMember.birthYear)}
             </span>
           )}
           <button
@@ -592,7 +602,7 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                     if (el) dateThRefs.current.set(date.id, el);
                     else dateThRefs.current.delete(date.id);
                   }}
-                  className="px-1 py-2 text-center font-medium text-gray-600 min-w-[56px]"
+                  className="px-1 py-2 text-center font-medium text-gray-600 min-w-[88px]"
                 >
                   <div className="flex flex-col items-center gap-0.5">
                     <span className="text-xs">{date.label}</span>
@@ -681,14 +691,15 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                   </td>
                   {/* Birth Year */}
                   <td className="hidden lg:table-cell bg-white px-1 py-1 text-center w-14">
-                    <span className="text-xs text-gray-500">{member.birthYear}</span>
+                    <span className="text-xs text-gray-500">{computePeerGroup(member.birthday, member.birthYear)}</span>
                   </td>
-                  {/* Attendance cells */}
+                  {/* Attendance cells + prayer notes */}
                   {team.dates.map((date) => {
                     const att = getAttendance(member, date.id);
+                    const note = getPrayerNote(member, date.id);
                     return (
                       <td key={date.id} className="px-0 py-1 text-center">
-                        <div className="flex justify-center">
+                        <div className="flex items-center justify-center gap-0.5">
                           <AttendanceCell
                             status={
                               (att?.status as AttendanceStatus | "") || ""
@@ -703,6 +714,16 @@ export function AttendanceTable({ team, className }: AttendanceTableProps) {
                                   status,
                                   awrReason,
                                 },
+                                { onError: () => showToast("저장 실패 — 다시 시도해주세요") }
+                              );
+                            }}
+                          />
+                          <PrayerNoteCell
+                            text={note?.text || ""}
+                            locked={!!date.locked}
+                            onChange={(text) => {
+                              prayerNoteMutation.mutate(
+                                { memberId: member.id, attendanceDateId: date.id, text },
                                 { onError: () => showToast("저장 실패 — 다시 시도해주세요") }
                               );
                             }}

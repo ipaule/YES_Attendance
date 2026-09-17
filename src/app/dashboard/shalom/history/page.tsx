@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Folder, FolderPlus, Pencil, Trash2, Check, X } from "lucide-react";
 import { fetchJson } from "@/lib/http";
+import { computePeerGroup } from "@/lib/profile";
 import { useHistorySearch } from "@/hooks/useHistorySearch";
 import { HistorySearchBox } from "@/components/HistorySearchBox";
 
@@ -140,7 +141,7 @@ export default function ShalomHistoryPage() {
             className="flex items-center gap-2 w-full bg-white rounded-lg border border-gray-200 hover:border-indigo-300 px-3 py-2.5 transition-colors text-left"
           >
             <span className="text-sm font-medium text-gray-800">{r.name}</span>
-            <span className="text-xs text-gray-400">{r.gender} · {r.birthYear}</span>
+            <span className="text-xs text-gray-400">{r.gender} · {computePeerGroup("", r.birthYear)}</span>
             <span className="flex items-center gap-1 text-xs text-gray-500 flex-1 min-w-0 justify-end">
               <Folder className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
               <span className="truncate">{r.folderName}</span>

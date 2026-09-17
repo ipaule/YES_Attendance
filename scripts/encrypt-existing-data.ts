@@ -42,10 +42,17 @@ async function main() {
   await backfill(
     "RosterMember",
     await prisma.rosterMember.findMany({
-      select: { id: true, phone: true, email: true, address: true, prayerRequest: true, note: true, birthday: true, salvationAssurance: true, statusReason: true },
+      select: { id: true, phone: true, email: true, note: true, birthday: true, salvationAssurance: true, statusReason: true },
     }) as Array<Record<string, unknown>>,
-    ["phone", "email", "address", "prayerRequest", "note", "birthday", "salvationAssurance", "statusReason"],
+    ["phone", "email", "note", "birthday", "salvationAssurance", "statusReason"],
     (id, patch) => prisma.rosterMember.update({ where: { id }, data: patch }),
+  );
+
+  await backfill(
+    "PrayerNote",
+    await prisma.prayerNote.findMany({ select: { id: true, text: true } }) as Array<Record<string, unknown>>,
+    ["text"],
+    (id, patch) => prisma.prayerNote.update({ where: { id }, data: patch }),
   );
 
   await backfill(

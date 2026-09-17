@@ -21,7 +21,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { ArrowLeft, Plus, Trash2, ArrowUpDown, Save, GripVertical, Search, MoveRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { normalizeBirthYear } from "@/lib/profile";
+import { normalizeBirthYear, computePeerGroup } from "@/lib/profile";
+import { useStickyState } from "@/hooks/useStickyState";
 import { fetchJson } from "@/lib/http";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
@@ -33,6 +34,7 @@ interface ShalomMember {
   englishName: string;
   gender: string;
   birthYear: string;
+  birthday: string;
   phone: string;
   visitDate: string;
   inviter: string;
@@ -73,12 +75,12 @@ export default function ShalomListPage() {
   const { showToast } = useToast();
   const canMoveToRoster = user?.role === "PASTOR" || (user?.role === "EXECUTIVE" && user?.group?.name === "샬롬");
 
-  const [sortKey, setSortKey] = useState<SortKey>("visitDate");
-  const [sortDir, setSortDir] = useState<SortDir>("none");
-  const [search, setSearch] = useState("");
-  const [filterGender, setFilterGender] = useState("");
-  const [filterBirthYear, setFilterBirthYear] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const [sortKey, setSortKey] = useStickyState<SortKey>("shalom-filters:sortKey", "visitDate");
+  const [sortDir, setSortDir] = useStickyState<SortDir>("shalom-filters:sortDir", "none");
+  const [search, setSearch] = useStickyState("shalom-filters:search", "");
+  const [filterGender, setFilterGender] = useStickyState("shalom-filters:gender", "");
+  const [filterBirthYear, setFilterBirthYear] = useStickyState("shalom-filters:birthYear", "");
+  const [filterStatus, setFilterStatus] = useStickyState("shalom-filters:status", "");
   const [showFlush, setShowFlush] = useState(false);
   const [flushMode, setFlushMode] = useState<"new" | "existing">("new");
   const [flushName, setFlushName] = useState("");
@@ -572,7 +574,7 @@ export default function ShalomListPage() {
                             {m.gender || "-"}
                           </span>
                         </td>
-                        <td className="px-2 py-1 text-center text-xs text-gray-500">{m.birthYear || "-"}</td>
+                        <td className="px-2 py-1 text-center text-xs text-gray-500">{computePeerGroup(m.birthday, m.birthYear)}</td>
                         <td className="px-2 py-1 text-center text-xs text-gray-500">{m.phone || "-"}</td>
                         <td className="px-2 py-1 text-center text-xs text-gray-500">{m.visitDate || "-"}</td>
                         <td className="px-2 py-1 text-center text-xs text-gray-500">{m.inviter || "-"}</td>

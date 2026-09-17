@@ -68,6 +68,8 @@ interface InputRow {
   name: string;
   englishName: string;
   gender: string;
+  // memberNumber/address parsed for TSV column alignment (cols 4 & 7) but no
+  // longer written anywhere — both fields were removed from RosterMember.
   memberNumber: string;
   phoneRaw: string;
   registrationDateRaw: string;
@@ -80,10 +82,8 @@ interface ExistingMember {
   name: string;
   englishName: string;
   gender: string;
-  memberNumber: string;
   phone: string;
   registrationDate: string;
-  address: string;
   email: string;
   groupName: string;
   teamName: string;
@@ -180,10 +180,8 @@ function computePatch(row: InputRow, existing: ExistingMember, newName?: string)
     // [field, newVal, existingVal]
     ["englishName", row.englishName, existing.englishName],
     ["gender", row.gender, existing.gender],
-    ["memberNumber", row.memberNumber, existing.memberNumber],
     ["phone", phoneNorm, existing.phone],
     ["registrationDate", dateConv, existing.registrationDate],
-    ["address", row.address, existing.address],
     ["email", row.email, existing.email],
   ];
 
@@ -216,10 +214,8 @@ function buildNewData(row: InputRow, order: number): Record<string, string | num
     name: row.name,
     englishName: row.englishName,
     gender: row.gender,
-    memberNumber: row.memberNumber,
     phone,
     registrationDate: convertDate(row.registrationDateRaw),
-    address: row.address,
     email: row.email,
     groupName: "",
     teamName: "",
@@ -324,8 +320,8 @@ async function main() {
   const existing = await prisma.rosterMember.findMany({
     select: {
       id: true, name: true, englishName: true, gender: true,
-      memberNumber: true, phone: true, registrationDate: true,
-      address: true, email: true, groupName: true, teamName: true,
+      phone: true, registrationDate: true,
+      email: true, groupName: true, teamName: true,
     },
   });
 

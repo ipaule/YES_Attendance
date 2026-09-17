@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { fetchJson } from "@/lib/http";
 import { useRowSelection } from "@/hooks/useRowSelection";
+import { useStickyState } from "@/hooks/useStickyState";
 
 interface UnregisteredMember {
   id: string;
@@ -51,11 +52,11 @@ export default function UnregisteredPage() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [confirmDeleteMembers, setConfirmDeleteMembers] = useState<UnregisteredMember[] | null>(null);
-  const [search, setSearch] = useState("");
-  const [filterGroup, setFilterGroup] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterAssignee, setFilterAssignee] = useState("");
-  const [filterContact, setFilterContact] = useState("");
+  const [search, setSearch] = useStickyState("unregistered-filters:search", "");
+  const [filterGroup, setFilterGroup] = useStickyState("unregistered-filters:group", "");
+  const [filterStatus, setFilterStatus] = useStickyState("unregistered-filters:status", "");
+  const [filterAssignee, setFilterAssignee] = useStickyState("unregistered-filters:assignee", "");
+  const [filterContact, setFilterContact] = useStickyState("unregistered-filters:contact", "");
 
   type SortKey =
     | "name"
@@ -70,8 +71,8 @@ export default function UnregisteredPage() {
     | "statusReason"
     | "assignee";
   type SortDir = "none" | "asc" | "desc";
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>("none");
+  const [sortKey, setSortKey] = useStickyState<SortKey | null>("unregistered-filters:sortKey", null);
+  const [sortDir, setSortDir] = useStickyState<SortDir>("unregistered-filters:sortDir", "none");
 
   const { data: members = [], isLoading, error } = useQuery({
     queryKey: ["unregistered"],

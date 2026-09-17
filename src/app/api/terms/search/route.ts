@@ -7,6 +7,7 @@ interface TermMember {
   name: string;
   gender: string;
   birthYear: string;
+  birthday?: string;
 }
 
 interface TermTeam {
@@ -22,6 +23,7 @@ export interface TermSearchResult {
   name: string;
   gender: string;
   birthYear: string;
+  birthday?: string;
   termId: string;
   termName: string;
   teamName: string;
@@ -61,6 +63,7 @@ export async function GET(request: NextRequest) {
           name: m.name,
           gender: m.gender,
           birthYear: m.birthYear,
+          birthday: m.birthday,
           termId: record.id,
           termName: record.name,
           teamName: team.name,

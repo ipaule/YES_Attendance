@@ -35,9 +35,11 @@ export interface Member {
   name: string;
   gender: Gender;
   birthYear: string;
+  birthday: string;
   teamId: string;
   order: number;
   attendances?: AttendanceRecord[];
+  prayerNotes?: PrayerNote[];
 }
 
 export interface DateColumn {
@@ -57,8 +59,16 @@ export interface AttendanceRecord {
   awrReason: string | null;
 }
 
+export interface PrayerNote {
+  id: string;
+  memberId: string;
+  attendanceDateId: string;
+  text: string;
+  updatedAt: string;
+}
+
 export interface TeamWithData extends Team {
-  members: (Member & { attendances: AttendanceRecord[] })[];
+  members: (Member & { attendances: AttendanceRecord[]; prayerNotes: PrayerNote[] })[];
   dates: DateColumn[];
   deleteBlockers?: string[];
 }

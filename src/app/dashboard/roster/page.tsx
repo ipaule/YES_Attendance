@@ -20,6 +20,7 @@ import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } 
 import { CSS } from "@dnd-kit/utilities";
 import { fetchJson } from "@/lib/http";
 import { useRowSelection } from "@/hooks/useRowSelection";
+import { useStickyState } from "@/hooks/useStickyState";
 
 interface RosterMember {
   id: string;
@@ -30,7 +31,6 @@ interface RosterMember {
   birthday: string;
   groupName: string;
   teamName: string;
-  ministry: string;
   note: string;
   training: string;
   baptismStatus: string;
@@ -60,24 +60,24 @@ export default function RosterPage() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [confirmDeleteMembers, setConfirmDeleteMembers] = useState<RosterMember[] | null>(null);
-  const [search, setSearch] = useState("");
-  const [filterBirthYear, setFilterBirthYear] = useState("");
-  const [filterGender, setFilterGender] = useState<string[]>([]);
-  const [filterGroup, setFilterGroup] = useState<string[]>([]);
-  const [filterLeader, setFilterLeader] = useState<string[]>([]);
-  const [filterGrade, setFilterGrade] = useState<string[]>([]);
-  const [filterTraining, setFilterTraining] = useState<string[]>([]);
-  const [filterBaptism, setFilterBaptism] = useState<string[]>([]);
+  const [search, setSearch] = useStickyState("roster-filters:search", "");
+  const [filterBirthYear, setFilterBirthYear] = useStickyState("roster-filters:birthYear", "");
+  const [filterGender, setFilterGender] = useStickyState<string[]>("roster-filters:gender", []);
+  const [filterGroup, setFilterGroup] = useStickyState<string[]>("roster-filters:group", []);
+  const [filterLeader, setFilterLeader] = useStickyState<string[]>("roster-filters:leader", []);
+  const [filterGrade, setFilterGrade] = useStickyState<string[]>("roster-filters:grade", []);
+  const [filterTraining, setFilterTraining] = useStickyState<string[]>("roster-filters:training", []);
+  const [filterBaptism, setFilterBaptism] = useStickyState<string[]>("roster-filters:baptism", []);
 
   const handleGroupChange = (next: string[]) => {
     setFilterGroup(next);
     setFilterLeader([]);
   };
 
-  type SortKey = "name" | "englishName" | "gender" | "birthYear" | "birthday" | "groupName" | "teamName" | "training" | "ministry" | "baptismStatus" | "salvationAssurance" | "rate" | "grade";
+  type SortKey = "name" | "englishName" | "gender" | "birthYear" | "birthday" | "groupName" | "teamName" | "training" | "baptismStatus" | "salvationAssurance" | "rate" | "grade";
   type SortDir = "none" | "asc" | "desc";
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>("none");
+  const [sortKey, setSortKey] = useStickyState<SortKey | null>("roster-filters:sortKey", null);
+  const [sortDir, setSortDir] = useStickyState<SortDir>("roster-filters:sortDir", "none");
 
   const { data: members, isLoading, error } = useQuery({
     queryKey: ["roster", search, filterBirthYear, filterGender.join(","), filterGroup.join(","), filterLeader.join(","), filterGrade.join(","), filterTraining.join(","), filterBaptism.join(",")],
@@ -396,7 +396,6 @@ export default function RosterPage() {
                   <SortTh label="공동체" k="groupName" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
                   <SortTh label="순장" k="teamName" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
                   <SortTh label="훈련과정" k="training" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
-                  <SortTh label="사역" k="ministry" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
                   <SortTh label="세례 여부" k="baptismStatus" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
                   <SortTh label="구원 확신" k="salvationAssurance" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
                   <SortTh label="출석률" k="rate" sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} sortIcon={sortIcon} />
@@ -475,7 +474,6 @@ export default function RosterPage() {
                           placeholder="—"
                         />
                       </td>
-                      <td className="px-2 py-1 text-xs text-gray-600 whitespace-nowrap">{m.ministry || "-"}</td>
                       <td className="px-2 py-1 text-center whitespace-nowrap">
                         <ColoredDropdown
                           category="baptism_status"

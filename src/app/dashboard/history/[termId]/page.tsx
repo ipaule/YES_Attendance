@@ -10,6 +10,7 @@ import {
   getGradeColor,
 } from "@/lib/attendance";
 import { statusOption } from "@/lib/attendance-status";
+import { computePeerGroup } from "@/lib/profile";
 import { fetchJson } from "@/lib/http";
 import { useHighlightRow } from "@/hooks/useHighlightRow";
 import type { AttendanceStatus } from "@/types";
@@ -31,6 +32,7 @@ interface TermData {
         name: string;
         gender: string;
         birthYear: string;
+        birthday?: string;
         order: number;
         attendances: {
           status: string;
@@ -289,7 +291,7 @@ export default function TermDetailPage() {
                               {member.gender || "-"}
                             </td>
                             <td className={`sticky left-[136px] z-10 ${stickyBg} px-1 py-1.5 text-center text-xs text-gray-500`}>
-                              {member.birthYear}
+                              {computePeerGroup(member.birthday ?? "", member.birthYear)}
                             </td>
                             {team.dates.map((date) => {
                               const att = member.attendances.find(

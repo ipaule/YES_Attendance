@@ -18,16 +18,12 @@ const ALLOWED_FIELDS = [
   "birthday",
   "groupName",
   "teamName",
-  "ministry",
   "note",
   "email",
   "phone",
-  "address",
   "salvationAssurance",
   "training",
-  "memberNumber",
   "registrationDate",
-  "prayerRequest",
   "peerGroup",
   "recentAttendanceOverride",
   "contactStatus",
@@ -98,6 +94,7 @@ export async function applyRosterPatch(
   if (data.name !== undefined && data.name !== oldMember.name) updates.name = data.name as string;
   if (data.gender !== undefined && data.gender !== oldMember.gender) updates.gender = data.gender as string;
   if (data.birthYear !== undefined && data.birthYear !== oldMember.birthYear) updates.birthYear = data.birthYear as string;
+  if (data.birthday !== undefined && data.birthday !== oldMember.birthday) updates.birthday = data.birthday as string;
 
   if (Object.keys(updates).length > 0 && oldMember.groupName && oldMember.teamName) {
     const ownGroup = await prisma.group.findFirst({
@@ -209,6 +206,7 @@ export async function applyRosterPatch(
                 name: nameToStore,
                 gender: member.gender,
                 birthYear: member.birthYear,
+                birthday: member.birthday,
                 teamId: newTeam.id,
                 order: (maxOrder?.order ?? -1) + 1,
               },

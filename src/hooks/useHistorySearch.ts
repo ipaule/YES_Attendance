@@ -3,12 +3,17 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchJson, HttpError } from "@/lib/http";
+import { useStickyState } from "@/hooks/useStickyState";
 
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
 
 export function useHistorySearch<T>(key: string, searchUrl: string) {
-  const [input, setInput] = useState("");
+  // Sticky so navigating into a result and back (or a refresh) keeps the
+  // query — same rule as every other list's filter. `query` (the debounced,
+  // fetch-triggering value) is intentionally plain state: it re-derives from
+  // `input` a moment after mount instead of being persisted itself.
+  const [input, setInput] = useStickyState(`${key}-query`, "");
   const [query, setQuery] = useState("");
 
   useEffect(() => {

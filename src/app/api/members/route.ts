@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 401 });
   }
 
-  const { name, gender, birthYear, teamId } = await request.json();
+  const { name, gender, birthYear, birthday, teamId } = await request.json();
 
   if (!name || !gender || !teamId) {
     return NextResponse.json(
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
       name,
       gender,
       birthYear: birthYear || "",
+      birthday: birthday || "",
       teamId,
       order: (maxOrder?.order ?? -1) + 1,
     },

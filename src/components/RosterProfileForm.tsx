@@ -18,16 +18,12 @@ export interface RosterProfileData {
   birthday: string;
   groupName: string;
   teamName: string;
-  ministry: string;
   note: string;
   email: string;
   phone: string;
-  address: string;
   salvationAssurance: string;
   training: string;
-  memberNumber: string;
   registrationDate: string;
-  prayerRequest: string;
   photo: string;
   baptismStatus: string;
 }
@@ -49,16 +45,12 @@ const EMPTY: RosterProfileData = {
   birthday: "",
   groupName: "",
   teamName: "",
-  ministry: "",
   note: "",
   email: "",
   phone: "",
-  address: "",
   salvationAssurance: "",
   training: "",
-  memberNumber: "",
   registrationDate: "",
-  prayerRequest: "",
   photo: "",
   baptismStatus: "",
 };
@@ -254,14 +246,6 @@ export function RosterProfileForm({ initial, mode, onSave, onCancel, saving, sav
             className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
           />
         </Field>
-        <Field label="주소">
-          <textarea
-            value={data.address}
-            onChange={(e) => update("address", e.target.value)}
-            rows={2}
-            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-          />
-        </Field>
       </Section>
 
       {/* 소속 */}
@@ -290,22 +274,6 @@ export function RosterProfileForm({ initial, mode, onSave, onCancel, saving, sav
               <option value={data.teamName}>{data.teamName}</option>
             )}
           </select>
-        </Field>
-        <Field label="사역">
-          <input
-            type="text"
-            value={data.ministry}
-            onChange={(e) => update("ministry", e.target.value)}
-            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-          />
-        </Field>
-        <Field label="교인번호">
-          <input
-            type="text"
-            value={data.memberNumber}
-            onChange={(e) => update("memberNumber", e.target.value)}
-            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-          />
         </Field>
         <Field label="등록 날짜">
           <input
@@ -350,14 +318,6 @@ export function RosterProfileForm({ initial, mode, onSave, onCancel, saving, sav
 
       {/* Full-width */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-4">
-        <Field label="기도제목">
-          <textarea
-            value={data.prayerRequest}
-            onChange={(e) => update("prayerRequest", e.target.value)}
-            rows={3}
-            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-          />
-        </Field>
         <Field label="비고">
           <textarea
             value={data.note}

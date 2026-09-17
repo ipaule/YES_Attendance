@@ -49,9 +49,11 @@ model Member {
   name        String
   gender      String       // 남, 여
   birthYear   String       @default("")
+  birthday    String       @default("")
   teamId      String
   team        Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
   attendances Attendance[]
+  prayerNotes PrayerNote[]
   order       Int          @default(0)
   createdAt   DateTime     @default(now())
 }
@@ -65,6 +67,7 @@ model AttendanceDate {
   order       Int          @default(0)
   locked      Boolean      @default(false)
   attendances Attendance[]
+  prayerNotes PrayerNote[]
   createdAt   DateTime     @default(now())
 
   @@unique([date, teamId])
@@ -98,21 +101,17 @@ model ShalomMember {
   birthday           String    @default("")
   phone              String    @default("")
   email              String    @default("")
-  address            String    @default("")
   visitDate          String    @default("")
   inviter            String    @default("")
   order              Int       @default(0)
   leader             String    @default("")
   groupName          String    @default("")
   teamName           String    @default("")
-  ministry           String    @default("")
-  memberNumber       String    @default("")
   registrationDate   String    @default("")
   salvationAssurance String    @default("")
   training           String    @default("")
   baptismStatus      String    @default("")
   photo              String    @default("")
-  prayerRequest      String    @default("")
   note               String    @default("")
   status             String    @default("방문") // 방문, 등록, 졸업
   movedToRosterAt    DateTime?
@@ -128,16 +127,12 @@ model RosterMember {
   birthday                 String   @default("")
   groupName                String   @default("")
   teamName                 String   @default("")
-  ministry                 String   @default("")
   note                     String   @default("")
   email                    String   @default("")
   phone                    String   @default("")
-  address                  String   @default("")
   salvationAssurance       String   @default("")
   training                 String   @default("")
-  memberNumber             String   @default("")
   registrationDate         String   @default("")
-  prayerRequest            String   @default("")
   peerGroup                String   @default("")
   photo                    String   @default("")
   baptismStatus            String   @default("")
@@ -190,6 +185,18 @@ model Attendance {
   attendanceDate   AttendanceDate @relation(fields: [attendanceDateId], references: [id], onDelete: Cascade)
   status           String         @default("HERE") // HERE, ABSENT, AWR
   awrReason        String?
+
+  @@unique([memberId, attendanceDateId])
+}
+
+model PrayerNote {
+  id               String         @id @default(cuid())
+  memberId         String
+  member           Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  attendanceDateId String
+  attendanceDate   AttendanceDate @relation(fields: [attendanceDateId], references: [id], onDelete: Cascade)
+  text             String
+  updatedAt        DateTime       @updatedAt
 
   @@unique([memberId, attendanceDateId])
 }

@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Plus, Users, Pencil, Trash2, Check, X, ArrowLeft, BarChart3 } from "lucide-react";
+import { Plus, Users, Pencil, Trash2, Check, X, ArrowLeft, BarChart3, HeartHandshake } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AttendanceChart } from "@/components/graphs/AttendanceChart";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -183,13 +183,22 @@ export default function GroupPage() {
           </h1>
         </div>
         {canManage && (
-          <button
-            onClick={() => setShowAddTeam(!showAddTeam)}
-            className="flex items-center gap-1 text-sm bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            순 추가
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push(`/dashboard/group/${groupId}/prayer`)}
+              className="flex items-center gap-1 text-sm bg-purple-600 text-white rounded-lg px-4 py-2 hover:bg-purple-700 transition-colors"
+            >
+              <HeartHandshake className="h-4 w-4" />
+              기도제목
+            </button>
+            <button
+              onClick={() => setShowAddTeam(!showAddTeam)}
+              className="flex items-center gap-1 text-sm bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              순 추가
+            </button>
+          </div>
         )}
       </div>
 

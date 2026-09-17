@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Delete everything
     await prisma.attendance.deleteMany();
+    await prisma.prayerNote.deleteMany();
     await prisma.attendanceDate.deleteMany();
     await prisma.member.deleteMany();
     await prisma.team.deleteMany();

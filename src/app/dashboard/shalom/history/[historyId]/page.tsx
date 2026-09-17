@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, FolderOpen, FolderPlus, Move } from "lucide-react";
 import { fetchJson } from "@/lib/http";
+import { computePeerGroup } from "@/lib/profile";
 import { useRowSelection } from "@/hooks/useRowSelection";
 import { useHighlightRow } from "@/hooks/useHighlightRow";
 
@@ -13,6 +14,7 @@ interface ShalomRecord {
   name: string;
   gender: string;
   birthYear: string;
+  birthday?: string;
   phone: string;
   visitDate: string;
   inviter: string;
@@ -171,7 +173,7 @@ export default function ShalomHistoryDetailPage() {
                   <td className="px-2 py-1.5 text-center text-xs text-gray-400">{i + 1}</td>
                   <td className="px-2 py-1.5 text-sm whitespace-nowrap">{m.name || "-"}</td>
                   <td className={`px-2 py-1.5 text-center text-xs font-medium whitespace-nowrap ${m.gender === "남" ? "text-blue-600" : m.gender === "여" ? "text-red-600" : "text-gray-500"}`}>{m.gender || "-"}</td>
-                  <td className="px-2 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap">{m.birthYear || "-"}</td>
+                  <td className="px-2 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap">{computePeerGroup(m.birthday ?? "", m.birthYear)}</td>
                   <td className="px-2 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap">{m.phone || "-"}</td>
                   <td className="px-2 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap">{m.visitDate || "-"}</td>
                   <td className="px-2 py-1.5 text-center text-xs text-gray-500 whitespace-nowrap">{m.inviter || "-"}</td>

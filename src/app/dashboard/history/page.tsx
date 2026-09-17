@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, RotateCcw, CalendarPlus, FolderPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchJson } from "@/lib/http";
+import { computePeerGroup } from "@/lib/profile";
 import { HistoryTree, type HistoryTreeHandle, type HistoryTreeNode } from "@/components/HistoryTree";
 import { useHistorySearch } from "@/hooks/useHistorySearch";
 import { HistorySearchBox } from "@/components/HistorySearchBox";
@@ -14,6 +15,7 @@ interface TermSearchResult {
   name: string;
   gender: string;
   birthYear: string;
+  birthday?: string;
   termId: string;
   termName: string;
   teamName: string;
@@ -221,7 +223,7 @@ export default function HistoryPage() {
             className="flex items-center gap-2 w-full bg-white rounded-lg border border-gray-200 hover:border-indigo-300 px-3 py-2.5 transition-colors text-left"
           >
             <span className="text-sm font-medium text-gray-800">{r.name}</span>
-            <span className="text-xs text-gray-400">{r.gender} · {r.birthYear}</span>
+            <span className="text-xs text-gray-400">{r.gender} · {computePeerGroup(r.birthday ?? "", r.birthYear)}</span>
             <span className="text-xs text-gray-500 flex-1 min-w-0 truncate text-right">{r.teamName} · {r.termName}</span>
           </button>
         )}

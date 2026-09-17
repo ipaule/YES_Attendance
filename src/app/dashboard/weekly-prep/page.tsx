@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Printer, Copy, Check } from "lucide-react";
+import { ArrowLeft, Printer, Copy, Check, HeartHandshake } from "lucide-react";
 import { CareNotesPrintable } from "@/components/CareNotesPrintable";
 import { useToast } from "@/components/Toast";
 
@@ -99,6 +99,13 @@ export default function WeeklyPrepPage() {
           <h1 className="text-xl font-bold text-gray-900">한 주의 준비</h1>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push("/dashboard/weekly-prep/prayer")}
+            className="flex items-center gap-1.5 text-sm bg-purple-600 text-white rounded-lg px-4 py-2 hover:bg-purple-700"
+          >
+            <HeartHandshake className="h-4 w-4" />
+            기도제목
+          </button>
           <select
             value={printTeamId || ""}
             onChange={(e) => setPrintTeamId(e.target.value || null)}

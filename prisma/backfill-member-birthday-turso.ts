@@ -1,22 +1,20 @@
-// Backfills Member.birthday from the matching RosterMember, so the team
-// attendance table can compute 또래 the same way the roster does
-// (last two digits of birthday, falling back to birthYear).
+// Turso-targeted twin of backfill-member-birthday.ts — same additive,
+// scoped-match logic, opposite guard (requires Turso env vars instead of
+// forcing them empty). Run after scripts/drop-removed-profile-columns.ts
+// (Member.birthday must exist first).
 //
 // Additive only: never deletes, never overwrites a Member.birthday that's
 // already set, and skips (reporting) any name that resolveRosterMember
 // can't confidently match — never a bare name match, per this project's
 // documented wrong-person history. Safe to re-run.
-//
-// Local dev.db only. `next dev` resolves TURSO_DATABASE_URL to "" because
-// .env.local's blank value overrides .env's real one — but @prisma/client's
-// own built-in dotenv loader only reads .env (ignores .env.local) and a
-// plain `tsx` run of this file would otherwise pick up the real Turso
-// credentials. Forcing them empty here, before the dynamic import below,
-// guarantees src/lib/db.ts takes the local-sqlite branch regardless.
 export {}; // no top-level import in this file otherwise — forces module
-           // scope so `main` doesn't collide with the Turso twin's `main`.
-process.env.TURSO_DATABASE_URL = "";
-process.env.TURSO_AUTH_TOKEN = "";
+           // scope so `main` doesn't collide with the local twin's `main`.
+
+if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
+  throw new Error(
+    "TURSO_DATABASE_URL/TURSO_AUTH_TOKEN must be set to run this against Turso — see backfill-member-birthday.ts for the local-only version."
+  );
+}
 
 async function main() {
   const { prisma } = await import("../src/lib/db");

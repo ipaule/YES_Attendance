@@ -1,0 +1,2 @@
+- [Local/Turso twin script pattern](project_local_turso_twin_pattern.md) — twin scripts differ only by env guard; diff siblings first when reviewing one
+- [Safe resolveRosterMember backfill shape](project_resolveroster_safe_pattern.md) — reference template: scoped query, resolveRosterMember, single-field update, idempotent

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { PrayerNoteTeam } from "@/lib/prayer-notes-query";
@@ -31,6 +32,23 @@ export function PrayerNotesView({
   showGroupHeadings,
 }: PrayerNotesViewProps) {
   const router = useRouter();
+  // Empty = unbounded, so the page always opens showing every note.
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+
+  // Members with no notes in range stay listed (shown as "—") so the
+  // printed sheet remains a full roster. `date` is an ISO string, so the
+  // YYYY-MM-DD prefix compares lexicographically.
+  const filteredTeams = teams.map((t) => ({
+    ...t,
+    members: t.members.map((m) => ({
+      ...m,
+      notes: m.notes.filter((n) => {
+        const d = n.date.slice(0, 10);
+        return (!start || d >= start) && (!end || d <= end);
+      }),
+    })),
+  }));
 
   // Pure per-render computation (no mutable variable captured across the
   // map callback) of which teams start a new group section.
@@ -58,6 +76,38 @@ export function PrayerNotesView({
 
       <h1 className="hidden print:block text-lg font-bold mb-4">{heading}</h1>
 
+      <div className="flex flex-wrap items-end gap-3 mb-4 print:hidden">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">시작일</label>
+          <input
+            type="date"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">종료일</label>
+          <input
+            type="date"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        {(start || end) && (
+          <button
+            onClick={() => {
+              setStart("");
+              setEnd("");
+            }}
+            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2"
+          >
+            초기화
+          </button>
+        )}
+      </div>
+
       {isLoading && <div className="text-center py-12 text-gray-400 print:hidden">불러오는 중...</div>}
       {!!error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 print:hidden">
@@ -69,7 +119,7 @@ export function PrayerNotesView({
       )}
 
       <div className="space-y-6">
-        {teams.map((team, i) => {
+        {filteredTeams.map((team, i) => {
           const groupHeading = startsNewGroup[i];
           return (
             <div key={team.teamId}>
@@ -95,8 +145,11 @@ export function PrayerNotesView({
                         <div className="text-gray-400">—</div>
                       ) : (
                         m.notes.map((n, i) => (
-                          <div key={i}>
-                            <span className="text-gray-400">{n.label}</span> — {n.text}
+                          <div key={i} className="flex gap-1">
+                            <span className="shrink-0">
+                              <span className="text-gray-400">{n.label}</span> —
+                            </span>
+                            <span className="min-w-0 whitespace-pre-wrap">{n.text}</span>
                           </div>
                         ))
                       )}

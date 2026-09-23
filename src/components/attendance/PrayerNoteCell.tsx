@@ -2,7 +2,7 @@
 
 import { useState, memo } from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { MessageSquare } from "lucide-react";
+import { Check, MessageSquare } from "lucide-react";
 
 interface PrayerNoteCellProps {
   text: string;
@@ -24,7 +24,7 @@ function PrayerNoteCellImpl({ text, onChange, locked }: PrayerNoteCellProps) {
       return;
     }
     // Closing (including outside-click, which Radix already treats as
-    // "close") is the save trigger — no separate save button.
+    // "close") is a save trigger too, in addition to the explicit button.
     if (!locked && draft !== text) onChange(draft);
     setOpen(next);
   };
@@ -72,6 +72,17 @@ function PrayerNoteCellImpl({ text, onChange, locked }: PrayerNoteCellProps) {
             }}
             className="w-full text-sm border border-gray-300 rounded px-2 py-1.5 resize-y focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
           />
+          <div className="flex justify-end mt-1">
+            <button
+              type="button"
+              disabled={locked}
+              onClick={() => handleOpenChange(false)}
+              className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50 p-1"
+            >
+              <Check className="h-4 w-4" />
+              저장
+            </button>
+          </div>
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

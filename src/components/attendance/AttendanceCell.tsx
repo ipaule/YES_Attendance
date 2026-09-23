@@ -2,6 +2,7 @@
 
 import { useRef, useState, memo } from "react";
 import * as Popover from "@radix-ui/react-popover";
+import { Check } from "lucide-react";
 import type { AttendanceStatus } from "@/types";
 import { statusOption } from "@/lib/attendance-status";
 import { StatusOptionList } from "@/components/StatusOptionList";
@@ -98,27 +99,42 @@ function AttendanceCellImpl({ status, awrReason, onChange, locked }: AttendanceC
                 {status === "ABSENT" ? "결석" : "사유결석"} 사유 {locked ? "보기" : "입력"}
                 {!locked && <HelpTip text={helpAnswer("a6")} />}
               </p>
-              <input
-                ref={reasonInputRef}
-                type="text"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                disabled={locked}
-                onBlur={commitReasonIfChanged}
-                onKeyDown={(e) => {
-                  if (locked) return;
-                  if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+              <div className="flex gap-1 items-center">
+                <input
+                  ref={reasonInputRef}
+                  type="text"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  disabled={locked}
+                  onBlur={commitReasonIfChanged}
+                  onKeyDown={(e) => {
+                    if (locked) return;
+                    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                      commitReasonIfChanged();
+                      setOpen(false);
+                    }
+                    if (e.key === "Escape") {
+                      setReason(awrReason || "");
+                      setOpen(false);
+                    }
+                  }}
+                  placeholder="사유 (선택)"
+                  className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
+                />
+                <button
+                  type="button"
+                  aria-label="저장"
+                  disabled={locked}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
                     commitReasonIfChanged();
                     setOpen(false);
-                  }
-                  if (e.key === "Escape") {
-                    setReason(awrReason || "");
-                    setOpen(false);
-                  }
-                }}
-                placeholder="사유 (선택)"
-                className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
-              />
+                  }}
+                  className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50 p-1"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           )}
         </Popover.Content>
